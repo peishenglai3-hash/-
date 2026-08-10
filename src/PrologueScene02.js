@@ -4,6 +4,7 @@ import { state } from './state.js';
 import { showTask, closeTask, showPrompt, playNarrative, advanceNarrative, showItem, closeItem, itemPanelOpen, showItemPassive, hideItem, fadeToBlack, togglePause, showFlavor } from './ui.js';
 import { ambience } from './ambience.js';
 import { OPENING, AUDIO_REVIEW, WRITE_QUESTION, FALL_ASLEEP, TASKS, PROP_LINES, ONE_LINERS, FLAVOR_SPOTS } from './content02.js';
+import { CollisionEditor } from './collision-editor.js';
 
 const PX = 32;
 const PLAYER_FRAME = { width: 332, height: 720 };
@@ -60,6 +61,7 @@ export class PrologueScene02 extends Phaser.Scene {
     this.setupObjectiveMarker();
     this.flavorArmed = new Map(FLAVOR_SPOTS.map((spot) => [spot.id, true]));
     this.keyMap = createKeyMap(this);
+    this.setupZoneEditor();
     this.cameras.main
       .setBounds(0, 0, this.logic.world_size[0], this.logic.world_size[1])
       .startFollow(this.player, true, 0.08, 0.08)
@@ -70,7 +72,6 @@ export class PrologueScene02 extends Phaser.Scene {
       else if (itemPanelOpen()) closeItem();
     });
     onAction(this, 'PAUSE', () => togglePause());
-    if (new URLSearchParams(window.location.search).get('debug') === '1') this.drawDebug();
     window.scene02Game = this;
     this.startOpening();
   }
@@ -261,7 +262,6 @@ export class PrologueScene02 extends Phaser.Scene {
   }
 
   update() {
-    if (this.physics.world.debugGraphic) this.physics.world.debugGraphic.setVisible(false);
     this.updateObjective();
     this.updateFlavor();
     if (state.paused) {
@@ -319,24 +319,23 @@ export class PrologueScene02 extends Phaser.Scene {
     });
   }
 
-  drawDebug() {
-    const g = this.add.graphics().setDepth(500);
-    for (let tx = 0; tx <= 64; tx += 1) g.lineStyle(1, 0xff3c3c, tx % 5 === 0 ? 0.5 : 0.18).lineBetween(tx * PX, 0, tx * PX, 36 * PX);
-    for (let ty = 0; ty <= 36; ty += 1) g.lineStyle(1, 0xff3c3c, ty % 5 === 0 ? 0.5 : 0.18).lineBetween(0, ty * PX, 64 * PX, ty * PX);
-    for (const rect of this.logic.collision_zones) {
-      const [x, y, w, h] = rect.rect;
-      g.lineStyle(2, 0xff4040, 0.9).strokeRect(x * PX, y * PX, w * PX, h * PX);
-    }
-    for (const zone of this.interactionData.zones) {
-      if (!zone.rect) continue;
-      const [x, y, w, h] = zone.rect;
-      g.lineStyle(2, 0x40ff80, 0.9).strokeRect(x * PX, y * PX, w * PX, h * PX);
-    }
-    for (const area of this.logic.walkable_area) {
-      const [x, y, w, h] = area.rect;
-      g.lineStyle(1, 0x4080ff, 0.7).strokeRect(x * PX, y * PX, w * PX, h * PX);
-    }
-    const [sx, sy] = this.logic.player_spawn.position;
-    g.lineStyle(2, 0xffff40, 1).strokeCircle(sx * PX, sy * PX, 10);
+  setupZoneEditor() {
+    const logicFile = 'public/data/PRO02_logic.json';
+    const interactionsFile = 'public/data/PRO02_interactions.json';
+    const documents = { [logicFile]: this.logic, [interactionsFile]: this.interactionData };
+    this.zoneEditor = new CollisionEditor(this, {
+      documents,
+      getCollisions: () => this.logic.collision_zones,
+      getInteractions: () => this.interactionData.zones,
+      getWorldSize: () => this.logic.logical_grid ? [this.logic.logical_grid.width, this.logic.logical_grid.height] : [64, 36],
+      getPlayerRect: () => [this.player.x / PX - 18 / PX, this.player.y / PX - 26 / PX, 36 / PX, 52 / PX],
+      replaceDocuments: (next) => {
+        this.logic = next[logicFile];
+        this.interactionData = next[interactionsFile];
+        documents[logicFile] = this.logic;
+        documents[interactionsFile] = this.interactionData;
+      },
+      onChange: () => this.buildCollision()
+    });
   }
 }

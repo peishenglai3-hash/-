@@ -9,6 +9,7 @@ import { SceneTransitionController } from './scene-transition.js';
 import { TRANSITION_A, TRANSITION_B } from './transition-content.js';
 import { SCENE_EXIT, validateNarrative } from './content01.js';
 import { hideIntro, showEndPanel, clearFade } from './ui.js';
+import { installDevEditorToggle } from './collision-editor.js';
 
 validateNarrative();
 
@@ -40,6 +41,8 @@ const game = new Phaser.Game({
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, width: 1280, height: 720 },
   scene: [Scene01, PrologueScene02]
 });
+
+installDevEditorToggle(game);
 
 let introStarted = false;
 function startIntro() {

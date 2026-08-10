@@ -7,6 +7,7 @@ import {
   hideResult, hideDialogue, fadeToBlack, togglePause
 } from './ui.js';
 import { REQUIRED_NARRATIVE, CHOICES, TASKS01, LEAVE_NARRATIVE, PROFILE_DELTAS } from './content01.js';
+import { CollisionEditor } from './collision-editor.js';
 
 const PX = 32;
 const PLAYER_FRAME = { width: 332, height: 720 };
@@ -47,6 +48,7 @@ export class Scene01 extends Phaser.Scene {
     this.playerDirection = 'down';
     this.setupPlayerVisual();
     this.keyMap = createKeyMap(this);
+    this.setupZoneEditor();
     this.camera = this.cameras.main.setBounds(0, 0, 1536, 864).startFollow(this.player, true, 0.08, 0.08);
     this.camera.setZoom(1);
     const studentASpawn = spawn('NPC_CH00_STUDENT_A');
@@ -205,7 +207,6 @@ export class Scene01 extends Phaser.Scene {
   }
 
   update() {
-    if (this.physics.world.debugGraphic) this.physics.world.debugGraphic.setVisible(false);
     const canWalk = state.mode === 'explore' || state.mode === 'leave_walk';
     if (!this.player || state.playerLocked || state.paused || !canWalk) {
       if (this.player) {
@@ -241,6 +242,27 @@ export class Scene01 extends Phaser.Scene {
     };
     if (canOccupy(this.player.x + dx, this.player.y)) this.player.x += dx;
     if (canOccupy(this.player.x, this.player.y + dy)) this.player.y += dy;
+  }
+
+  setupZoneEditor() {
+    const file = 'public/data/scene01_manifest.json';
+    const documents = { [file]: this.manifest };
+    this.zoneEditor = new CollisionEditor(this, {
+      documents,
+      getCollisions: () => this.manifest.collision,
+      getInteractions: () => this.manifest.interactions,
+      getWorldSize: () => [48, 27],
+      getPlayerRect: () => [this.player.x / PX - 12 / PX, this.player.y / PX - 20 / PX, 24 / PX, 40 / PX],
+      getActorRects: () => [this.studentA, this.studentB, this.studentBExit]
+        .filter(Boolean)
+        .filter((actor) => actor.visible !== false)
+        .map((actor) => [actor.x / PX - 12 / PX, actor.y / PX - 20 / PX, 24 / PX, 40 / PX]),
+      replaceDocuments: (next) => {
+        this.manifest = next[file];
+        documents[file] = this.manifest;
+      },
+      onChange: () => this.buildCollision()
+    });
   }
 
   updatePrompt() {
