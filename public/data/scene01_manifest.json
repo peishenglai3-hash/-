@@ -1,0 +1,56 @@
+{
+  "scene_id": "MAP_PRO_MONUMENT",
+  "map_file": "scene01_map.tmj",
+  "background": {
+    "image": "scene01_base.png",
+    "source_width_px": 1672,
+    "source_height_px": 941,
+    "display_world_size": [48, 27],
+    "pixels_per_unit": 32,
+    "sha256": "C464BDFDDF7565FCE132025714A9066950048DE0E7711C43128F1F82B7F0134E",
+    "visual_master_locked": true
+  },
+  "grid": { "width": 48, "height": 27, "tile_size_px": 32, "coordinate_origin": "top_left" },
+  "layers": ["background", "walkable", "collision", "interactions", "spawns", "camera_bounds", "foreground_occlusion"],
+  "walkable": [
+    { "id": "plaza", "rect": [2, 10, 44, 7], "surface": "stone_plaza" },
+    { "id": "south_entry_path", "rect": [19, 17, 12, 10], "surface": "stone_path" },
+    { "id": "south_forecourt", "rect": [2, 20, 44, 7], "surface": "grass_forecourt" }
+  ],
+  "collision": [
+    { "id": "monument_body", "shape": "rect", "rect": [21.5, 7, 7, 5.5], "kind": "monument" },
+    { "id": "monument_steps", "shape": "rect", "rect": [20.75, 12, 8.5, 1.5], "kind": "monument" },
+    { "id": "rear_fence_west", "shape": "rect", "rect": [3, 9, 18, 1], "kind": "fence" },
+    { "id": "rear_fence_east", "shape": "rect", "rect": [30, 9, 19, 1], "kind": "fence" },
+    { "id": "side_fence_west", "shape": "rect", "rect": [1, 9, 1, 9], "kind": "fence" },
+    { "id": "side_fence_east", "shape": "rect", "rect": [46, 9, 1, 9], "kind": "fence" },
+    { "id": "front_fence_west", "shape": "rect", "rect": [0, 17, 17.5, 1], "kind": "fence" },
+    { "id": "front_fence_east", "shape": "rect", "rect": [31.5, 17, 16.5, 1], "kind": "fence" },
+    { "id": "gate_pillar_west", "shape": "rect", "rect": [17, 13, 2, 5], "kind": "pillar" },
+    { "id": "gate_pillar_east", "shape": "rect", "rect": [31, 13, 2, 5], "kind": "pillar" },
+    { "id": "tree_trunk_west", "shape": "rect", "rect": [7.5, 9, 1, 2], "kind": "tree" },
+    { "id": "tree_trunk_east", "shape": "rect", "rect": [39.5, 9, 1, 2], "kind": "tree" },
+    { "id": "scene_boundary_top", "shape": "rect", "rect": [0, 0, 48, 1], "kind": "boundary" },
+    { "id": "scene_boundary_left", "shape": "rect", "rect": [0, 0, 1, 27], "kind": "boundary" },
+    { "id": "scene_boundary_right", "shape": "rect", "rect": [47, 0, 1, 27], "kind": "boundary" },
+    { "id": "scene_boundary_bottom", "shape": "rect", "rect": [0, 26, 48, 1], "kind": "boundary" }
+  ],
+  "interactions": [
+    { "id": "INT_MONUMENT", "type": "inspect", "rect": [21.5, 11.5, 7, 2], "prompt": "查看碑文", "completion_flag": "FLAG_INT_MONUMENT_COMPLETED" },
+    { "id": "INT_FIELDWORK_MATERIAL", "type": "inspect", "rect": [12, 19, 4, 3], "prompt": "查看田野工作材料" },
+    { "id": "PRO_Q01_TRIGGER", "type": "event", "rect": [21.5, 12.5, 7, 1.5], "required_flags": ["FLAG_INT_MONUMENT_COMPLETED"], "event_id": "PRO_Q01_TRIGGER" },
+    { "id": "EXIT_TRIGGER", "type": "event", "rect": [22, 25, 4, 1], "required_flags": ["FLAG_PRO_Q01_COMPLETED"], "event_id": "EXIT_TRIGGER", "enabled_by_default": false }
+  ],
+  "spawns": [
+    { "id": "PLAYER_START", "position": [24, 24], "facing": "up" },
+    { "id": "NPC_CH00_STUDENT_A", "position": [34, 21], "facing": "down", "animation_start": "reading_down" },
+    { "id": "NPC_CH00_STUDENT_B", "position": [20.5, 18.5], "facing": "up", "animation_start": "idle_up" }
+  ],
+  "anchors": [
+    { "id": "exit_south_center", "position": [24, 25], "facing": "down" },
+    { "id": "exit_south_east", "position": [26, 25], "facing": "down" },
+    { "id": "exit_south_west", "position": [22, 25], "facing": "down" }
+  ],
+  "camera_bounds": { "rect": [0, 0, 48, 27] },
+  "foreground_occlusion": { "reserved": true, "objects": [] }
+}

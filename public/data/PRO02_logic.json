@@ -1,0 +1,73 @@
+{
+  "scene_id": "MAP_MOD_BASE",
+  "chapter": "CH00",
+  "scene": "CH00_SC02_PRACTICE_BASE",
+  "display_name": "现代实践驻地",
+  "background": {
+    "image": "pro02_base.png",
+    "source_width_px": 2048,
+    "source_height_px": 1152,
+    "display_world_size": [64, 36],
+    "pixels_per_unit": 32,
+    "sha256": "CD61B6385BBEF9A439E757DDB4B5FDC1C7DC23C3036C0C97A8E94459ABD3ADE3",
+    "visual_master_locked": true,
+    "note": "原始底图为唯一 Visual Master，1:1 原生显示，禁止重绘/重采样/Tile化"
+  },
+  "world_size": [2048, 1152],
+  "logical_grid": { "width": 64, "height": 36, "tile_size_px": 32, "coordinate_origin": "top_left" },
+  "player_spawn": { "spawnId": "PRO02_PLAYER_START", "position": [10.5, 34], "facing": "up" },
+  "npc_spawns": [],
+  "walkable_area": [
+    { "id": "left_aisle", "rect": [3.5, 10, 3.7, 11.5], "note": "左墙与床之间的通道（门上方）" },
+    { "id": "bed_foot", "rect": [7.3, 31.5, 10.5, 3.5], "note": "床尾地面（含出生点、门口触发区）" },
+    { "id": "room_center", "rect": [18, 16.8, 21.8, 18.2], "note": "房间中央主通行区（含背包碰撞块需绕行）" },
+    { "id": "desk_approach", "rect": [25, 20.8, 22.5, 2.4], "note": "书桌正前方站立交互带" },
+    { "id": "right_aisle", "rect": [47.5, 16.8, 8, 18.2], "note": "书桌右侧通道（风扇需绕行）" }
+  ],
+  "collision_zones": [
+    { "id": "wall_top", "shape": "rect", "rect": [0, 0, 64, 10], "kind": "wall", "note": "后墙+窗户带" },
+    { "id": "wall_left_upper", "shape": "rect", "rect": [0, 0, 5.2, 13], "kind": "wall" },
+    { "id": "wall_left_mid", "shape": "rect", "rect": [0, 13, 4, 8.5], "kind": "wall" },
+    { "id": "door_panel", "shape": "rect", "rect": [0, 21.5, 7.3, 14.5], "kind": "door", "note": "左墙开启的门板+门洞+左下墙角" },
+    { "id": "wall_right_top", "shape": "rect", "rect": [55.5, 10, 8.5, 8], "kind": "wall", "note": "右墙为透视斜墙，三段矩形逼近" },
+    { "id": "wall_right_mid", "shape": "rect", "rect": [56.5, 18, 7.5, 9], "kind": "wall" },
+    { "id": "wall_right_low", "shape": "rect", "rect": [57.5, 27, 6.5, 9], "kind": "wall" },
+    { "id": "boundary_bottom", "shape": "rect", "rect": [0, 35, 64, 1], "kind": "boundary" },
+    { "id": "bed_body", "shape": "rect", "rect": [7, 10, 11, 21.5], "kind": "furniture", "note": "床整体（床头板→床尾）" },
+    { "id": "bed_drawer", "shape": "rect", "rect": [8, 31.5, 5.2, 1.4], "kind": "furniture", "note": "床底拉出的抽屉" },
+    { "id": "nightstand", "shape": "rect", "rect": [18, 10, 3.5, 7], "kind": "furniture" },
+    { "id": "floor_books", "shape": "rect", "rect": [17.8, 27.8, 2.5, 4.2], "kind": "furniture", "note": "床旁地面书堆" },
+    { "id": "desk_body", "shape": "rect", "rect": [25.2, 9.8, 22.3, 11], "kind": "furniture", "note": "书桌主体，含桌下垃圾桶与抽屉柜" },
+    { "id": "chair", "shape": "rect", "rect": [39.8, 22.5, 7.5, 8.3], "kind": "furniture" },
+    { "id": "fan", "shape": "rect", "rect": [49.8, 13, 6, 9.8], "kind": "furniture" },
+    { "id": "backpack", "shape": "rect", "rect": [25.3, 24.8, 6, 7.5], "kind": "furniture", "note": "地面背包（有体积）；地面纸张/写字板为平面物不设碰撞" }
+  ],
+  "camera_bounds": { "rect": [0, 0, 64, 36] },
+  "interaction_zones_file": "PRO02_interactions.json",
+  "dynamic_props": [
+    { "id": "PROP_PRO_NOTEBOOK", "slot": "desk_notebook", "anchor_tile": [31.5, 15.5], "states": ["default", "name_checked", "name_written"], "overlay": null, "note": "overlay=null 表示等待正式独立美术资产；当前状态通过检查面板文案反馈" },
+    { "id": "PROP_PRO_RECORDER", "slot": "desk_recorder", "anchor_tile": [30, 11], "states": ["default", "selected_file"], "overlay": null },
+    { "id": "PROP_PRO_PHONE", "slot": "desk_phone", "anchor_tile": [41.5, 15.5], "states": ["default", "monument_photo"], "overlay": null },
+    { "id": "PROP_PRO_CAMERA", "slot": "desk_camera", "anchor_tile": [39.5, 11.5], "reserved": true, "overlay": null },
+    { "id": "PROP_PRO_DOCUMENT", "slot": "desk_papers", "anchor_tile": [27, 11.5], "reserved": true, "overlay": null },
+    { "id": "PROP_PRO_BACKPACK", "slot": "floor_backpack", "anchor_tile": [28, 29], "reserved": true, "overlay": null }
+  ],
+  "story_state_bindings": {
+    "states_file": "PRO02_states.json",
+    "flag_source_priority": ["window.__RED_CODE_FLAGS__", "localStorage:redcode.prologue.flags", "url_query:?flags=FLAG_A,FLAG_B"],
+    "flag_map": {
+      "FLAG_PRO_NAME_CHECKED": "PRO_NAME_CHECKED",
+      "FLAG_PRO_PHOTO_TAKEN": "PRO_PHOTO_TAKEN",
+      "FLAG_PRO_TEAM_RECORD_FOUND": "PRO_TEAM_RECORD_FOUND",
+      "FLAG_PRO_NAME_WRITTEN": "PRO_NAME_WRITTEN"
+    },
+    "apply_order": ["PRO_NAME_CHECKED", "PRO_PHOTO_TAKEN", "PRO_TEAM_RECORD_FOUND", "PRO_NAME_WRITTEN"],
+    "note": "场景1 PRO-Q01 的选择结果以 FLAG_PRO_* 旗标注入；同一 prop 被多个状态命中时按 apply_order 后者优先"
+  },
+  "foreground_layers": {
+    "reserved": true,
+    "objects": [],
+    "depth_rule": { "background": 0, "floor_props": 10, "characters": "10 + y/32 (y-sort)", "foreground": 100, "ui": "DOM, 独立于世界相机" },
+    "note": "当前无可分离前景资产，仅预留节点与深度规则；不生成风格不一致的替代图"
+  }
+}

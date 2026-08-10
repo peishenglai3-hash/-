@@ -1,0 +1,74 @@
+{
+  "_meta": {
+    "scene_id": "MAP_MOD_BASE",
+    "input_action": "INTERACT（默认键位 E，可在 src/actions.js 调整，不绑死）",
+    "advance_action": "ADVANCE（默认 SPACE）",
+    "margin_tiles": 0.5,
+    "priority": "数组顺序即判定优先级：RECORDER > NOTEBOOK > PHONE > DESK（DESK 为泛化检查，最后判定）"
+  },
+  "zones": [
+    {
+      "id": "RECORDER_INTERACTION",
+      "type": "inspect",
+      "rect": [26.5, 21, 3.5, 1.8],
+      "prompt": "播放采访录音",
+      "action": "recorder_review",
+      "targets_prop": "PROP_PRO_RECORDER",
+      "once_flag": "FLAG_PRO02_AUDIO_REVIEWED",
+      "repeat_line": "这段材料已经看过一遍了。",
+      "repeat_line_state": { "selected_file": "设备停在涂老五那段采访——已经听过一遍了。" }
+    },
+    {
+      "id": "NOTEBOOK_INTERACTION",
+      "type": "inspect",
+      "rect": [30.5, 21, 3.5, 1.8],
+      "prompt": "翻开实践笔记",
+      "action": "notebook_write",
+      "targets_prop": "PROP_PRO_NOTEBOOK",
+      "requires_flag": "FLAG_PRO02_AUDIO_REVIEWED",
+      "blocked_line": "先把采访录音听完，再动笔。",
+      "once_flag": "FLAG_PRO02_QUESTION_WRITTEN",
+      "repeat_line": "问题还停在纸上。答案不在今晚。"
+    },
+    {
+      "id": "PHONE_INTERACTION",
+      "type": "inspect",
+      "rect": [39.5, 21, 3.5, 1.8],
+      "prompt": "查看手机",
+      "action": "phone_look",
+      "targets_prop": "PROP_PRO_PHONE"
+    },
+    {
+      "id": "DESK_INTERACTION",
+      "type": "inspect",
+      "rect": [34.5, 21, 4.5, 1.8],
+      "prompt": "查看书桌",
+      "action": "desk_look",
+      "priority": "low"
+    },
+    {
+      "id": "BED_INTERACTION",
+      "type": "inspect",
+      "rect": [13.5, 32, 4.3, 2],
+      "prompt": "查看床铺",
+      "action": "bed_look"
+    },
+    {
+      "id": "EXIT_TRIGGER",
+      "type": "event",
+      "rect": [7.3, 33, 2, 2],
+      "prompt": "离开房间",
+      "action": "exit_blocked",
+      "line": "今晚不出去了。材料还摊在桌上。"
+    },
+    {
+      "id": "PRO02_END_TRIGGER",
+      "type": "event",
+      "rect": null,
+      "trigger": "auto",
+      "required_flags": ["FLAG_PRO02_AUDIO_REVIEWED", "FLAG_PRO02_QUESTION_WRITTEN"],
+      "action": "end_scene",
+      "note": "非站位区：写笔记序列完成后自动链入 入睡→穿越→CH01 占位"
+    }
+  ]
+}

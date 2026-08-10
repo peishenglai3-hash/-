@@ -1,0 +1,21 @@
+{
+  "_meta": {
+    "scene_id": "MAP_MOD_BASE",
+    "source": "序章 选择节点 PRO-Q01（场景1）的四种结果",
+    "flag_prefix": "FLAG_PRO_*",
+    "injection": "场景1旗标经 window.__RED_CODE_FLAGS__ / localStorage:redcode.prologue.flags / URL ?flags= 注入",
+    "visual_policy": "不建立四张不同地图；MAP_MOD_BASE + State Overlay / Dynamic Props 实现四种剧情反馈。当前无独立在世界道具精灵，状态通过检查面板文案反馈，overlay 挂钩预留（overlay=null）"
+  },
+  "PRO_NAME_CHECKED": {
+    "notebook": "name_checked"
+  },
+  "PRO_PHOTO_TAKEN": {
+    "phone": "monument_photo"
+  },
+  "PRO_TEAM_RECORD_FOUND": {
+    "recorder": "selected_file"
+  },
+  "PRO_NAME_WRITTEN": {
+    "notebook": "name_written"
+  }
+}
