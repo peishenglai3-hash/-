@@ -8,6 +8,7 @@ import {
 } from './ui.js';
 import { REQUIRED_NARRATIVE, CHOICES, TASKS01, LEAVE_NARRATIVE, PROFILE_DELTAS } from './content01.js';
 import { CollisionEditor } from './collision-editor.js';
+import { ForegroundOcclusionRenderer } from './foreground-occlusion.js';
 
 const PX = 32;
 const PLAYER_FRAME = { width: 332, height: 720 };
@@ -37,7 +38,13 @@ export class Scene01 extends Phaser.Scene {
     this.createKeyedTexture('student-b-side', 'student-b-side-keyed');
     this.anims.create({ key: 'student-a-reading-anim', frames: this.anims.generateFrameNumbers('student-a-reading', { start: 0, end: 31 }), frameRate: 8, repeat: -1 });
     this.physics.world.setBounds(0, 0, 48 * PX, 27 * PX);
-    this.add.image(768, 432, 'bg01').setDisplaySize(1536, 864).setDepth(-20);
+    this.background = this.add.image(768, 432, 'bg01').setDisplaySize(1536, 864).setDepth(-20);
+    this.foregroundOcclusion = new ForegroundOcclusionRenderer(this, {
+      background: this.background,
+      getObjects: () => this.manifest.foreground_occlusion?.objects ?? [],
+      resolveDepth: (object) => Number.isFinite(Number(object.depth)) ? Number(object.depth) : 2000,
+      tileSize: PX
+    });
     this.buildCollision();
     const spawn = (id) => this.manifest.spawns.find((entry) => entry.id === id);
     const playerSpawn = spawn('PLAYER_START');
@@ -251,6 +258,12 @@ export class Scene01 extends Phaser.Scene {
       documents,
       getCollisions: () => this.manifest.collision,
       getInteractions: () => this.manifest.interactions,
+      getForegrounds: () => {
+        this.manifest.foreground_occlusion ??= { reserved: true, objects: [] };
+        this.manifest.foreground_occlusion.objects ??= [];
+        return this.manifest.foreground_occlusion.objects;
+      },
+      getDefaultForegroundDepth: () => 2000,
       getWorldSize: () => [48, 27],
       getPlayerRect: () => [this.player.x / PX - 12 / PX, this.player.y / PX - 20 / PX, 24 / PX, 40 / PX],
       getActorRects: () => [this.studentA, this.studentB, this.studentBExit]
@@ -261,7 +274,10 @@ export class Scene01 extends Phaser.Scene {
         this.manifest = next[file];
         documents[file] = this.manifest;
       },
-      onChange: () => this.buildCollision()
+      onChange: (kind) => {
+        if (!kind || kind === 'collision') this.buildCollision();
+        if (!kind || kind === 'foreground') this.foregroundOcclusion.rebuild();
+      }
     });
   }
 

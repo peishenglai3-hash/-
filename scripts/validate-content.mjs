@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import { REQUIRED_NARRATIVE, CHOICES, LEAVE_NARRATIVE, validateNarrative } from '../src/content01.js';
 import { OPENING, AUDIO_REVIEW, WRITE_QUESTION, FALL_ASLEEP, FLAVOR_SPOTS } from '../src/content02.js';
 import { TRANSITION_A, TRANSITION_B } from '../src/transition-content.js';
@@ -30,4 +31,76 @@ for (const list of lists) {
   }
 }
 
+const orientation = (a, b, c) => {
+  const cross = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+  return Math.abs(cross) < 1e-8 ? 0 : Math.sign(cross);
+};
+const onSegment = (a, b, point) => point[0] >= Math.min(a[0], b[0]) - 1e-8
+  && point[0] <= Math.max(a[0], b[0]) + 1e-8
+  && point[1] >= Math.min(a[1], b[1]) - 1e-8
+  && point[1] <= Math.max(a[1], b[1]) + 1e-8;
+const segmentsIntersect = (a, b, c, d) => {
+  const abC = orientation(a, b, c);
+  const abD = orientation(a, b, d);
+  const cdA = orientation(c, d, a);
+  const cdB = orientation(c, d, b);
+  if (abC !== abD && cdA !== cdB) return true;
+  return (abC === 0 && onSegment(a, b, c))
+    || (abD === 0 && onSegment(a, b, d))
+    || (cdA === 0 && onSegment(c, d, a))
+    || (cdB === 0 && onSegment(c, d, b));
+};
+const polygonSelfIntersects = (points) => {
+  for (let first = 0; first < points.length; first += 1) {
+    const firstNext = (first + 1) % points.length;
+    for (let second = first + 1; second < points.length; second += 1) {
+      const secondNext = (second + 1) % points.length;
+      if (first === second || firstNext === second || secondNext === first) continue;
+      if (segmentsIntersect(points[first], points[firstNext], points[second], points[secondNext])) return true;
+    }
+  }
+  return false;
+};
+const polygonArea = (points) => Math.abs(points.reduce((sum, point, index) => {
+  const next = points[(index + 1) % points.length];
+  return sum + point[0] * next[1] - next[0] * point[1];
+}, 0) / 2);
+
+function validateForegroundObjects(file, objects, [worldWidth, worldHeight]) {
+  assert(Array.isArray(objects), `${file} foreground objects array`);
+  const ids = new Set();
+  for (const object of objects) {
+    assert(object && typeof object === 'object', file + ' foreground object');
+    assert(typeof object.id === 'string' && object.id.trim(), `${file} foreground id`);
+    assert(!ids.has(object.id), `${file} unique foreground id ${object.id}`);
+    ids.add(object.id);
+    assert(object.shape === 'polygon', `${file} ${object.id} polygon shape`);
+    assert(object.layer === 'foreground', `${file} ${object.id} foreground layer`);
+    assert(object.units === 'tiles', `${file} ${object.id} tile units`);
+    assert(object.enabled === true || object.enabled === false, `${file} ${object.id} enabled boolean`);
+    assert(Number.isFinite(object.depth), `${file} ${object.id} finite depth`);
+    assert(Array.isArray(object.points) && object.points.length >= 3 && object.points.length <= 512, `${file} ${object.id} point count`);
+    for (const point of object.points) {
+      assert(Array.isArray(point) && point.length === 2 && point.every(Number.isFinite), `${file} ${object.id} finite point`);
+      assert(point[0] >= 0 && point[0] <= worldWidth && point[1] >= 0 && point[1] <= worldHeight, `${file} ${object.id} point bounds`);
+    }
+    assert(polygonArea(object.points) > 1e-6, `${file} ${object.id} non-zero area`);
+    assert(!polygonSelfIntersects(object.points), `${file} ${object.id} non-self-intersecting`);
+  }
+}
+
+const scene01Manifest = JSON.parse(fs.readFileSync(new URL('../public/data/scene01_manifest.json', import.meta.url), 'utf8'));
+const scene02Logic = JSON.parse(fs.readFileSync(new URL('../public/data/PRO02_logic.json', import.meta.url), 'utf8'));
+validateForegroundObjects(
+  'scene01_manifest.json',
+  scene01Manifest.foreground_occlusion?.objects,
+  [scene01Manifest.grid.width, scene01Manifest.grid.height]
+);
+validateForegroundObjects(
+  'PRO02_logic.json',
+  scene02Logic.foreground_layers?.objects,
+  [scene02Logic.logical_grid.width, scene02Logic.logical_grid.height]
+);
+assert(!polygonSelfIntersects([[0, 0], [2, 0], [2, 2], [0, 2]]), 'foreground square geometry probe');
+assert(polygonSelfIntersects([[0, 0], [2, 2], [0, 2], [2, 0]]), 'foreground bow-tie geometry probe');
 console.log('PASS prologue content lock: scene01 24+1 entries / 4 choices, scene02 6+4+13+6 entries / 6 flavors, transitions A5+B21');

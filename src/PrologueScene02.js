@@ -5,6 +5,7 @@ import { showTask, closeTask, showPrompt, playNarrative, advanceNarrative, showI
 import { ambience } from './ambience.js';
 import { OPENING, AUDIO_REVIEW, WRITE_QUESTION, FALL_ASLEEP, TASKS, PROP_LINES, ONE_LINERS, FLAVOR_SPOTS } from './content02.js';
 import { CollisionEditor } from './collision-editor.js';
+import { ForegroundOcclusionRenderer } from './foreground-occlusion.js';
 
 const PX = 32;
 const PLAYER_FRAME = { width: 332, height: 720 };
@@ -39,8 +40,13 @@ export class PrologueScene02 extends Phaser.Scene {
     this.statesData = this.cache.json.get('states');
     this.applyInjectedStates();
     this.physics.world.setBounds(0, 0, this.logic.logical_grid.width * PX, this.logic.logical_grid.height * PX);
-    this.add.image(this.logic.world_size[0] / 2, this.logic.world_size[1] / 2, 'bg02').setDepth(0);
-    this.foreground = this.add.container(0, 0).setDepth(100);
+    this.background = this.add.image(this.logic.world_size[0] / 2, this.logic.world_size[1] / 2, 'bg02').setDepth(0);
+    this.foregroundOcclusion = new ForegroundOcclusionRenderer(this, {
+      background: this.background,
+      getObjects: () => this.logic.foreground_layers?.objects ?? [],
+      resolveDepth: (object) => Number.isFinite(Number(object.depth)) ? Number(object.depth) : 100,
+      tileSize: PX
+    });
     this.buildCollision();
     const spawn = this.logic.player_spawn;
     this.player = this.physics.add
@@ -327,6 +333,12 @@ export class PrologueScene02 extends Phaser.Scene {
       documents,
       getCollisions: () => this.logic.collision_zones,
       getInteractions: () => this.interactionData.zones,
+      getForegrounds: () => {
+        this.logic.foreground_layers ??= { reserved: true, objects: [] };
+        this.logic.foreground_layers.objects ??= [];
+        return this.logic.foreground_layers.objects;
+      },
+      getDefaultForegroundDepth: () => 100,
       getWorldSize: () => this.logic.logical_grid ? [this.logic.logical_grid.width, this.logic.logical_grid.height] : [64, 36],
       getPlayerRect: () => [this.player.x / PX - 18 / PX, this.player.y / PX - 26 / PX, 36 / PX, 52 / PX],
       replaceDocuments: (next) => {
@@ -335,7 +347,10 @@ export class PrologueScene02 extends Phaser.Scene {
         documents[logicFile] = this.logic;
         documents[interactionsFile] = this.interactionData;
       },
-      onChange: () => this.buildCollision()
+      onChange: (kind) => {
+        if (!kind || kind === 'collision') this.buildCollision();
+        if (!kind || kind === 'foreground') this.foregroundOcclusion.rebuild();
+      }
     });
   }
 }

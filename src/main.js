@@ -7,7 +7,7 @@ import { ambience } from './ambience.js';
 import { TransitionAudioController } from './transition-audio.js';
 import { SceneTransitionController } from './scene-transition.js';
 import { TRANSITION_A, TRANSITION_B } from './transition-content.js';
-import { SCENE_EXIT, validateNarrative } from './content01.js';
+import { CHOICES, PROFILE_DELTAS, SCENE_EXIT, validateNarrative } from './content01.js';
 import { hideIntro, showEndPanel, clearFade } from './ui.js';
 import { installDevEditorToggle } from './collision-editor.js';
 
@@ -126,6 +126,20 @@ function finishPrologue() {
   showEndPanel(save);
 }
 
+window.addEventListener('honghu:dev-next-chapter', () => {
+  const choice = CHOICES[Math.floor(Math.random() * CHOICES.length)];
+  state.choice = choice;
+  for (const axis of Object.keys(state.profile)) state.profile[axis] = 0;
+  for (const [axis, delta] of Object.entries(PROFILE_DELTAS[choice.id] ?? {})) state.profile[axis] = delta;
+  for (const candidate of CHOICES) state.flags.delete(candidate.flag);
+  state.flags.add(choice.flag);
+  for (const flag of ['FLAG_PRO_Q01_COMPLETED', 'FLAG_PRO02_AUDIO_REVIEWED', 'FLAG_PRO02_QUESTION_WRITTEN', 'PROLOGUE_COMPLETED', 'TIME_TRAVEL_CHECKPOINT']) state.flags.add(flag);
+  state.audioReviewed = true;
+  state.questionWritten = true;
+  state.playerLocked = true;
+  state.mode = 'complete';
+  finishPrologue();
+});
 dom.start.addEventListener('click', startIntro);
 dom.video.addEventListener('click', startIntro);
 
