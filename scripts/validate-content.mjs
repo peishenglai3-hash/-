@@ -2,6 +2,9 @@ import fs from 'node:fs';
 import { REQUIRED_NARRATIVE, CHOICES, LEAVE_NARRATIVE, validateNarrative } from '../src/content01.js';
 import { OPENING, AUDIO_REVIEW, WRITE_QUESTION, FALL_ASLEEP, FLAVOR_SPOTS } from '../src/content02.js';
 import { TRANSITION_A, TRANSITION_B } from '../src/transition-content.js';
+import { aabbOverlapsRotatedRect } from '../src/collision-geometry.js';
+import { foregroundBottomPx } from '../src/foreground-occlusion.js';
+import { actorColliderBottomAt } from '../src/actor-collider.js';
 
 const assert = (condition, message) => {
   if (!condition) {
@@ -79,6 +82,7 @@ function validateForegroundObjects(file, objects, [worldWidth, worldHeight]) {
     assert(object.units === 'tiles', `${file} ${object.id} tile units`);
     assert(object.enabled === true || object.enabled === false, `${file} ${object.id} enabled boolean`);
     assert(Number.isFinite(object.depth), `${file} ${object.id} finite depth`);
+    assert(object.sort_y === undefined || (Number.isFinite(object.sort_y) && object.sort_y >= 0 && object.sort_y <= worldHeight), `${file} ${object.id} sort_y bounds`);
     assert(Array.isArray(object.points) && object.points.length >= 3 && object.points.length <= 512, `${file} ${object.id} point count`);
     for (const point of object.points) {
       assert(Array.isArray(point) && point.length === 2 && point.every(Number.isFinite), `${file} ${object.id} finite point`);
@@ -89,8 +93,49 @@ function validateForegroundObjects(file, objects, [worldWidth, worldHeight]) {
   }
 }
 
+function validateCollisionRectangles(file, objects, [worldWidth, worldHeight]) {
+  assert(Array.isArray(objects), `${file} collision array`);
+  const ids = new Set();
+  for (const object of objects) {
+    assert(object && typeof object === 'object', `${file} collision object`);
+    assert(typeof object.id === 'string' && object.id.trim(), `${file} collision id`);
+    assert(!ids.has(object.id), `${file} unique collision id ${object.id}`);
+    ids.add(object.id);
+    assert(Array.isArray(object.rect) && object.rect.length === 4 && object.rect.every(Number.isFinite), `${file} ${object.id} finite rect`);
+    assert(object.rect[2] > 0 && object.rect[3] > 0, `${file} ${object.id} positive rect size`);
+    assert(object.rotation === undefined || Number.isFinite(object.rotation), `${file} ${object.id} finite rotation`);
+    assert(object.rect[0] >= 0 && object.rect[0] + object.rect[2] <= worldWidth, `${file} ${object.id} rect x bounds`);
+    assert(object.rect[1] >= 0 && object.rect[1] + object.rect[3] <= worldHeight, `${file} ${object.id} rect y bounds`);
+  }
+}
+
+function validateActorColliders(file, colliders) {
+  assert(colliders && typeof colliders === 'object' && !Array.isArray(colliders), `${file} actor collider map`);
+  for (const [id, collider] of Object.entries(colliders)) {
+    assert(Array.isArray(collider.offset) && collider.offset.length === 2 && collider.offset.every(Number.isFinite), `${file} ${id} finite actor offset`);
+    assert(Array.isArray(collider.size) && collider.size.length === 2 && collider.size.every(Number.isFinite), `${file} ${id} finite actor size`);
+    assert(collider.size.every((value) => value > 0), `${file} ${id} positive actor size`);
+  }
+}
+
 const scene01Manifest = JSON.parse(fs.readFileSync(new URL('../public/data/scene01_manifest.json', import.meta.url), 'utf8'));
 const scene02Logic = JSON.parse(fs.readFileSync(new URL('../public/data/PRO02_logic.json', import.meta.url), 'utf8'));
+validateCollisionRectangles(
+  'scene01_manifest.json',
+  scene01Manifest.collision,
+  [scene01Manifest.grid.width, scene01Manifest.grid.height]
+);
+validateActorColliders('scene01_manifest.json', scene01Manifest.actor_colliders);
+validateActorColliders('PRO02_logic.json', scene02Logic.actor_colliders);
+for (const id of ['NPC_CH00_STUDENT_A', 'NPC_CH00_STUDENT_B', 'LEAVE_NPC_A', 'LEAVE_NPC_B']) {
+  const zone = scene01Manifest.interactions.find((item) => item.id === id);
+  assert(zone?.type === 'dialogue' && Array.isArray(zone.rect), `scene01 editable NPC interaction ${id}`);
+}
+validateCollisionRectangles(
+  'PRO02_logic.json',
+  scene02Logic.collision_zones,
+  [scene02Logic.logical_grid.width, scene02Logic.logical_grid.height]
+);
 validateForegroundObjects(
   'scene01_manifest.json',
   scene01Manifest.foreground_occlusion?.objects,
@@ -103,4 +148,9 @@ validateForegroundObjects(
 );
 assert(!polygonSelfIntersects([[0, 0], [2, 0], [2, 2], [0, 2]]), 'foreground square geometry probe');
 assert(polygonSelfIntersects([[0, 0], [2, 2], [0, 2], [2, 0]]), 'foreground bow-tie geometry probe');
+assert(aabbOverlapsRotatedRect([4.5, 4.5, 1, 1], [4, 2, 2, 6], 35), 'rotated collision overlap probe');
+assert(!aabbOverlapsRotatedRect([0, 0, 1, 1], [4, 2, 2, 6], 35), 'rotated collision separation probe');
+assert(foregroundBottomPx({ points: [[1, 2], [3, 7], [5, 4]], units: 'tiles' }, 32) === 224, 'foreground automatic bottom probe');
+assert(foregroundBottomPx({ sort_y: 5, points: [[1, 9], [3, 10], [5, 8]], units: 'tiles' }, 32) === 320, 'foreground polygon bottom overrides legacy midpoint');
+assert(actorColliderBottomAt(320, 240, { offset: [-0.5, -0.75], size: [1, 1.5] }, 32) === 264, 'actor depth uses collider bottom edge');
 console.log('PASS prologue content lock: scene01 24+1 entries / 4 choices, scene02 6+4+13+6 entries / 6 flavors, transitions A5+B21');

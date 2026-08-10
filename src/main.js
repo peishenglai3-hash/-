@@ -8,8 +8,11 @@ import { TransitionAudioController } from './transition-audio.js';
 import { SceneTransitionController } from './scene-transition.js';
 import { TRANSITION_A, TRANSITION_B } from './transition-content.js';
 import { CHOICES, PROFILE_DELTAS, SCENE_EXIT, validateNarrative } from './content01.js';
-import { hideIntro, showEndPanel, clearFade } from './ui.js';
-import { installDevEditorToggle } from './collision-editor.js';
+import {
+  hideIntro, showEndPanel, clearFade, hideTask, hideItem,
+  hideDialogue, hideChoices, hideResult, showPrompt
+} from './ui.js';
+import { installDevEditorToggle } from './zone-editor.js';
 
 validateNarrative();
 
@@ -81,21 +84,53 @@ function runTransition(config, onComplete) {
   controller.start();
 }
 
+function clearStoryUi() {
+  hideTask();
+  hideItem();
+  hideDialogue();
+  hideChoices();
+  hideResult();
+  showPrompt('');
+}
+
+function enterScene02() {
+  controller?.cancel();
+  hideIntro();
+  clearStoryUi();
+  dom.transition.classList.remove('active');
+  dom.transition.classList.add('hidden');
+  dom.reveal.classList.remove('visible');
+  dom.reveal.classList.add('hidden');
+  clearFade();
+  game.scene.stop('Scene01');
+  state.mode = 'intro';
+  state.playerLocked = true;
+  state.taskOpen = false;
+  state.paused = false;
+  state.audioReviewed = false;
+  state.questionWritten = false;
+  state.sleepStarted = false;
+  state.narrativeQueue = [];
+  state.narrativeIndex = 0;
+  state.inNarrative = false;
+  ambience.unlock();
+  ambience.startRoom();
+  game.scene.start('PrologueScene02');
+}
+
+function randomizePrologueChoice() {
+  const choice = CHOICES[Math.floor(Math.random() * CHOICES.length)];
+  state.choice = choice;
+  for (const axis of Object.keys(state.profile)) state.profile[axis] = 0;
+  for (const [axis, delta] of Object.entries(PROFILE_DELTAS[choice.id] ?? {})) state.profile[axis] = delta;
+  for (const candidate of CHOICES) state.flags.delete(candidate.flag);
+  state.flags.add(choice.flag);
+  return choice;
+}
+
 game.events.on('prologue:scene01-complete', () => {
   runTransition(TRANSITION_A, () => {
-    dom.transition.classList.remove('active');
-    clearFade();
-    game.scene.stop('Scene01');
-    state.mode = 'intro';
-    state.playerLocked = true;
-    state.taskOpen = false;
-    state.paused = false;
-    state.narrativeQueue = [];
-    state.narrativeIndex = 0;
-    state.inNarrative = false;
-    ambience.unlock();
-    ambience.startRoom();
-    game.scene.start('PrologueScene02');
+    enterScene02();
   });
 });
 
@@ -123,34 +158,46 @@ function finishPrologue() {
     window.localStorage.setItem('redcode.prologue.save', JSON.stringify(save));
   } catch { /* storage unavailable */ }
   window.dispatchEvent(new CustomEvent('prologue:scene-exit', { detail: structuredClone(save) }));
+  controller?.cancel();
+  hideIntro();
+  dom.transition.classList.remove('hidden');
+  dom.transition.classList.add('active');
+  dom.subtitle.classList.add('hidden');
+  dom.date.classList.add('hidden');
+  dom.revealImage.src = TRANSITION_B.revealImage;
+  dom.reveal.classList.remove('hidden');
+  dom.reveal.classList.add('visible');
+  game.scene.stop('Scene01');
+  game.scene.stop('PrologueScene02');
+  window.honghuActiveScene = SCENE_EXIT.nextSceneCanonical;
   showEndPanel(save);
 }
 
-window.addEventListener('honghu:dev-next-chapter', () => {
-  const choice = CHOICES[Math.floor(Math.random() * CHOICES.length)];
-  state.choice = choice;
-  for (const axis of Object.keys(state.profile)) state.profile[axis] = 0;
-  for (const [axis, delta] of Object.entries(PROFILE_DELTAS[choice.id] ?? {})) state.profile[axis] = delta;
-  for (const candidate of CHOICES) state.flags.delete(candidate.flag);
-  state.flags.add(choice.flag);
+window.addEventListener('honghu:dev-next-chapter', (event) => {
+  const sceneKey = event.detail?.sceneKey ?? game.scene.getScenes(true).find((scene) => scene.zoneEditor)?.scene.key;
+  if (sceneKey === 'Scene01') {
+    randomizePrologueChoice();
+    state.flags.add('FLAG_PRO_Q01_COMPLETED');
+    for (const flag of ['FLAG_PRO02_AUDIO_REVIEWED', 'FLAG_PRO02_QUESTION_WRITTEN', 'PROLOGUE_COMPLETED', 'TIME_TRAVEL_CHECKPOINT']) state.flags.delete(flag);
+    enterScene02();
+    return;
+  }
+
+  if (!state.choice) randomizePrologueChoice();
   for (const flag of ['FLAG_PRO_Q01_COMPLETED', 'FLAG_PRO02_AUDIO_REVIEWED', 'FLAG_PRO02_QUESTION_WRITTEN', 'PROLOGUE_COMPLETED', 'TIME_TRAVEL_CHECKPOINT']) state.flags.add(flag);
   state.audioReviewed = true;
   state.questionWritten = true;
   state.playerLocked = true;
-  state.mode = 'complete';
-  finishPrologue();
+  state.mode = 'transition';
+  clearStoryUi();
+  runTransition(TRANSITION_B, finishPrologue);
 });
 dom.start.addEventListener('click', startIntro);
 dom.video.addEventListener('click', startIntro);
 
 if (new URLSearchParams(window.location.search).get('scene') === '02') {
   game.events.once(Phaser.Core.Events.READY, () => {
-    hideIntro();
-    game.scene.stop('Scene01');
-    state.mode = 'intro';
-    ambience.unlock();
-    ambience.startRoom();
-    game.scene.start('PrologueScene02');
+    enterScene02();
   });
 }
 

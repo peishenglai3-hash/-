@@ -4,8 +4,10 @@ import { state } from './state.js';
 import { showTask, closeTask, showPrompt, playNarrative, advanceNarrative, showItem, closeItem, itemPanelOpen, showItemPassive, hideItem, fadeToBlack, togglePause, showFlavor } from './ui.js';
 import { ambience } from './ambience.js';
 import { OPENING, AUDIO_REVIEW, WRITE_QUESTION, FALL_ASLEEP, TASKS, PROP_LINES, ONE_LINERS, FLAVOR_SPOTS } from './content02.js';
-import { CollisionEditor } from './collision-editor.js';
-import { ForegroundOcclusionRenderer } from './foreground-occlusion.js';
+import { CollisionEditor } from './zone-editor.js';
+import { aabbOverlapsRotatedRect } from './collision-geometry.js';
+import { ForegroundOcclusionRenderer, foregroundBottomPx } from './foreground-occlusion.js';
+import { actorColliderBottomAt, actorColliderRectAt, createActorColliderEntry, ensureActorColliderConfig } from './actor-collider.js';
 
 const PX = 32;
 const PLAYER_FRAME = { width: 332, height: 720 };
@@ -36,6 +38,7 @@ export class PrologueScene02 extends Phaser.Scene {
 
   create() {
     this.logic = this.cache.json.get('logic');
+    this.setupActorCollider();
     this.interactionData = this.cache.json.get('interactions');
     this.statesData = this.cache.json.get('states');
     this.applyInjectedStates();
@@ -44,7 +47,7 @@ export class PrologueScene02 extends Phaser.Scene {
     this.foregroundOcclusion = new ForegroundOcclusionRenderer(this, {
       background: this.background,
       getObjects: () => this.logic.foreground_layers?.objects ?? [],
-      resolveDepth: (object) => Number.isFinite(Number(object.depth)) ? Number(object.depth) : 100,
+      resolveDepth: (object) => 10 + (foregroundBottomPx(object, PX) ?? 0) / PX + 0.001,
       tileSize: PX
     });
     this.buildCollision();
@@ -52,8 +55,8 @@ export class PrologueScene02 extends Phaser.Scene {
     this.player = this.physics.add
       .sprite(spawn.position[0] * PX, spawn.position[1] * PX, 'player-walk-down')
       .setOrigin(0.5, 1)
-      .setDepth(this.depthFor(spawn.position[1] * PX));
-    this.player.setSize(36, 52).setOffset(148, 668);
+      .setDepth(this.depthForBottom(actorColliderBottomAt(spawn.position[0] * PX, spawn.position[1] * PX, this.playerColliderProfile, PX)));
+    this.applyPlayerColliderBody();
     this.player.setCollideWorldBounds(true);
     this.playerDirection = spawn.facing || 'up';
     this.player.setPosition(DOOR_STAND.x, DOOR_STAND.y);
@@ -93,13 +96,40 @@ export class PrologueScene02 extends Phaser.Scene {
     }
   }
 
-  depthFor(yPx) { return 10 + yPx / PX; }
+  depthForBottom(bottomY) { return 10 + bottomY / PX; }
+
+  depthForPlayer() {
+    return this.depthForBottom(actorColliderBottomAt(this.player.x, this.player.y, this.playerColliderProfile, PX));
+  }
 
   buildCollision() {
     this.collisionRects = this.logic.collision_zones.map((item) => {
       const [x, y, width, height] = item.rect;
-      return { id: item.id, x: x * PX, y: y * PX, width: width * PX, height: height * PX };
+      return {
+        id: item.id,
+        rect: [x * PX, y * PX, width * PX, height * PX],
+        rotation: Number(item.rotation) || 0
+      };
     });
+  }
+
+  setupActorCollider() {
+    this.playerColliderProfile = ensureActorColliderConfig(this.logic, 'PLAYER', {
+      offset: [-0.5625, -0.8125],
+      size: [1.125, 1.625]
+    });
+    this.actorColliderEntries = [createActorColliderEntry({
+      id: 'ACTOR_PLAYER',
+      label: '主角脚底',
+      getActor: () => this.player,
+      getProfile: () => this.playerColliderProfile
+    })];
+  }
+
+  applyPlayerColliderBody() {
+    const profile = this.playerColliderProfile;
+    this.player.setSize(profile.size[0] * PX, profile.size[1] * PX)
+      .setOffset(PLAYER_FRAME.width / 2 + profile.offset[0] * PX, PLAYER_FRAME.height + profile.offset[1] * PX);
   }
 
   setupPlayerVisual() {
@@ -114,13 +144,13 @@ export class PrologueScene02 extends Phaser.Scene {
     this.playerVisual = this.add.sprite(this.player.x, this.player.y, 'player-walk-down', 0)
       .setOrigin(0.5, 1)
       .setDisplaySize(PLAYER_VIEW_WIDTH, PLAYER_VIEW_HEIGHT)
-      .setDepth(this.depthFor(this.player.y) + 0.5);
+      .setDepth(this.depthForPlayer());
     this.player.setVisible(false);
   }
 
   syncPlayerVisual(direction, moving) {
     if (!this.playerVisual) return;
-    this.playerVisual.setPosition(this.player.x, this.player.y).setDepth(this.depthFor(this.player.y) + 0.5);
+    this.playerVisual.setPosition(this.player.x, this.player.y).setDepth(this.depthForPlayer());
     if (this.introSide) {
       if (!moving) return;
       this.introSide = false;
@@ -294,17 +324,16 @@ export class PrologueScene02 extends Phaser.Scene {
       if (Math.abs(x) > Math.abs(y)) this.playerDirection = x < 0 ? 'left' : 'right';
       if (Math.abs(y) >= Math.abs(x)) this.playerDirection = y < 0 ? 'up' : 'down';
     }
-    this.player.setDepth(this.depthFor(this.player.y));
+    this.player.setDepth(this.depthForPlayer());
     this.syncPlayerVisual(this.playerDirection, x !== 0 || y !== 0);
     this.updatePrompt();
   }
 
   tryMove(dx, dy) {
-    const halfW = 18;
-    const halfH = 26;
     const canOccupy = (nextX, nextY) => {
-      if (nextX - halfW < 0 || nextY - halfH < 0 || nextX + halfW > this.logic.world_size[0] || nextY + halfH > this.logic.world_size[1]) return false;
-      return !this.collisionRects.some((rect) => nextX + halfW > rect.x && nextX - halfW < rect.x + rect.width && nextY + halfH > rect.y && nextY - halfH < rect.y + rect.height);
+      const playerRect = actorColliderRectAt(nextX, nextY, this.playerColliderProfile, PX);
+      if (playerRect[0] < 0 || playerRect[1] < 0 || playerRect[0] + playerRect[2] > this.logic.world_size[0] || playerRect[1] + playerRect[3] > this.logic.world_size[1]) return false;
+      return !this.collisionRects.some((collision) => aabbOverlapsRotatedRect(playerRect, collision.rect, collision.rotation));
     };
     if (canOccupy(this.player.x + dx, this.player.y)) this.player.x += dx;
     if (canOccupy(this.player.x, this.player.y + dy)) this.player.y += dy;
@@ -340,15 +369,20 @@ export class PrologueScene02 extends Phaser.Scene {
       },
       getDefaultForegroundDepth: () => 100,
       getWorldSize: () => this.logic.logical_grid ? [this.logic.logical_grid.width, this.logic.logical_grid.height] : [64, 36],
-      getPlayerRect: () => [this.player.x / PX - 18 / PX, this.player.y / PX - 26 / PX, 36 / PX, 52 / PX],
+      getActorColliders: () => this.actorColliderEntries,
+      getMagneticSource: () => this.textures.get('bg02').getSourceImage(),
       replaceDocuments: (next) => {
         this.logic = next[logicFile];
         this.interactionData = next[interactionsFile];
         documents[logicFile] = this.logic;
         documents[interactionsFile] = this.interactionData;
+        this.setupActorCollider();
       },
       onChange: (kind) => {
-        if (!kind || kind === 'collision') this.buildCollision();
+        if (!kind || kind === 'collision') {
+          this.buildCollision();
+          this.applyPlayerColliderBody();
+        }
         if (!kind || kind === 'foreground') this.foregroundOcclusion.rebuild();
       }
     });

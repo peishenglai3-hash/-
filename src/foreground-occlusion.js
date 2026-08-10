@@ -31,6 +31,19 @@ function toWorldPoints(points, units, tileSize) {
   return Math.abs(twiceArea) > 0.001 ? result : null;
 }
 
+export function foregroundBottomPx(object, tileSize = DEFAULT_TILE_SIZE) {
+  const points = toWorldPoints(object?.points ?? object?.polygon, object?.units, tileSize);
+  if (points?.length) return Math.max(...points.map((point) => point.y));
+
+  // Keep legacy data readable, but valid polygons always sort by their lowest point.
+  const explicit = object?.sort_y;
+  return explicit !== undefined && explicit !== null && explicit !== '' && Number.isFinite(Number(explicit))
+    ? Number(explicit) * tileSize
+    : null;
+}
+
+export const foregroundBaselinePx = foregroundBottomPx;
+
 function copyBackground(scene, background, depth) {
   const overlay = scene.add.image(
     background.x,

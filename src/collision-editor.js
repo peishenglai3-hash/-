@@ -95,8 +95,9 @@ export class CollisionEditor {
     root.querySelector('[data-action="reset"]').onclick = () => this.reset();
     root.querySelector('[data-action="save"]').onclick = () => this.save();
     root.querySelector('[data-action="next-chapter"]').onclick = () => {
-      window.dispatchEvent(new CustomEvent('honghu:dev-next-chapter'));
+      const sceneKey = this.scene.scene.key;
       this.setEnabled(false);
+      window.dispatchEvent(new CustomEvent('honghu:dev-next-chapter', { detail: { sceneKey } }));
     };
   }
 

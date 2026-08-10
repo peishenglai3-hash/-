@@ -7,10 +7,14 @@ import {
   hideResult, hideDialogue, fadeToBlack, togglePause
 } from './ui.js';
 import { REQUIRED_NARRATIVE, CHOICES, TASKS01, LEAVE_NARRATIVE, PROFILE_DELTAS } from './content01.js';
-import { CollisionEditor } from './collision-editor.js';
-import { ForegroundOcclusionRenderer } from './foreground-occlusion.js';
+import { CollisionEditor } from './zone-editor.js';
+import { aabbOverlapsRotatedRect } from './collision-geometry.js';
+import { ForegroundOcclusionRenderer, foregroundBottomPx } from './foreground-occlusion.js';
+import { actorColliderBottomAt, actorColliderRectAt, createActorColliderEntry, ensureActorColliderConfig } from './actor-collider.js';
 
 const PX = 32;
+const ACTOR_DEPTH_BASE = 500;
+const actorDepth = (bottomY) => ACTOR_DEPTH_BASE + bottomY;
 const PLAYER_FRAME = { width: 332, height: 720 };
 const PLAYER_DISPLAY = { width: 83, height: 180 };
 const NPC_DISPLAY = { width: 77, height: 160 };
@@ -33,6 +37,7 @@ export class Scene01 extends Phaser.Scene {
 
   create() {
     this.manifest = this.cache.json.get('manifest');
+    this.setupActorColliders();
     this.createKeyedTexture('student-b-front', 'student-b-front-keyed');
     this.createKeyedTexture('student-b-back', 'student-b-back-keyed');
     this.createKeyedTexture('student-b-side', 'student-b-side-keyed');
@@ -42,14 +47,17 @@ export class Scene01 extends Phaser.Scene {
     this.foregroundOcclusion = new ForegroundOcclusionRenderer(this, {
       background: this.background,
       getObjects: () => this.manifest.foreground_occlusion?.objects ?? [],
-      resolveDepth: (object) => Number.isFinite(Number(object.depth)) ? Number(object.depth) : 2000,
+      resolveDepth: (object) => ACTOR_DEPTH_BASE + (foregroundBottomPx(object, PX) ?? 0) + 0.001,
       tileSize: PX
     });
     this.buildCollision();
     const spawn = (id) => this.manifest.spawns.find((entry) => entry.id === id);
     const playerSpawn = spawn('PLAYER_START');
-    this.player = this.physics.add.sprite(playerSpawn.position[0] * PX, playerSpawn.position[1] * PX, 'player-walk-down').setOrigin(0.5, 1).setDepth(800);
-    this.player.setSize(24, 40).setOffset(154, 680);
+    const playerX = playerSpawn.position[0] * PX;
+    const playerY = playerSpawn.position[1] * PX;
+    this.player = this.physics.add.sprite(playerX, playerY, 'player-walk-down').setOrigin(0.5, 1)
+      .setDepth(actorDepth(actorColliderBottomAt(playerX, playerY, this.actorColliderProfiles.PLAYER, PX)));
+    this.applyPlayerColliderBody();
     this.player.setCollideWorldBounds(true);
     this.player.setVisible(false);
     this.playerDirection = 'down';
@@ -89,12 +97,12 @@ export class Scene01 extends Phaser.Scene {
       });
     }
     this.playerVisual = this.add.sprite(this.player.x, this.player.y, 'player-walk-down', 0)
-      .setOrigin(0.5, 1).setDisplaySize(PLAYER_DISPLAY.width, PLAYER_DISPLAY.height).setDepth(801);
+      .setOrigin(0.5, 1).setDisplaySize(PLAYER_DISPLAY.width, PLAYER_DISPLAY.height).setDepth(this.depthForActor(this.player, this.actorColliderProfiles.PLAYER));
   }
 
   syncPlayerVisual(direction, moving) {
     if (!this.playerVisual) return;
-    this.playerVisual.setPosition(this.player.x, this.player.y).setFlipX(false);
+    this.playerVisual.setPosition(this.player.x, this.player.y).setFlipX(false).setDepth(this.depthForActor(this.player, this.actorColliderProfiles.PLAYER));
     if (moving) {
       const animation = `player-walk-${direction}-anim`;
       if (this.playerVisual.anims.currentAnim?.key !== animation || !this.playerVisual.anims.isPlaying) this.playerVisual.play(animation);
@@ -145,18 +153,48 @@ export class Scene01 extends Phaser.Scene {
   buildCollision() {
     this.collisionRects = this.manifest.collision.map((item) => {
       const [x, y, width, height] = item.rect;
-      return { id: item.id, x: x * PX, y: y * PX, width: width * PX, height: height * PX };
+      return {
+        id: item.id,
+        rect: [x * PX, y * PX, width * PX, height * PX],
+        rotation: Number(item.rotation) || 0
+      };
     });
+  }
+
+  setupActorColliders() {
+    const defaults = { offset: [-0.375, -0.625], size: [0.75, 1.25] };
+    this.actorColliderProfiles = {
+      PLAYER: ensureActorColliderConfig(this.manifest, 'PLAYER', defaults),
+      NPC_CH00_STUDENT_A: ensureActorColliderConfig(this.manifest, 'NPC_CH00_STUDENT_A', defaults),
+      NPC_CH00_STUDENT_B: ensureActorColliderConfig(this.manifest, 'NPC_CH00_STUDENT_B', defaults)
+    };
+    this.actorColliderEntries = [
+      createActorColliderEntry({ id: 'ACTOR_PLAYER', label: '主角脚底', getActor: () => this.player, getProfile: () => this.actorColliderProfiles.PLAYER }),
+      createActorColliderEntry({ id: 'ACTOR_STUDENT_A', label: '同学甲脚底', getActor: () => this.studentA, getProfile: () => this.actorColliderProfiles.NPC_CH00_STUDENT_A }),
+      createActorColliderEntry({ id: 'ACTOR_STUDENT_B', label: '同学乙脚底', getActor: () => this.studentBExit?.visible ? this.studentBExit : this.studentB, getProfile: () => this.actorColliderProfiles.NPC_CH00_STUDENT_B })
+    ];
+  }
+
+  applyPlayerColliderBody() {
+    const profile = this.actorColliderProfiles.PLAYER;
+    this.player.setSize(profile.size[0] * PX, profile.size[1] * PX)
+      .setOffset(PLAYER_FRAME.width / 2 + profile.offset[0] * PX, PLAYER_FRAME.height + profile.offset[1] * PX);
+  }
+
+  depthForActor(actor, profile) {
+    return actorDepth(actorColliderBottomAt(actor.x, actor.y, profile, PX));
   }
 
   createNpc(prefix, id, x, y, facing) {
     const textureFacing = facing === 'down' ? 'front' : facing === 'up' ? 'back' : 'side';
+    const profile = this.actorColliderProfiles[id];
+    const depth = actorDepth(actorColliderBottomAt(x * PX, y * PX, profile, PX));
     if (id === 'NPC_CH00_STUDENT_B') {
       const image = document.createElement('img');
       image.src = '/assets/characters/student-b/actions/camera-keyed.gif';
       image.className = 'npc-gif-mask';
       image.alt = '同学乙拍照';
-      const npc = this.add.dom(x * PX, y * PX, image).setOrigin(0.5, 1).setDepth(550 + y * PX);
+      const npc = this.add.dom(x * PX, y * PX, image).setOrigin(0.5, 1).setDepth(depth);
       npc.setData('spawnId', id);
       npc.setData('facing', facing);
       npc.setData('action', 'photo');
@@ -164,7 +202,7 @@ export class Scene01 extends Phaser.Scene {
       return;
     }
     if (id === 'NPC_CH00_STUDENT_A') {
-      const npc = this.add.sprite(x * PX, y * PX, 'student-a-reading', 0).setDisplaySize(STUDENT_A_DISPLAY.width, STUDENT_A_DISPLAY.height).setOrigin(0.5, 1).setDepth(500 + y * PX);
+      const npc = this.add.sprite(x * PX, y * PX, 'student-a-reading', 0).setDisplaySize(STUDENT_A_DISPLAY.width, STUDENT_A_DISPLAY.height).setOrigin(0.5, 1).setDepth(depth);
       npc.setData('spawnId', id);
       npc.setData('facing', facing);
       npc.setData('action', 'reading');
@@ -172,7 +210,7 @@ export class Scene01 extends Phaser.Scene {
       this.studentA = npc;
       return;
     }
-    const npc = this.add.sprite(x * PX, y * PX, `${prefix}-${textureFacing}-keyed`).setDisplaySize(NPC_DISPLAY.width, NPC_DISPLAY.height).setOrigin(0.5, 1).setDepth(500 + y * PX);
+    const npc = this.add.sprite(x * PX, y * PX, `${prefix}-${textureFacing}-keyed`).setDisplaySize(NPC_DISPLAY.width, NPC_DISPLAY.height).setOrigin(0.5, 1).setDepth(depth);
     npc.setData('spawnId', id);
     npc.setData('facing', facing);
     npc.setData('action', 'idle');
@@ -203,7 +241,8 @@ export class Scene01 extends Phaser.Scene {
     const displayHeight = NPC_DISPLAY.height;
     const displayWidth = Math.round(displayHeight * (source.width / source.height));
     this.studentBExit = this.add.sprite(22 * PX, 25 * PX, texture)
-      .setDisplaySize(displayWidth, displayHeight).setOrigin(0.5, 1).setDepth(600);
+      .setDisplaySize(displayWidth, displayHeight).setOrigin(0.5, 1)
+      .setDepth(actorDepth(actorColliderBottomAt(22 * PX, 25 * PX, this.actorColliderProfiles.NPC_CH00_STUDENT_B, PX)));
     this.studentBExit.setData('spawnId', 'NPC_CH00_STUDENT_B');
   }
 
@@ -213,7 +252,17 @@ export class Scene01 extends Phaser.Scene {
     this.interact();
   }
 
+  syncActorDepths() {
+    const playerDepth = this.depthForActor(this.player, this.actorColliderProfiles.PLAYER);
+    if (this.player) this.player.setDepth(playerDepth);
+    if (this.playerVisual) this.playerVisual.setDepth(playerDepth);
+    if (this.studentA) this.studentA.setDepth(this.depthForActor(this.studentA, this.actorColliderProfiles.NPC_CH00_STUDENT_A));
+    if (this.studentB) this.studentB.setDepth(this.depthForActor(this.studentB, this.actorColliderProfiles.NPC_CH00_STUDENT_B));
+    if (this.studentBExit) this.studentBExit.setDepth(this.depthForActor(this.studentBExit, this.actorColliderProfiles.NPC_CH00_STUDENT_B));
+  }
+
   update() {
+    this.syncActorDepths();
     const canWalk = state.mode === 'explore' || state.mode === 'leave_walk';
     if (!this.player || state.playerLocked || state.paused || !canWalk) {
       if (this.player) {
@@ -241,11 +290,10 @@ export class Scene01 extends Phaser.Scene {
   }
 
   tryMove(dx, dy) {
-    const halfW = 12;
-    const halfH = 20;
     const canOccupy = (nextX, nextY) => {
-      if (nextX - halfW < 0 || nextY - halfH < 0 || nextX + halfW > 48 * PX || nextY + halfH > 27 * PX) return false;
-      return !this.collisionRects.some((rect) => nextX + halfW > rect.x && nextX - halfW < rect.x + rect.width && nextY + halfH > rect.y && nextY - halfH < rect.y + rect.height);
+      const playerRect = actorColliderRectAt(nextX, nextY, this.actorColliderProfiles.PLAYER, PX);
+      if (playerRect[0] < 0 || playerRect[1] < 0 || playerRect[0] + playerRect[2] > 48 * PX || playerRect[1] + playerRect[3] > 27 * PX) return false;
+      return !this.collisionRects.some((collision) => aabbOverlapsRotatedRect(playerRect, collision.rect, collision.rotation));
     };
     if (canOccupy(this.player.x + dx, this.player.y)) this.player.x += dx;
     if (canOccupy(this.player.x, this.player.y + dy)) this.player.y += dy;
@@ -265,17 +313,18 @@ export class Scene01 extends Phaser.Scene {
       },
       getDefaultForegroundDepth: () => 2000,
       getWorldSize: () => [48, 27],
-      getPlayerRect: () => [this.player.x / PX - 12 / PX, this.player.y / PX - 20 / PX, 24 / PX, 40 / PX],
-      getActorRects: () => [this.studentA, this.studentB, this.studentBExit]
-        .filter(Boolean)
-        .filter((actor) => actor.visible !== false)
-        .map((actor) => [actor.x / PX - 12 / PX, actor.y / PX - 20 / PX, 24 / PX, 40 / PX]),
+      getActorColliders: () => this.actorColliderEntries,
+      getMagneticSource: () => this.textures.get('bg01').getSourceImage(),
       replaceDocuments: (next) => {
         this.manifest = next[file];
         documents[file] = this.manifest;
+        this.setupActorColliders();
       },
       onChange: (kind) => {
-        if (!kind || kind === 'collision') this.buildCollision();
+        if (!kind || kind === 'collision') {
+          this.buildCollision();
+          this.applyPlayerColliderBody();
+        }
         if (!kind || kind === 'foreground') this.foregroundOcclusion.rebuild();
       }
     });
@@ -288,18 +337,12 @@ export class Scene01 extends Phaser.Scene {
 
   nearby() {
     const px = this.player.x / PX; const py = this.player.y / PX;
-    const targets = [...this.manifest.interactions];
-    if (state.mode === 'explore') {
-      targets.push({ id: 'NPC_CH00_STUDENT_A', prompt: '与同学甲交谈', rect: [33, 20, 2, 2], type: 'dialogue' });
-      targets.push({ id: 'NPC_CH00_STUDENT_B', prompt: '与同学乙交谈', rect: [19.5, 17.5, 2, 2], type: 'dialogue' });
-    }
-    if (state.mode === 'leave_walk') {
-      if (!state.npcDialogue.has('A') && this.leaveNpcArrived?.A) targets.push({ id: 'LEAVE_NPC_A', prompt: '与同学甲交谈', rect: [25, 24, 2, 2], type: 'dialogue' });
-      if (state.npcDialogue.has('A') && !state.npcDialogue.has('B') && this.leaveNpcArrived?.B) targets.push({ id: 'LEAVE_NPC_B', prompt: '与同学乙交谈', rect: [21, 24, 2, 2], type: 'dialogue' });
-    }
-    return targets.find((target) => {
+    return this.manifest.interactions.find((target) => {
       if (target.id === 'EXIT_TRIGGER') return false;
       if (target.id === 'PRO_Q01_TRIGGER' && !state.monumentSeen) return false;
+      if (target.stage === 'explore' && state.mode !== 'explore') return false;
+      if (target.id === 'LEAVE_NPC_A' && (state.mode !== 'leave_walk' || state.npcDialogue.has('A') || !this.leaveNpcArrived?.A)) return false;
+      if (target.id === 'LEAVE_NPC_B' && (state.mode !== 'leave_walk' || !state.npcDialogue.has('A') || state.npcDialogue.has('B') || !this.leaveNpcArrived?.B)) return false;
       const [x, y, width, height] = target.rect;
       return px >= x - 1 && px <= x + width + 1 && py >= y - 1 && py <= y + height + 1;
     });
