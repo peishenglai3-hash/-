@@ -1,7 +1,8 @@
 import type { GameDirector } from '../GameDirector';
 import type { TransitionConfig } from '@/types/director';
 
-const TRANSITION_REVEAL_IMAGE = '/assets/transition/ch01-chenjinnan-home-reveal.png';
+import { assetPath } from '@/common/paths';
+const TRANSITION_REVEAL_IMAGE = assetPath('/assets/transition/ch01-chenjinnan-home-reveal.png');
 
 export const TRANSITION_B: TransitionConfig = {
   revealEntryId: 'SC02_THOUGHT_04',

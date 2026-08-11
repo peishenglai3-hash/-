@@ -37,11 +37,13 @@ export interface Choice {
   result: [string, string];
 }
 
+import { assetPath } from '@/common/paths';
+
 export const CHOICES: Choice[] = [
-  { id: 'PRO_Q01_A', label: '逐字核对碑面姓名与采访登记', detail: '核验文字与姓名，确保记录准确', image: '/assets/choices/a.png', flag: 'FLAG_PRO_NAME_CHECKED', echo_summary: '我把碑上的名字，一个一个核对了。', result: ['就是他。', '现在，我站在纪念他的石碑前，念叨着他的名字，但好像仍然对他一无所知。'] },
-  { id: 'PRO_Q01_B', label: '拍下纪念碑与周围环境', detail: '保存姓名所在的具体环境与现场关系', image: '/assets/choices/b.png', flag: 'FLAG_PRO_PHOTO_TAKEN', echo_summary: '拍下纪念碑的时候，周围安静得能听见风。', result: ['刘绍南，刘绍南……', '十八岁的你，二十五岁的你，会是什么模样？'] },
-  { id: 'PRO_Q01_C', label: '向同学确认采访中是否提到刘绍南', detail: '通过他人记录和团队材料补全信息', image: '/assets/choices/c.png', flag: 'FLAG_PRO_TEAM_RECORD_FOUND', echo_summary: '同队的记录里有他的名字——找到了。', result: ['石碑上、登记表上，录音里、陌生人的记忆里，', '好像处处都有你，但好像处处又都没有你。'] },
-  { id: 'PRO_Q01_D', label: '在实践笔记上写下"刘绍南"', detail: '主动留下问题，并继续追索这个名字', image: '/assets/choices/d.png', flag: 'FLAG_PRO_NAME_WRITTEN', echo_summary: '那页纸还摊着，笔也还在。', result: ['我想继续写下去，', '我发现自己无话可说。'] }
+  { id: 'PRO_Q01_A', label: '逐字核对碑面姓名与采访登记', detail: '核验文字与姓名，确保记录准确', image: assetPath('/assets/choices/a.png'), flag: 'FLAG_PRO_NAME_CHECKED', echo_summary: '我把碑上的名字，一个一个核对了。', result: ['就是他。', '现在，我站在纪念他的石碑前，念叨着他的名字，但好像仍然对他一无所知。'] },
+  { id: 'PRO_Q01_B', label: '拍下纪念碑与周围环境', detail: '保存姓名所在的具体环境与现场关系', image: assetPath('/assets/choices/b.png'), flag: 'FLAG_PRO_PHOTO_TAKEN', echo_summary: '拍下纪念碑的时候，周围安静得能听见风。', result: ['刘绍南，刘绍南……', '十八岁的你，二十五岁的你，会是什么模样？'] },
+  { id: 'PRO_Q01_C', label: '向同学确认采访中是否提到刘绍南', detail: '通过他人记录和团队材料补全信息', image: assetPath('/assets/choices/c.png'), flag: 'FLAG_PRO_TEAM_RECORD_FOUND', echo_summary: '同队的记录里有他的名字——找到了。', result: ['石碑上、登记表上，录音里、陌生人的记忆里，', '好像处处都有你，但好像处处又都没有你。'] },
+  { id: 'PRO_Q01_D', label: '在实践笔记上写下"刘绍南"', detail: '主动留下问题，并继续追索这个名字', image: assetPath('/assets/choices/d.png'), flag: 'FLAG_PRO_NAME_WRITTEN', echo_summary: '那页纸还摊着，笔也还在。', result: ['我想继续写下去，', '我发现自己无话可说。'] }
 ];
 
 export const PROFILE_DELTAS: Record<string, Record<string, number>> = {

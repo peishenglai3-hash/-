@@ -3,6 +3,7 @@ import { createKeyMap, isActionDown, onAction } from '@/common/actions';
 import { state } from '@/common/state';
 import { showTask, closeTask, showPrompt, playNarrative, advanceNarrative, showItem, closeItem, itemPanelOpen, showItemPassive, hideItem, fadeToBlack, togglePause, showFlavor } from '@/common/ui';
 import { ambience } from '@/common/ambience';
+import { assetPath } from '@/common/paths';
 import { OPENING, AUDIO_REVIEW, WRITE_QUESTION, FALL_ASLEEP, TASKS, PROP_LINES, ONE_LINERS, FLAVOR_SPOTS } from './content';
 
 const PX = 32;
@@ -63,14 +64,14 @@ export class PrologueScene02 extends Phaser.Scene {
   constructor() { super('PrologueScene02'); }
 
   preload() {
-    this.load.json('logic', '/data/PRO02_logic.json');
-    this.load.json('interactions', '/data/PRO02_interactions.json');
-    this.load.json('states', '/data/PRO02_states.json');
-    this.load.image('bg02', '/assets/map/pro02_base.png');
+    this.load.json('logic', 'data/PRO02_logic.json');
+    this.load.json('interactions', 'data/PRO02_interactions.json');
+    this.load.json('states', 'data/PRO02_states.json');
+    this.load.image('bg02', 'assets/map/pro02_base.png');
     for (const direction of PLAYER_DIRECTIONS) {
-      this.load.spritesheet(`player-walk-${direction}`, `/assets/characters/player/modern/walk-${direction}.png`, { frameWidth: PLAYER_FRAME.width, frameHeight: PLAYER_FRAME.height });
+      this.load.spritesheet(`player-walk-${direction}`, `assets/characters/player/modern/walk-${direction}.png`, { frameWidth: PLAYER_FRAME.width, frameHeight: PLAYER_FRAME.height });
     }
-    this.load.image('player-side-right', '/assets/characters/player/modern/side-right.png');
+    this.load.image('player-side-right', 'assets/characters/player/modern/side-right.png');
   }
 
   create() {
@@ -228,7 +229,7 @@ export class PrologueScene02 extends Phaser.Scene {
     switch (zone.action) {
       case 'recorder_review': return this.recorderReview(zone);
       case 'notebook_write': return this.notebookWrite(zone);
-      case 'phone_look': return showItem({ icon: '/assets/items/phone-icon.png', title: '手机', text: PROP_LINES.phone[state.propStates.phone] ?? PROP_LINES.phone.default });
+      case 'phone_look': return showItem({ icon: assetPath('/assets/items/phone-icon.png'), title: '手机', text: PROP_LINES.phone[state.propStates.phone] ?? PROP_LINES.phone.default });
       case 'desk_look': return this.oneLine(ONE_LINERS.desk);
       case 'bed_look': return this.bedLook();
       case 'exit_blocked': return this.oneLine(zone.line ?? ONE_LINERS.exit);
@@ -242,7 +243,7 @@ export class PrologueScene02 extends Phaser.Scene {
     }
     state.mode = 'narrative';
     ambience.play('tape');
-    showItemPassive({ icon: '/assets/items/recorder-icon.png', title: '采访录音设备', text: PROP_LINES.recorder[state.propStates.recorder] ?? PROP_LINES.recorder.default });
+    showItemPassive({ icon: assetPath('/assets/items/recorder-icon.png'), title: '采访录音设备', text: PROP_LINES.recorder[state.propStates.recorder] ?? PROP_LINES.recorder.default });
     playNarrative(AUDIO_REVIEW, () => {
       hideItem();
       ambience.play('stopTape');
@@ -260,7 +261,7 @@ export class PrologueScene02 extends Phaser.Scene {
     }
     if (state.questionWritten) return this.oneLine(zone.repeat_line ?? ONE_LINERS.notebookRepeat);
     state.mode = 'narrative';
-    showItemPassive({ icon: '/assets/items/notebook-written-icon.png', title: '实践笔记', text: PROP_LINES.notebook[state.propStates.notebook] ?? PROP_LINES.notebook.default });
+    showItemPassive({ icon: assetPath('/assets/items/notebook-written-icon.png'), title: '实践笔记', text: PROP_LINES.notebook[state.propStates.notebook] ?? PROP_LINES.notebook.default });
     playNarrative(WRITE_QUESTION, () => {
       hideItem();
       state.questionWritten = true;

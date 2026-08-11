@@ -4,6 +4,7 @@ import { TransitionAudioController } from './TransitionAudio';
 import { SceneTransitionController } from './SceneTransition';
 import { SCENE_EXIT } from '@/scenes/Scene01/content';
 import { state, type SaveData } from '@/common/state';
+import { assetPath } from '@/common/paths';
 import { showEndPanel } from '@/common/ui';
 import { setupStartScene } from './flow/StartScene';
 import { setupScene01ToScene02 } from './flow/Scene01ToScene02';
@@ -37,7 +38,7 @@ export class GameDirector {
     this.game = game;
     this.dom = dom;
     this.transitionAudio = new TransitionAudioController();
-    this.bgm = new Audio('/assets/audio/prologue_bgm.wav');
+    this.bgm = new Audio(assetPath('/assets/audio/prologue_bgm.wav'));
     this.bgm.loop = true;
     this.bgm.volume = 0.35;
   }

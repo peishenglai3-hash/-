@@ -31,6 +31,7 @@ const game = new Phaser.Game({
   dom: { createContainer: true },
   physics: { default: 'arcade', arcade: { gravity: { x: 0, y: 0 }, debug: false } },
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, width: 1280, height: 720 },
+  loader: { baseURL: import.meta.env.BASE_URL },
   scene: [Scene01, PrologueScene02]
 });
 

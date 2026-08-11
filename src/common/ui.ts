@@ -1,5 +1,6 @@
 import { state } from '@/common/state';
 import { ambience } from '@/common/ambience';
+import { assetPath } from '@/common/paths';
 import type { SaveData } from '@/common/state';
 
 const dom = {
@@ -92,7 +93,7 @@ function renderNarrativeEntry() {
   dom.dialogue.classList.remove('hidden');
   dom.avatarWrap.classList.toggle('hidden', !entry.avatar_id);
   dom.avatar.classList.toggle('hidden', !entry.avatar_id);
-  if (entry.avatar_id) dom.avatar.src = `/assets/characters/${entry.avatar_id}/avatar.png`;
+  if (entry.avatar_id) dom.avatar.src = assetPath(`/assets/characters/${entry.avatar_id}/avatar.png`);
   dom.speaker.textContent = entry.speaker_name || '';
   dom.text.textContent = '';
   dom.hint.textContent = 'Space 继续';

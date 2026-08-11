@@ -9,6 +9,7 @@ import {
 } from '@/common/ui';
 import { REQUIRED_NARRATIVE, CHOICES, TASKS01, LEAVE_NARRATIVE, PROFILE_DELTAS } from './content';
 import type { Choice } from './content';
+import { assetPath } from '@/common/paths';
 
 const PX = 32;
 const PLAYER_FRAME = { width: 332, height: 720 };
@@ -39,14 +40,14 @@ export class Scene01 extends Phaser.Scene {
   constructor() { super('Scene01'); }
 
   preload() {
-    this.load.json('manifest', '/data/scene01_manifest.json');
-    this.load.image('bg01', '/assets/map/scene01_base.png');
+    this.load.json('manifest', 'data/scene01_manifest.json');
+    this.load.image('bg01', 'assets/map/scene01_base.png');
     for (const direction of ['up', 'down', 'left', 'right']) {
-      this.load.spritesheet(`player-walk-${direction}`, `/assets/characters/player/modern/walk-${direction}.png`, { frameWidth: PLAYER_FRAME.width, frameHeight: PLAYER_FRAME.height });
+      this.load.spritesheet(`player-walk-${direction}`, `assets/characters/player/modern/walk-${direction}.png`, { frameWidth: PLAYER_FRAME.width, frameHeight: PLAYER_FRAME.height });
     }
-    for (const id of ['front', 'back', 'side']) this.load.image(`student-b-${id}`, `/assets/characters/student-b/${id}.png`);
-    this.load.image('student-b-front-task3', '/assets/characters/student-b/front-task3.png');
-    this.load.spritesheet('student-a-reading', '/assets/characters/student-a/actions/reading-sheet.png', { frameWidth: STUDENT_A_FRAME.width, frameHeight: STUDENT_A_FRAME.height });
+    for (const id of ['front', 'back', 'side']) this.load.image(`student-b-${id}`, `assets/characters/student-b/${id}.png`);
+    this.load.image('student-b-front-task3', 'assets/characters/student-b/front-task3.png');
+    this.load.spritesheet('student-a-reading', 'assets/characters/student-a/actions/reading-sheet.png', { frameWidth: STUDENT_A_FRAME.width, frameHeight: STUDENT_A_FRAME.height });
   }
 
   create() {
@@ -164,7 +165,7 @@ export class Scene01 extends Phaser.Scene {
     const textureFacing = facing === 'down' ? 'front' : facing === 'up' ? 'back' : 'side';
     if (id === 'NPC_CH00_STUDENT_B') {
       const image = document.createElement('img');
-      image.src = '/assets/characters/student-b/actions/camera-keyed.gif';
+      image.src = assetPath('/assets/characters/student-b/actions/camera-keyed.gif');
       image.className = 'scene01-npc-gif-mask';
       image.alt = '同学乙拍照';
       const npc = this.add.dom(x * PX, y * PX, image).setOrigin(0.5, 1).setDepth(550 + y * PX);
@@ -304,7 +305,7 @@ export class Scene01 extends Phaser.Scene {
   showFieldwork() {
     state.fieldworkSeen = true;
     state.flags.add('FLAG_FIELDWORK_MATERIAL_SEEN');
-    showItem({ icon: '/assets/items/notebook-open.png', title: '实践笔记', text: '散落的采访记录与待确认的名字。' });
+    showItem({ icon: assetPath('/assets/items/notebook-open.png'), title: '实践笔记', text: '散落的采访记录与待确认的名字。' });
   }
 
   openNpc(entryId: string) {
