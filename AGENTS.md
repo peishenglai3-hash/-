@@ -65,12 +65,15 @@ honghu_game/
 │   │   ├── PausePanel.vue           # 暂停面板
 │   │   ├── FlavorToast.vue          # 风味气泡
 │   │   ├── EndPanel.vue             # 序章结算面板
+│   │   ├── TitleLoadPanel.vue       # 标题读档面板（槽位列表）
+│   │   ├── TitleSettingsPanel.vue   # 标题设置面板（音量/文字速度）
 │   │   └── TransitionOverlay.vue    # 转场覆盖层（提供 DOM 给 SceneTransitionController 操控）
 │   ├── common/
 │   │   ├── actions.ts               # 键位映射（WASD/方向键/E/Space/ESC）
 │   │   ├── ambience.ts              # 环境音引擎（风扇/虫鸣/磁带底噪，Web Audio）
 │   │   ├── paths.ts                 # 资源路径工具（assetPath，自动拼接 BASE_URL）
-│   │   ├── state.ts                 # 游戏状态（flags/profile/propStates/mode 等）
+│   │   ├── save.ts                  # 本地存档系统（SaveManager：auto/fixed 槽+设置+回退）
+│   │   ├── state.ts                 # 游戏状态（flags/profile/risk/propStates/mode 等）
 │   │   ├── store.ts                 # HUD reactive 数据层（Vue + Phaser 共用）
 │   │   └── ui.ts                    # HUD 控制转发层（对 Scene 兼容旧接口，转发至 store.ts）
 │   ├── css/
@@ -85,6 +88,8 @@ honghu_game/
 │   │       ├── Scene02ToSettlement.ts # 转场B：场景2→1927
 │   │       └── DebugRoute.ts        # 调试入口（/?scene=02）
 │   ├── scenes/
+│   │   ├── Title/
+│   │   │   └── TitleScene.ts        # 初始界面（设计图+四热区+标题 BGM）
 │   │   ├── Scene01/
 │   │   │   ├── Scene01.ts           # 场景1：纪念碑探索、NPC对话、叙述链、四选一、离场
 │   │   │   ├── content.ts           # 场景1 内容数据（叙述条目/选项/画像增量/离场叙述）
@@ -217,13 +222,34 @@ intro 视频 → Scene01 (探索/叙事/四选一/离场)
 - **转场音效**：[src/director/TransitionAudio.ts](src/director/TransitionAudio.ts) — 脚步、车辆、虫鸣、风扇、碗筷等合成 cue
 - 音频解锁：通过用户首次点击调用 `ambience.unlock()` / `transitionAudio.prime()`
 
-### 存档系统
+### 初始界面（TitleScene，2026-08-12 引入）
 
-序章结算时将存档写入 `localStorage`：
-- `redcode.prologue.flags` — 旗标集合
-- `redcode.prologue.save` — 完整存档对象（checkpoint/profile/choice/risk/flags）
+启动后 Phaser 自动进入 `TitleScene`（scene 列表首位）：设计图
+`public/assets/ui/title_screen.png` 等比铺满 1280×720，四个烧录木牌按钮对应透明热区
+（创建/加载/设置/退出，悬停微光），动作经 `game.events.emit("title:action", id)` 派发给
+`GameDirector.handleTitleAction`。停留标题期间循环播放
+`public/assets/audio/title_bgm.mp3`（浏览器自动播放限制下于首次交互起播），
+进入正式游玩即停。
 
-供第一章读取。
+- **创建**：`resetRunState()` → 离场 → Scene01 + 自动存档 → `director:new-game` 事件触发 App 接线开场视频流程
+- **加载**：`TitleLoadPanel.vue` 列槽（固定检查点在前）→ `director.startFromSave(save)` 直达目标场景，不重玩序章
+- **设置**：`TitleSettingsPanel.vue`（音乐/音效音量、文字速度三档），持久化 `redcode.settings`，订阅实时生效
+- **退出**：`window.close()` + 兜底提示
+- 调试路由 `/?scene=02` 经 `director.leaveTitle()` 绕过标题
+
+### 存档系统（SaveManager，2026-08-12 引入）
+
+[src/common/save.ts](src/common/save.ts) 统一管理，localStorage 后端（几 KB 纯 JSON），
+全部读写 try/catch（隐私模式兜底），`version + checksum` 读档校验：
+
+| 槽 | 键 | 写入时机 | 内容 |
+|---|---|---|---|
+| auto | `redcode.save.auto` | 每次场景切换（`director.enterScene`） | 全量运行时状态（flags/profile/choice/risk/propStates） |
+| fixed | `redcode.save.fixed` | 进入陈继南家中、场景整体呈现（`Ch01Sc01Scene.beginExplore`，幂等） | 序章画像累计 + PRO-Q01 引用标签 + 固定标签 `PROLOGUE_COMPLETED`/`TIME_TRAVEL_CHECKPOINT` + 三风险 0；tags 过滤 `CH01` 前缀 |
+
+- **失败回退**：`director.rollbackToCheckpoint()`（`window.rollbackToCheckpoint` 调试钩子）——读 fixed 槽恢复 state 后重启 Ch01Sc01Scene；不重玩现代序章、序章画像/标签保留、穿越后画像恢复存档态、三风险归 0。预留供后续全章统一校准的失败条件调用。序章本身不检查风险、不触发失败。
+- **读档恢复**：`SaveManager.applyToState(save)` 还原 flags/profile/choice/risk/propStates 并复位瞬态字段。
+- 序章结算仍兼容写 `redcode.prologue.flags` / `redcode.prologue.save`（旧键保留）。
 
 ## 类型系统
 
@@ -246,8 +272,12 @@ intro 视频 → Scene01 (探索/叙事/四选一/离场)
 
 ```bash
 pnpm dev              # 开发服务器 http://127.0.0.1:5175/
-pnpm run test:content # 内容锁校验（条目数/样式/说话人完整性）
+pnpm run test:content # 内容锁校验（条目数/样式/说话人完整性，经 tsx）
 pnpm run e2e          # Playwright 全流程测试（约2分钟）
+node scripts/e2e-title-save.mjs          # 初始界面+存档系统专项（11 断言）
+node scripts/e2e-ch01-sc01.mjs           # 第一章场景全流程
+node scripts/e2e-prologue-transition.mjs # 转场+BGM 专项
+# 端口被占时可用 E2E_PORT 环境变量改端口（配合 vite --port <P>）
 npx tsc --noEmit      # TypeScript 类型检查（不生成文件）
 pnpm run build        # 生产构建
 ```

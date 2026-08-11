@@ -189,6 +189,12 @@ class Ambience {
 		else if (name === "footsteps") this.footsteps();
 		else if (name === "sleepFade") this.sleepFade();
 	}
+
+	// 设置面板音效音量（0..1），映射到 master gain（默认 0.9）
+	setVolume(volume: number) {
+		if (this.master)
+			this.master.gain.value = 0.9 * Math.max(0, Math.min(1, volume));
+	}
 }
 
 export const ambience = new Ambience();

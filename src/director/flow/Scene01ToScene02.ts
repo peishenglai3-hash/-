@@ -66,7 +66,7 @@ export function setupScene01ToScene02(director: GameDirector): void {
 			state.inNarrative = false;
 			ambience.unlock();
 			ambience.startRoom();
-			director.game.scene.start("PrologueScene02");
+			director.enterScene("PrologueScene02", "PROLOGUE_SC02");
 		});
 	});
 }

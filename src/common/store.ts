@@ -1,5 +1,6 @@
 import { reactive } from "vue";
 import { state } from "@/common/state";
+import { getTextSpeedMult } from "@/common/save";
 
 // ===== HUD Store — Phaser Scene 写数据，Vue 组件自动渲染 =====
 
@@ -51,8 +52,14 @@ let _flavorTimer: number | null = null;
 let _narrativeTimer: number | null = null;
 
 export const hud = reactive({
-	// --- intro video ---
-	introVisible: true,
+	// --- intro video（标题界面期间隐藏，创建新游戏时显示） ---
+	introVisible: false,
+
+	// --- title sub panels ---
+	title: {
+		loadOpen: false,
+		settingsOpen: false,
+	},
 
 	// --- task card ---
 	taskCard: null as TaskCard | null,
@@ -150,13 +157,14 @@ function _renderCurrentEntry() {
 		_finishNarrative();
 		return;
 	}
+	const cps = Math.max(4, Math.round((entry.cps || 14) * getTextSpeedMult()));
 	hud.dialogue.visible = true;
 	hud.dialogue.style = entry.style || "narration";
 	hud.dialogue.speaker = entry.speaker_name || "";
 	hud.dialogue.avatarSrc = entry.avatar_id || "";
 	hud.dialogue.fullText = entry.text;
 	hud.dialogue.displayedText = "";
-	hud.dialogue.cps = entry.cps || 14;
+	hud.dialogue.cps = cps;
 	hud.dialogue.typing = true;
 	hud.dialogue.hint = "Space 继续";
 
@@ -173,7 +181,7 @@ function _renderCurrentEntry() {
 				hud.dialogue.typing = false;
 			}
 		},
-		Math.max(20, 1000 / (entry.cps || 14)),
+		Math.max(20, 1000 / cps),
 	);
 }
 

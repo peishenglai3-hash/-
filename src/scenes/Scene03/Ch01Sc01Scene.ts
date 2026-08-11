@@ -37,6 +37,7 @@ import {
 import type { Choice } from "./ch01Sc01.content";
 import { FLAGS } from "./ch01Sc01.flags";
 import { assetPath } from "@/common/paths";
+import { SaveManager } from "@/common/save";
 
 const WORLD_W = 1672;
 const WORLD_H = 941;
@@ -51,7 +52,11 @@ const CAMERA_ZOOM = 0.765;
 
 interface ManifestData {
 	spawns: { id: string; position: [number, number]; facing: string }[];
-	collision: { id: string; rect: [number, number, number, number]; kind?: string }[];
+	collision: {
+		id: string;
+		rect: [number, number, number, number];
+		kind?: string;
+	}[];
 	interactions: {
 		id: string;
 		prompt?: string;
@@ -60,8 +65,18 @@ interface ManifestData {
 		prop_icon?: string;
 		prompt_anchor?: [number, number];
 	}[];
-	objectives?: { id: string; kind: string; position: [number, number]; anchor: [number, number] }[];
-	exits?: { id: string; rect: [number, number, number, number]; target_scene: string; initially_blocked: boolean }[];
+	objectives?: {
+		id: string;
+		kind: string;
+		position: [number, number];
+		anchor: [number, number];
+	}[];
+	exits?: {
+		id: string;
+		rect: [number, number, number, number];
+		target_scene: string;
+		initially_blocked: boolean;
+	}[];
 }
 
 export class Ch01Sc01Scene extends Phaser.Scene {
@@ -71,7 +86,13 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	playerDirection: string = "down";
 	keyMap!: ReturnType<typeof createKeyMap>;
 	camera!: Phaser.Cameras.Scene2D.Camera;
-	collisionRects!: { id: string; x: number; y: number; width: number; height: number }[];
+	collisionRects!: {
+		id: string;
+		x: number;
+		y: number;
+		width: number;
+		height: number;
+	}[];
 	observationMarks: Phaser.GameObjects.Text[] = [];
 	videoOverlay?: Phaser.GameObjects.Video;
 	bgm?: Phaser.Sound.BaseSound;
@@ -92,17 +113,34 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	}
 
 	preload() {
-		this.load.json("ch01_sc01_manifest", "data/ch01_sc01_chen_home_wake_manifest.json");
-		this.load.image("ch01_sc01_bg", "assets/ch01/sc01/map/ch01_sc01_base.png");
-		this.load.video("ch01_sc01_intro", "assets/ch01/sc01/video/intro_ch01_sc01.mp4");
+		this.load.json(
+			"ch01_sc01_manifest",
+			"data/ch01_sc01_chen_home_wake_manifest.json",
+		);
+		this.load.image(
+			"ch01_sc01_bg",
+			"assets/ch01/sc01/map/ch01_sc01_base.png",
+		);
+		this.load.video(
+			"ch01_sc01_intro",
+			"assets/ch01/sc01/video/intro_ch01_sc01.mp4",
+		);
 		this.load.audio("ch01_sc01_bgm", "assets/ch01/sc01/audio/bgm_ch01.mp3");
 
-		const dirs: ("down" | "up" | "left" | "right")[] = ["down", "up", "left", "right"];
+		const dirs: ("down" | "up" | "left" | "right")[] = [
+			"down",
+			"up",
+			"left",
+			"right",
+		];
 		for (const dir of dirs) {
 			this.load.spritesheet(
 				`chen-walk-${dir}`,
 				`assets/ch01/sc01/sprites/walk_${dir}.png`,
-				{ frameWidth: PLAYER_FRAME[dir].width, frameHeight: PLAYER_FRAME[dir].height },
+				{
+					frameWidth: PLAYER_FRAME[dir].width,
+					frameHeight: PLAYER_FRAME[dir].height,
+				},
 			);
 		}
 		// Prop icons are loaded on demand by the Vue ItemPanel; no Phaser preload needed.
@@ -115,13 +153,23 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 		this.add.image(WORLD_W / 2, WORLD_H / 2, "ch01_sc01_bg").setDepth(-20);
 		this.buildCollision();
 
-		const spawn = (id: string) => this.manifest.spawns.find((entry) => entry.id === id);
+		const spawn = (id: string) =>
+			this.manifest.spawns.find((entry) => entry.id === id);
 		const playerSpawn = spawn("PLAYER_CHENJINNAN")!;
 		this.player = this.physics.add
-			.sprite(playerSpawn.position[0], playerSpawn.position[1], "chen-walk-down")
+			.sprite(
+				playerSpawn.position[0],
+				playerSpawn.position[1],
+				"chen-walk-down",
+			)
 			.setOrigin(0.5, 1)
 			.setDepth(800);
-		this.player.setSize(56, 36).setOffset(PLAYER_FRAME.down.width / 2 - 28, PLAYER_FRAME.down.height - 36);
+		this.player
+			.setSize(56, 36)
+			.setOffset(
+				PLAYER_FRAME.down.width / 2 - 28,
+				PLAYER_FRAME.down.height - 36,
+			);
 		this.player.setCollideWorldBounds(true);
 		this.player.setVisible(false);
 		this.setupPlayerVisual();
@@ -142,7 +190,10 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 		onAction(this, "PAUSE", () => togglePause());
 		(window as any).ch01Sc01Game = this;
 
-		this.bgm = this.sound.add("ch01_sc01_bgm", { loop: true, volume: 0.35 });
+		this.bgm = this.sound.add("ch01_sc01_bgm", {
+			loop: true,
+			volume: 0.35,
+		});
 		this.bgm.play();
 
 		if (!state.flags.has(FLAGS.VIDEO_SEEN)) {
@@ -156,7 +207,9 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	playIntroVideo() {
 		state.mode = "intro";
 		state.playerLocked = true;
-		this.videoOverlay = this.add.video(WORLD_W / 2, WORLD_H / 2, "ch01_sc01_intro").setDepth(2000);
+		this.videoOverlay = this.add
+			.video(WORLD_W / 2, WORLD_H / 2, "ch01_sc01_intro")
+			.setDepth(2000);
 		this.videoOverlay.setDisplaySize(WORLD_W, WORLD_H);
 		this.videoOverlay.play();
 		this.videoOverlay.on("complete", () => {
@@ -188,19 +241,26 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 		state.mode = "explore";
 		state.playerLocked = false;
 		showTask(TASKS_CH01_SC01.explore);
+		// 固定存档点：玩家进入陈继南家中、场景整体呈现时后台自动建立（幂等）
+		SaveManager.writeFixedCheckpoint();
 	}
 
 	setupPlayerVisual() {
 		for (const dir of ["down", "up", "left", "right"] as const) {
 			this.anims.create({
 				key: `chen-walk-${dir}-anim`,
-				frames: this.anims.generateFrameNumbers(`chen-walk-${dir}`, { start: 0, end: 7 }),
+				frames: this.anims.generateFrameNumbers(`chen-walk-${dir}`, {
+					start: 0,
+					end: 7,
+				}),
 				frameRate: 8,
 				repeat: -1,
 			});
 		}
 		const frame = PLAYER_FRAME.down;
-		const displayWidth = Math.round((frame.width / frame.height) * PLAYER_DISPLAY_HEIGHT);
+		const displayWidth = Math.round(
+			(frame.width / frame.height) * PLAYER_DISPLAY_HEIGHT,
+		);
 		this.playerVisual = this.add
 			.sprite(this.player.x, this.player.y, "chen-walk-down", 0)
 			.setOrigin(0.5, 1)
@@ -212,14 +272,19 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 		if (!this.playerVisual) return;
 		const dir = direction as keyof typeof PLAYER_FRAME;
 		const frame = PLAYER_FRAME[dir];
-		const displayWidth = Math.round((frame.width / frame.height) * PLAYER_DISPLAY_HEIGHT);
+		const displayWidth = Math.round(
+			(frame.width / frame.height) * PLAYER_DISPLAY_HEIGHT,
+		);
 		this.playerVisual
 			.setPosition(this.player.x, this.player.y)
 			.setDisplaySize(displayWidth, PLAYER_DISPLAY_HEIGHT)
 			.setFlipX(false);
 		if (moving) {
 			const animation = `chen-walk-${direction}-anim`;
-			if (this.playerVisual.anims.currentAnim?.key !== animation || !this.playerVisual.anims.isPlaying)
+			if (
+				this.playerVisual.anims.currentAnim?.key !== animation ||
+				!this.playerVisual.anims.isPlaying
+			)
 				this.playerVisual.play(animation);
 			return;
 		}
@@ -238,7 +303,9 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 		for (const mark of this.observationMarks) mark.destroy();
 		this.observationMarks = [];
 		if (!this.manifest.objectives) return;
-		const observations = this.manifest.objectives.filter((o) => o.kind === "observation");
+		const observations = this.manifest.objectives.filter(
+			(o) => o.kind === "observation",
+		);
 		for (const obs of observations) {
 			const flagMap: Record<string, string> = {
 				OBS_BASIN: FLAGS.OBS_BASIN,
@@ -276,7 +343,8 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	}
 
 	update() {
-		if (this.physics.world.debugGraphic) this.physics.world.debugGraphic.setVisible(false);
+		if (this.physics.world.debugGraphic)
+			this.physics.world.debugGraphic.setVisible(false);
 		const canWalk = state.mode === "explore";
 		if (!this.player || state.playerLocked || state.paused || !canWalk) {
 			if (this.player) {
@@ -292,11 +360,15 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 		if (isActionDown(this.keyMap, "MOVE_RIGHT")) x += 1;
 		if (isActionDown(this.keyMap, "MOVE_UP")) y -= 1;
 		if (isActionDown(this.keyMap, "MOVE_DOWN")) y += 1;
-		const vector = new Phaser.Math.Vector2(x, y).normalize().scale(speed * (this.game.loop.delta / 1000));
+		const vector = new Phaser.Math.Vector2(x, y)
+			.normalize()
+			.scale(speed * (this.game.loop.delta / 1000));
 		this.tryMove(vector.x, vector.y);
 		if (x !== 0 || y !== 0) {
-			if (Math.abs(x) > Math.abs(y)) this.playerDirection = x < 0 ? "left" : "right";
-			if (Math.abs(y) >= Math.abs(x)) this.playerDirection = y < 0 ? "up" : "down";
+			if (Math.abs(x) > Math.abs(y))
+				this.playerDirection = x < 0 ? "left" : "right";
+			if (Math.abs(y) >= Math.abs(x))
+				this.playerDirection = y < 0 ? "up" : "down";
 		}
 		this.syncPlayerVisual(this.playerDirection, x !== 0 || y !== 0);
 		this.updatePrompt();
@@ -306,7 +378,12 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 		const halfW = 28;
 		const halfH = 18;
 		const canOccupy = (nextX: number, nextY: number) => {
-			if (nextX - halfW < 0 || nextY - halfH < 0 || nextX + halfW > WORLD_W || nextY + halfH > WORLD_H)
+			if (
+				nextX - halfW < 0 ||
+				nextY - halfH < 0 ||
+				nextX + halfW > WORLD_W ||
+				nextY + halfH > WORLD_H
+			)
 				return false;
 			return !this.collisionRects.some(
 				(rect) =>
@@ -326,11 +403,23 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	}
 
 	nearby():
-		| { id: string; prompt?: string; rect: [number, number, number, number]; type?: string; prop_icon?: string }
+		| {
+				id: string;
+				prompt?: string;
+				rect: [number, number, number, number];
+				type?: string;
+				prop_icon?: string;
+		  }
 		| undefined {
 		const px = this.player.x;
 		const py = this.player.y;
-		const targets: { id: string; prompt?: string; rect: [number, number, number, number]; type?: string; prop_icon?: string }[] = [];
+		const targets: {
+			id: string;
+			prompt?: string;
+			rect: [number, number, number, number];
+			type?: string;
+			prop_icon?: string;
+		}[] = [];
 		// Dynamic event targets take precedence over static inspect targets
 		if (
 			state.flags.has(FLAGS.OBS_BASIN) &&
@@ -345,7 +434,10 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 				type: "event",
 			});
 		}
-		if (state.flags.has(FLAGS.INK_DONE) && !state.flags.has(FLAGS.SCENE_COMPLETE)) {
+		if (
+			state.flags.has(FLAGS.INK_DONE) &&
+			!state.flags.has(FLAGS.SCENE_COMPLETE)
+		) {
 			targets.push({
 				id: "EXIT_COURTYARD",
 				prompt: "推开木门",
@@ -356,7 +448,12 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 		targets.push(...this.manifest.interactions);
 		return targets.find((target) => {
 			const [x, y, width, height] = target.rect;
-			return px >= x - 32 && px <= x + width + 32 && py >= y - 32 && py <= y + height + 32;
+			return (
+				px >= x - 32 &&
+				px <= x + width + 32 &&
+				py >= y - 32 &&
+				py <= y + height + 32
+			);
 		});
 	}
 
@@ -368,12 +465,19 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 		if (target.id === "book") return this.observeDesk();
 		if (target.id === "outer_gown") return this.observeDoor();
 		if (target.id === "FAMILY_CHOICE1") return this.startChoice1();
-		if (target.id === "inkstone_paper" && state.flags.has(FLAGS.INK_DONE) === false && state.choice) return this.startInkEvent();
+		if (
+			target.id === "inkstone_paper" &&
+			state.flags.has(FLAGS.INK_DONE) === false &&
+			state.choice
+		)
+			return this.startInkEvent();
 		if (target.id === "EXIT_COURTYARD") return this.completeScene();
 		// Generic inspect items
 		if (target.prop_icon) {
 			showItem({
-				icon: assetPath(`/assets/ch01/sc01/props/${target.prop_icon}_Icon_v01.png`),
+				icon: assetPath(
+					`/assets/ch01/sc01/props/${target.prop_icon}_Icon_v01.png`,
+				),
 				title: target.prompt || "查看",
 				text: target.id,
 			});
@@ -396,7 +500,11 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 			state.flags.add(FLAGS.OBS_DESK);
 			this.updateObservationMarks();
 			this.checkObservationsComplete();
-			showItem({ icon: PROP_PATHS.PAPERWEIGHT, title: "镇纸压纸", text: "纸上有几行未写完的字，最下面一行墨色比别处新一些：陳繼南。" });
+			showItem({
+				icon: PROP_PATHS.PAPERWEIGHT,
+				title: "镇纸压纸",
+				text: "纸上有几行未写完的字，最下面一行墨色比别处新一些：陳繼南。",
+			});
 			state.mode = "explore";
 		});
 	}
@@ -407,13 +515,21 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 			state.flags.add(FLAGS.OBS_DOOR);
 			this.updateObservationMarks();
 			this.checkObservationsComplete();
-			showItem({ icon: PROP_PATHS.HAORI, title: "外褂", text: "衣摆沾着干泥，像是白天出过门。" });
+			showItem({
+				icon: PROP_PATHS.HAORI,
+				title: "外褂",
+				text: "衣摆沾着干泥，像是白天出过门。",
+			});
 			state.mode = "explore";
 		});
 	}
 
 	checkObservationsComplete() {
-		if (state.flags.has(FLAGS.OBS_BASIN) && state.flags.has(FLAGS.OBS_DESK) && state.flags.has(FLAGS.OBS_DOOR)) {
+		if (
+			state.flags.has(FLAGS.OBS_BASIN) &&
+			state.flags.has(FLAGS.OBS_DESK) &&
+			state.flags.has(FLAGS.OBS_DOOR)
+		) {
 			showTask(TASKS_CH01_SC01.choice);
 			showPrompt("回应家人 · E");
 		}
@@ -424,7 +540,11 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 		state.playerLocked = true;
 		playNarrative(CHOICE1_INTRO, () => {
 			state.mode = "choice";
-			showChoices(CHOICES, (id: string) => this.choose(id), "你如何回应家人？");
+			showChoices(
+				CHOICES,
+				(id: string) => this.choose(id),
+				"你如何回应家人？",
+			);
 		});
 	}
 
@@ -432,7 +552,9 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 		const choice = CHOICES.find((item) => item.id === id);
 		if (!choice) return;
 		state.choice = choice;
-		for (const [axis, delta] of Object.entries(PROFILE_DELTAS[choice.id] ?? {}))
+		for (const [axis, delta] of Object.entries(
+			PROFILE_DELTAS[choice.id] ?? {},
+		))
 			state.profile[axis] += delta;
 		state.flags.add(choice.flag);
 		hideChoices();
@@ -451,7 +573,11 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	startInkEvent() {
 		state.mode = "narrative";
 		state.playerLocked = true;
-		showItem({ icon: PROP_PATHS.INK_PEN, title: "未干的墨", text: "砚中的墨还没有完全干透，笔杆磨得光滑。" });
+		showItem({
+			icon: PROP_PATHS.INK_PEN,
+			title: "未干的墨",
+			text: "砚中的墨还没有完全干透，笔杆磨得光滑。",
+		});
 		playNarrative(INK_NARRATIVE, () => {
 			state.flags.add(FLAGS.INK_DONE);
 			hideItem();
@@ -476,17 +602,6 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	}
 
 	saveProgress() {
-		const save = {
-			checkpoint: "CH01_SC01_CHEN_HOME_WAKE",
-			profile: state.profile,
-			choice: state.choice?.id ?? null,
-			choiceTag: state.choice?.flag ?? null,
-			tags: [...state.flags],
-		};
-		try {
-			window.localStorage.setItem("redcode.ch01.sc01.save", JSON.stringify(save));
-		} catch {
-			/* ignore */
-		}
+		SaveManager.autosave("CH01_SC01");
 	}
 }

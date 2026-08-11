@@ -6,6 +6,30 @@
  * @FilePath: /honghu_game/src/types/common.d.ts
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
+export type SceneId = "PROLOGUE_SC01" | "PROLOGUE_SC02" | "CH01_SC01";
+
+export interface RunSave {
+	version: number;
+	kind: "auto" | "fixed";
+	sceneId: SceneId;
+	sceneLabel: string;
+	checkpoint: string;
+	timestamp: number;
+	profile: Record<string, number>;
+	choice: { id: string; flag: string; echo_summary: string } | null;
+	tags: string[];
+	fixed: string[];
+	risk: { identity: number; execution: number; coordination: number };
+	propStates: Record<string, string>;
+	checksum: string;
+}
+
+export interface GameSettings {
+	bgmVolume: number;
+	sfxVolume: number;
+	textSpeed: number;
+}
+
 export interface SaveData {
 	checkpoint: string;
 	checkpointLabel: string;
@@ -38,6 +62,7 @@ export interface GameState {
 	flags: Set<string>;
 	profile: Record<string, number>;
 	choice: { id: string; flag: string; echo_summary: string } | null;
+	risk: { identity: number; execution: number; coordination: number };
 	propStates: Record<string, string>;
 	playerLocked: boolean;
 	audioReviewed: boolean;

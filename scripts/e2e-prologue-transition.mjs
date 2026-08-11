@@ -1,9 +1,10 @@
-import { createRequire } from 'module';
-const require = createRequire('C:\\Users\\35636\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\noop.js');
-const { chromium } = require('playwright');
+import { chromium } from 'playwright';
+import { mkdirSync } from 'fs';
 
-const out = 'C:\\Users\\35636\\AppData\\Local\\Temp\\opencode\\';
+const out = 'C:\\Users\\35636\\AppData\\Local\\Temp\\honghu_e2e\\';
+mkdirSync(out, { recursive: true });
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const PORT = process.env.E2E_PORT || '5175';
 
 const browser = await chromium.launch();
 const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
@@ -12,7 +13,10 @@ page.on('pageerror', (e) => console.log('[pageerror]', e.message));
 page.on('console', (m) => { if (m.type() === 'error') console.log('[console.error]', m.text()); });
 page.on('requestfailed', (r) => console.log('[requestfailed]', r.url(), r.failure()?.errorText));
 
-await page.goto('http://127.0.0.1:5175/', { waitUntil: 'networkidle' });
+await page.goto('http://127.0.0.1:' + PORT + '/', { waitUntil: 'networkidle' });
+// 标题门禁（2026-08-12 起）：先点「创建」热区进入新游戏流程
+await page.waitForFunction(() => window.titleScene, null, { timeout: 15000 });
+await page.mouse.click(301, 641);
 await page.waitForSelector('.intro-panel button');
 await sleep(800);
 

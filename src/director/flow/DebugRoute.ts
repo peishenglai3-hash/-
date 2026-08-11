@@ -10,6 +10,7 @@ export function setupDebugRoute(director: GameDirector): void {
 
 	director.game.events.once(Phaser.Core.Events.READY, () => {
 		hideIntro();
+		director.leaveTitle();
 		director.game.scene.stop("Scene01");
 		state.mode = "intro";
 		ambience.unlock();

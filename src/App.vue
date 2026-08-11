@@ -9,13 +9,17 @@
 <script setup lang="ts">
 import { GameDirector } from "@/director/GameDirector";
 import { setupStartScene } from "@/director/flow/StartScene";
+import { TitleScene } from "@/scenes/Title/TitleScene";
 import { Scene01 } from "@/scenes/Scene01/Scene01";
 import { PrologueScene02 } from "@/scenes/Scene02/PrologueScene02";
 import { Ch01Sc01Scene } from "@/scenes/Scene03/Ch01Sc01Scene";
 import Phaser from "phaser";
 
-import { onMounted, ref } from "vue";
+import { onMounted, ref, nextTick } from "vue";
+import { hud } from "@/common/store";
 import IntroPanel from "./components/IntroPanel.vue";
+import TitleLoadPanel from "./components/TitleLoadPanel.vue";
+import TitleSettingsPanel from "./components/TitleSettingsPanel.vue";
 import TaskCard from "./components/TaskCard.vue";
 import InteractionPrompt from "./components/InteractionPrompt.vue";
 import DialoguePanel from "./components/DialoguePanel.vue";
@@ -50,28 +54,32 @@ onMounted(() => {
 			height: 720,
 		},
 		loader: { baseURL: import.meta.env.BASE_URL },
-		scene: [Scene01, PrologueScene02, Ch01Sc01Scene],
+		scene: [TitleScene, Scene01, PrologueScene02, Ch01Sc01Scene],
 	});
 
 	const director = new GameDirector({ game });
 	director.init();
-	(window as any).gameDirector = director;
 
-	// 开场视频流程：使用 IntroPanel 暴露的模板引用
-	const panel = introPanelRef.value!;
-	setupStartScene({
-		videoEl: panel.videoEl,
-		buttonEl: panel.buttonEl,
-		bgm: director.bgm,
-		transitionAudio: director.transitionAudio,
+	// 开场视频流程：标题界面选择「创建」后再接线（IntroPanel 此时才渲染出模板引用）
+	game.events.on("director:new-game", () => {
+		hud.introVisible = true;
+		nextTick(() => {
+			const panel = introPanelRef.value!;
+			setupStartScene({
+				videoEl: panel.videoEl,
+				buttonEl: panel.buttonEl,
+				bgm: director.bgm,
+				transitionAudio: director.transitionAudio,
+			});
+		});
 	});
-
-	// (window as any).prologueBgm = director.bgm;
 });
 </script>
 
 <template>
 	<div id="game"></div>
+	<TitleLoadPanel />
+	<TitleSettingsPanel />
 	<IntroPanel ref="introPanelRef" />
 	<TaskCard />
 	<InteractionPrompt />
