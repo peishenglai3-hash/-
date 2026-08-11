@@ -39,7 +39,7 @@ body { display: grid; place-items: center; }
   image-rendering: auto;
 }
 
-#hud {
+#app {
   position: absolute;
   left: 50%;
   top: 50%;

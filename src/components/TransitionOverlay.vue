@@ -1,5 +1,21 @@
-/* ===== 场景转场系统 ===== */
+<script setup lang="ts">
+import { hud } from '@/common/store';
+</script>
 
+<template>
+  <div class="scene-transition">
+    <div class="transition-subtitle hidden">
+      <div class="transition-kind" data-transition-kind></div>
+      <div class="transition-text" data-transition-text></div>
+    </div>
+    <div class="transition-date hidden"></div>
+    <div class="transition-reveal hidden">
+      <img data-transition-reveal-image alt="" />
+    </div>
+  </div>
+</template>
+
+<style scoped>
 .scene-transition {
   position: absolute;
   inset: 0;
@@ -16,7 +32,6 @@
   visibility: visible;
 }
 
-/* 字幕 */
 .transition-subtitle {
   position: absolute;
   left: 50%;
@@ -44,7 +59,6 @@
   border-color: #b9a885;
 }
 
-/* 字幕类型标签 */
 .transition-kind {
   margin-bottom: 6px;
   min-height: 1em;
@@ -57,7 +71,6 @@
 .transition-subtitle.thought .transition-kind   { color: #3e7251; }
 .transition-subtitle.dialogue .transition-kind  { color: #e5d3ad; }
 
-/* 字幕正文 */
 .transition-text {
   color: #f3ead5;
   font-size: clamp(14px, 1.5vw, 20px);
@@ -72,7 +85,6 @@
 .transition-subtitle.dialogue .transition-text  { color: #fff; }
 .transition-subtitle.cue .transition-text       { color: #f3ead5; }
 
-/* 日期/地点 */
 .transition-date {
   position: absolute;
   left: 50%;
@@ -88,7 +100,6 @@
   z-index: 3;
 }
 
-/* 揭示图 */
 .transition-reveal {
   position: absolute;
   inset: 0;
@@ -107,3 +118,6 @@
   object-fit: cover;
   image-rendering: auto;
 }
+
+.hidden { display: none !important; }
+</style>

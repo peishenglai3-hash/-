@@ -13,8 +13,9 @@
 | 游戏引擎 | Phaser 3.90.0 (ES Module 引入) |
 | 构建工具 | Vite 5.4.14 |
 | 语言 | TypeScript (strict mode) |
-| 运行时 | 纯浏览器端，无框架 |
-| 样式 | 原生 CSS (拆分至 `src/css/` + 场景独立样式) |
+| 运行时 | 纯浏览器端 |
+| UI 框架 | Vue 3.5 (HUD 层) |
+| 样式 | Vue scoped CSS + 全局 CSS (`src/css/base.css`) |
 | 音频 | Web Audio API (合成音效) + HTML5 Audio (BGM) |
 | BGM | `public/assets/audio/prologue_bgm.wav` |
 | 数据格式 | JSON (场景配置、交互定义、状态绑定) |
@@ -25,10 +26,10 @@
 
 ```
 honghu_game/
-├── index.html                       # 入口 HTML，HUD DOM 结构和 Phaser 挂载点
+├── index.html                       # 入口 HTML，仅保留 Phaser #game 挂载点 + Vue #app 挂载点
 ├── package.json                     # 项目元信息与脚本
 ├── tsconfig.json                    # TypeScript 配置（strict / bundler / 路径别名）
-├── vite.config.ts                   # Vite 配置（@ 别名 / base 路径 / 端口）
+├── vite.config.ts                   # Vite 配置（@ 别名 / base 路径 / 端口 / Vue plugin）
 ├── .env.development                 # 开发环境变量（VITE_BASE=/）
 ├── .env.production                  # 生产环境变量（VITE_BASE=./）
 ├── public/
@@ -50,20 +51,33 @@ honghu_game/
 │       ├── PRO02_interactions.json  # 场景2交互区域定义
 │       └── PRO02_states.json        # 场景2状态文案变体
 ├── src/
-│   ├── main.ts                      # 游戏入口：Phaser 初始化、loader.baseURL、启动 Director
+│   ├── main.ts                      # 游戏入口：Vue app 初始化 + Phaser 初始化 + GameDirector
+│   ├── App.vue                      # Vue 根组件，组装所有 HUD 子组件
+│   ├── components/                  # Vue 3 HUD 组件（scoped CSS）
+│   │   ├── IntroPanel.vue           # 开场视频面板
+│   │   ├── TaskCard.vue             # 任务卡片
+│   │   ├── InteractionPrompt.vue    # 交互提示（"查看碑文 · E"）
+│   │   ├── DialoguePanel.vue        # 对话面板（带打字机动画）
+│   │   ├── ItemPanel.vue            # 物品/道具面板
+│   │   ├── ChoicePanel.vue          # 四选一面板
+│   │   ├── ResultPanel.vue          # 选择结果展示
+│   │   ├── SceneFade.vue            # 淡入淡出层
+│   │   ├── PausePanel.vue           # 暂停面板
+│   │   ├── FlavorToast.vue          # 风味气泡
+│   │   ├── EndPanel.vue             # 序章结算面板
+│   │   └── TransitionOverlay.vue    # 转场覆盖层（提供 DOM 给 SceneTransitionController 操控）
 │   ├── common/
 │   │   ├── actions.ts               # 键位映射（WASD/方向键/E/Space/ESC）
 │   │   ├── ambience.ts              # 环境音引擎（风扇/虫鸣/磁带底噪，Web Audio）
 │   │   ├── paths.ts                 # 资源路径工具（assetPath，自动拼接 BASE_URL）
-│   │   ├── state.ts                 # 全局状态总线（flags/profile/propStates 等）
-│   │   └── ui.ts                    # 共享 HUD 系统（对话/任务/物品/选择/结算面板）
+│   │   ├── state.ts                 # 游戏状态（flags/profile/propStates/mode 等）
+│   │   ├── store.ts                 # HUD reactive 数据层（Vue + Phaser 共用）
+│   │   └── ui.ts                    # HUD 控制转发层（对 Scene 兼容旧接口，转发至 store.ts）
 │   ├── css/
-│   │   ├── base.css                 # 全局布局/重置样式
-│   │   ├── hud.css                  # HUD 面板样式（对话/物品/任务/选择等）
-│   │   └── transition.css           # 转场系统样式
+│   │   └── base.css                 # 全局布局/重置样式
 │   ├── director/
 │   │   ├── GameDirector.ts          # 流程编排器（intro→场景→转场→结算）
-│   │   ├── SceneTransition.ts       # 黑幕字幕转场控制器
+│   │   ├── SceneTransition.ts       # 黑幕字幕转场控制器（直接操作 TransitionOverlay DOM）
 │   │   ├── TransitionAudio.ts       # 转场合成音效控制器
 │   │   └── flow/
 │   │       ├── StartScene.ts        # 开场视频流程
@@ -80,7 +94,7 @@ honghu_game/
 │   │       └── content.ts           # 场景2 内容数据（开场/录音/写问题/入睡/风味点/道具文案）
 │   └── types/
 │       ├── common.d.ts               # 核心类型定义（SaveData / NarrativeEntry / GameState）
-│       ├── css.d.ts                 # CSS module 类型声明
+│       ├── css.d.ts                 # CSS module + .vue 类型声明
 │       ├── director.d.ts            # 转场类型定义（TransitionConfig 等）
 │       └── vite-env.d.ts            # Vite 客户端类型引用
 └── scripts/
@@ -133,13 +147,36 @@ export function assetPath(path: string): string {
 
 ### 状态管理
 
-全局状态统一存储在 [src/common/state.ts](src/common/state.ts) 的 `state` 对象中，类型定义位于 [src/types/common.d.ts](src/types/common.d.ts)，所有模块直接导入引用：
+游戏状态分为两层：
+
+**游戏状态** — [src/common/state.ts](src/common/state.ts)，全局可变对象，所有模块直接导入引用：
 
 - `flags: Set<string>` — 剧情旗标（如 `FLAG_PRO_Q01_COMPLETED`），决定场景2的状态注入
 - `profile: Record<string, number>` — 画像六维数值，由四选一产生不同增量
 - `propStates: Record<string, string>` — 道具状态，受 `story_state_bindings` 按 flag 注入不同文案
 - `mode: string` — 控制玩家行为模式（`intro`/`explore`/`narrative`/`choice`/`result`/`leave_walk` 等）
 - `playerLocked: boolean` — 控制玩家移动和交互锁定
+
+**HUD 状态** — [src/common/store.ts](src/common/store.ts)，Vue `reactive()` 对象，Vue 组件 + Phaser Scene 共用：
+
+- `hud.taskCard` / `hud.dialogue` / `hud.item` / `hud.choices` / ... — 各面板数据
+- `hud.playerLocked` — 同步至 `state.playerLocked`，控制场景侧输入锁定
+- Scene 通过 `ui.ts` 转发层修改 store，Vue 组件通过 `v-if` / `watch` 自动响应渲染
+
+### Vue HUD 架构
+
+```
+src/common/store.ts (reactive)
+        │
+   ┌────┴────┐
+   │         │
+┌──▼─────┐  ┌▼──────────┐
+│ Scene  │  │ Vue 组件   │
+│ (写)    │  │ (自动渲染)  │
+└────────┘  └───────────┘
+```
+
+Vue 通过 `v-if` 按可见性渲染面板，转场系统采用混合模式：`TransitionOverlay.vue` 提供 scoped DOM 初始渲染，`SceneTransitionController` 直接操作 DOM（`classList` 切换），Vue 不干预更新周期。
 
 ### 场景1 → 场景2 状态传递
 
@@ -225,6 +262,22 @@ pnpm run build        # 生产构建
 2. 更新 `scripts/validate-content.mjs` 中的条目数断言
 3. 运行 `pnpm run test:content` 验证
 
+### 添加新 HUD 面板
+
+1. 在 `src/components/` 创建 `NewPanel.vue`，使用 scoped CSS：
+   ```vue
+   <script setup lang="ts">
+   import { hud } from '@/common/store';
+   </script>
+   <template>
+     <div v-if="hud.newPanel.visible" class="new-panel">...</div>
+   </template>
+   <style scoped>.new-panel { ... }</style>
+   ```
+2. 在 [src/common/store.ts](src/common/store.ts) 的 `hud` 对象中添加对应字段
+3. 在 [src/common/ui.ts](src/common/ui.ts) 中添加转发函数（如需要 Scene 侧兼容调用）
+4. 在 [src/App.vue](src/App.vue) 中引入并组装组件
+
 ### 添加新场景
 
 1. 创建 `src/scenes/SceneXX/SceneXX.ts`，继承 `Phaser.Scene`
@@ -264,5 +317,6 @@ img.src = assetPath('/assets/xxx/yyy.png');
 - **精灵图尺寸**：主角行走帧 332×720（原始），显示尺寸 83×180（场景1）/ ~166×360（场景2）
 - 碰撞检测使用手动网格碰撞（`tryMove`），非 Phaser Arcade 物理碰撞
 - NPC 素材生成需运行 `python scripts/build-npc-assets.py`（需要 Python 环境 + PIL）
-- **所有新文件使用 `.ts` 扩展名**，项目已完成 TypeScript 迁移
+- **所有新文件使用 `.ts` 扩展名**；Vue 组件使用 `.vue` 扩展名
 - 类型检查命令：`npx tsc --noEmit`
+- **Phaser Canvas 与 Vue DOM 分开管理**：Phaser 只操作 `<canvas>` 内的 `#game`，Vue 只操作 `#app` 内的 HUD DOM
