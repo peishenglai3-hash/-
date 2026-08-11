@@ -61,7 +61,10 @@ onMounted(() => {
 	director.init();
 	(window as any).game = game;
 	window.addEventListener("keydown", (event) => {
-		if (event.code !== "KeyP" || ["INPUT", "TEXTAREA", "SELECT"].includes((event.target as HTMLElement)?.tagName)) return;
+		if (event.code !== "KeyP") return;
+		const editorPanel = document.querySelector(".dev-zone-editor");
+		const target = event.target as HTMLElement | null;
+		if (["INPUT", "TEXTAREA", "SELECT"].includes(target?.tagName ?? "") && !editorPanel?.contains(target)) return;
 		event.preventDefault();
 		const scene = game.scene.getScenes(true).find((item: any) => item.zoneEditor) as any;
 		scene?.zoneEditor.toggle();

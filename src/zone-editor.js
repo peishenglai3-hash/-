@@ -206,7 +206,7 @@ export class CollisionEditor {
       if (this.kind === 'foreground') return this.lasso.pointerDown(pointer);
       const point = this.worldPoint(pointer);
       const selectedHandle = this.selected?.rect ? this.handleAt(this.selected, point) : '';
-      const hit = selectedHandle ? this.selected : [...this.items].reverse().find((item) => pointInRotatedRect(item.rect, this.rotationOf(item), point));
+      const hit = selectedHandle ? this.selected : [...this.items].reverse().find((item) => item.rect && pointInRotatedRect(item.rect, this.rotationOf(item), point, 0.12));
       if (!hit) return this.select(null);
       this.select(hit);
       const handle = selectedHandle || this.handleAt(hit, point);
