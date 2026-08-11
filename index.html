@@ -7,53 +7,8 @@
   </head>
   <body>
     <main id="game-shell" aria-label="红色源代码洪湖篇序章可玩闭环">
-      <div id="game"></div>
-      <section id="hud" aria-live="polite">
-        <div id="task-card" class="task-card hidden"></div>
-        <div id="interaction-prompt" class="interaction-prompt hidden"></div>
-        <div id="dialogue-panel" class="dialogue-panel hidden">
-          <div class="dialogue-left">
-            <div id="dialogue-avatar-wrap" class="dialogue-avatar-wrap"><img id="dialogue-avatar" alt="" /></div>
-            <div id="dialogue-speaker" class="dialogue-speaker"></div>
-          </div>
-          <div class="dialogue-copy">
-            <div id="dialogue-text" class="dialogue-text"></div>
-            <div id="dialogue-hint" class="dialogue-hint">Space 继续</div>
-          </div>
-        </div>
-        <div id="item-panel" class="item-panel hidden"></div>
-        <div id="choice-panel" class="choice-panel hidden"></div>
-        <div id="result-panel" class="result-panel hidden"></div>
-        <div id="flavor-toast" class="flavor-toast"></div>
-        <div id="pause-panel" class="pause-panel hidden"><div>已暂停<small>按 ESC 继续</small></div></div>
-        <div id="scene-fade" class="scene-fade"></div>
-        <section id="scene-transition" class="scene-transition hidden" aria-live="polite">
-          <div id="transition-subtitle" class="transition-subtitle hidden">
-            <div class="transition-kind" data-transition-kind></div>
-            <div class="transition-text" data-transition-text></div>
-          </div>
-          <div id="transition-date" class="transition-date hidden"></div>
-          <div id="transition-reveal" class="transition-reveal hidden">
-            <img id="transition-reveal-image" alt="戴家场陈继南家中" />
-          </div>
-        </section>
-        <div id="end-panel" class="end-panel hidden">
-          <div class="end-card">
-            <strong>序章·名字留在纸上｜完成</strong>
-            <span id="end-checkpoint"></span>
-            <span id="end-profile"></span>
-            <span id="end-tags"></span>
-            <span id="end-risk"></span>
-            <small>第一章·陈继南家中醒来｜敬请期待</small>
-          </div>
-        </div>
-        <div id="intro-panel" class="intro-panel">
-          <video id="intro-video" src="/assets/video/intro.mp4" playsinline preload="auto"></video>
-          <div class="intro-caption"><div id="intro-caption-title">红色源代码·洪湖篇</div><small id="intro-caption-subtitle">序章｜名字留在纸上</small></div>
-          <button id="start-button">开始进入序章</button>
-        </div>
-      </section>
+      <div id="app"></div>
     </main>
-    <script type="module" src="/src/main.js"></script>
+    <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

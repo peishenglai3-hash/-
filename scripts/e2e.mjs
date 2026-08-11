@@ -1,9 +1,10 @@
-import { createRequire } from 'module';
-const require = createRequire('C:\\Users\\35636\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\noop.js');
-const { chromium } = require('playwright');
+import { chromium } from 'playwright';
+import { mkdirSync } from 'fs';
 
-const out = 'C:\\Users\\35636\\AppData\\Local\\Temp\\opencode\\';
+const out = 'C:\\Users\\35636\\AppData\\Local\\Temp\\honghu_e2e\\';
+mkdirSync(out, { recursive: true });
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const PORT = process.env.E2E_PORT || '5175';
 
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
@@ -20,12 +21,15 @@ async function advanceUntil(predicate, presses = 80, delay = 150) {
   return predicate();
 }
 
-await page.goto('http://127.0.0.1:5175/');
-await page.waitForSelector('#start-button');
+await page.goto('http://127.0.0.1:' + PORT + '/');
+// 标题门禁（2026-08-12 起）：先点「创建」热区进入新游戏流程
+await page.waitForFunction(() => window.titleScene, null, { timeout: 15000 });
+await page.mouse.click(301, 641);
+await page.waitForSelector('.intro-panel button');
 await sleep(1200);
-await page.click('#start-button');
+await page.click('.intro-panel button');
 await sleep(500);
-await page.click('#start-button');
+await page.click('.intro-panel button');
 await sleep(800);
 console.log('1 intro skipped, mode =', await mode());
 await page.keyboard.press('e');
@@ -39,7 +43,7 @@ await sleep(600);
 const reachedChoice = await advanceUntil(async () => (await mode()) === 'choice');
 console.log('2 monument sequence done, choice =', reachedChoice);
 await page.screenshot({ path: out + 'pl_02_choice.png' });
-await page.click('[data-choice="PRO_Q01_A"]');
+await page.click('.choice-panel .choice'); // PRO_Q01_A 为首项
 await sleep(500);
 await page.screenshot({ path: out + 'pl_03_result.png' });
 await page.keyboard.press('Space');
@@ -88,11 +92,11 @@ await sleep(20000);
 await page.screenshot({ path: out + 'pl_06_transitionB.png' });
 await sleep(24000);
 await page.screenshot({ path: out + 'pl_07_reveal.png' });
-await page.waitForFunction(() => !document.querySelector('#end-panel').classList.contains('hidden'), null, { timeout: 60000 });
+await page.waitForFunction(() => !!document.querySelector('.end-panel'), null, { timeout: 60000 });
 await sleep(600);
 await page.screenshot({ path: out + 'pl_08_end.png' });
 
-const endText = await page.evaluate(() => document.querySelector('#end-panel').textContent);
+const endText = await page.evaluate(() => document.querySelector('.end-panel').textContent);
 const save = await page.evaluate(() => JSON.parse(window.localStorage.getItem('redcode.prologue.save') || 'null'));
 console.log('7 end panel:', endText.includes('固定回退点') && endText.includes('PROLOGUE_COMPLETED') ? 'OK' : 'MISSING');
 console.log('8 save:', save ? `${save.checkpoint} / ${save.choiceTag} / risk ${save.risk.identity}${save.risk.execution}${save.risk.coordination}` : 'MISSING');

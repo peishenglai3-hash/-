@@ -1,0 +1,149 @@
+<script setup lang="ts">
+import { hud } from "@/common/store";
+</script>
+
+<template>
+	<div class="scene-transition" :class="{ active: hud.transition.active }">
+		<div
+			v-show="hud.transition.subtitleVisible"
+			class="transition-subtitle"
+			:class="hud.transition.subtitleStyle"
+		>
+			<div class="transition-kind">{{ hud.transition.kindText }}</div>
+			<div class="transition-text">{{ hud.transition.text }}</div>
+		</div>
+		<div v-show="hud.transition.dateVisible" class="transition-date">
+			{{ hud.transition.dateText }}
+		</div>
+		<div
+			v-show="hud.transition.revealShown"
+			class="transition-reveal"
+			:class="{ visible: hud.transition.revealFadeIn }"
+		>
+			<img :src="hud.transition.revealSrc" alt="" />
+		</div>
+	</div>
+</template>
+
+<style scoped>
+.scene-transition {
+	position: absolute;
+	inset: 0;
+	background: #000;
+	opacity: 0;
+	visibility: hidden;
+	pointer-events: auto;
+	transition: opacity 0.35s ease;
+	z-index: 35;
+}
+
+.scene-transition.active {
+	opacity: 1;
+	visibility: visible;
+}
+
+.transition-subtitle {
+	position: absolute;
+	left: 50%;
+	bottom: 4%;
+	transform: translateX(-50%);
+	width: min(60%, 760px);
+	min-height: 76px;
+	padding: 14px 22px 16px;
+	border: 1px solid #b9a885;
+	border-radius: 6px;
+	background: #17130fe8;
+	box-shadow: 0 5px 24px #000b;
+	text-align: left;
+	z-index: 3;
+}
+
+.transition-subtitle.narration,
+.transition-subtitle.thought {
+	background: #e8e0cfef;
+	border-color: #c5b696;
+}
+
+.transition-subtitle.dialogue {
+	background: #17130fea;
+	border-color: #b9a885;
+}
+
+.transition-kind {
+	margin-bottom: 6px;
+	min-height: 1em;
+	color: #c4b99e;
+	font-size: 11px;
+	letter-spacing: 0.14em;
+}
+
+.transition-subtitle.narration .transition-kind {
+	color: #493f32;
+}
+.transition-subtitle.thought .transition-kind {
+	color: #3e7251;
+}
+.transition-subtitle.dialogue .transition-kind {
+	color: #e5d3ad;
+}
+
+.transition-text {
+	color: #f3ead5;
+	font-size: clamp(14px, 1.5vw, 20px);
+	line-height: 1.65;
+	letter-spacing: 0.035em;
+	white-space: pre-line;
+	text-shadow: 0 1px 2px #0008;
+}
+
+.transition-subtitle.narration .transition-text {
+	color: #11100d;
+	text-shadow: 0 1px 1px #fff8;
+}
+.transition-subtitle.thought .transition-text {
+	color: #2e8b57;
+	text-shadow: 0 1px 1px #eaffee;
+}
+.transition-subtitle.dialogue .transition-text {
+	color: #fff;
+}
+.transition-subtitle.cue .transition-text {
+	color: #f3ead5;
+}
+
+.transition-date {
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, -50%);
+	color: #e5d5b6;
+	font-size: clamp(19px, 2.6vw, 34px);
+	line-height: 1.55;
+	letter-spacing: 0.14em;
+	text-align: center;
+	text-shadow: 0 2px 16px #000;
+	white-space: pre-line;
+	z-index: 3;
+}
+
+.transition-reveal {
+	position: absolute;
+	inset: 0;
+	opacity: 0;
+	transition: opacity 0.8s ease;
+	z-index: 1;
+	background: #000;
+}
+
+.transition-reveal.visible {
+	opacity: 1;
+}
+
+.transition-reveal img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	image-rendering: auto;
+}
+</style>
