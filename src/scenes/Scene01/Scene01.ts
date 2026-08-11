@@ -40,11 +40,16 @@ import {
 } from "@/common/modernPlayerWalk";
 // @ts-ignore Legacy developer editor is shared by the TS scenes.
 import { CollisionEditor } from "../../zone-editor.js";
+// @ts-ignore Shared foreground renderer is implemented in JavaScript.
+import { ForegroundOcclusionRenderer, foregroundBottomPx } from "../../foreground-occlusion.js";
 // @ts-ignore Legacy actor collider helpers are shared by the editor.
+
 
 import { actorColliderBottomAt, ensureActorColliderConfig, createActorColliderEntry, ensureActorVisualConfig, createActorVisualEntry } from "../../actor-collider.js";
 
 const PX = 32;
+const ACTOR_DEPTH_BASE = 500;
+const actorDepth = (bottomY: number) => ACTOR_DEPTH_BASE + bottomY;
 const PLAYER_FRAME = MODERN_PLAYER_SOURCE_FRAME;
 const PLAYER_DISPLAY_HEIGHT = 160;
 const NPC_DISPLAY = { width: 77, height: 160 };
@@ -71,6 +76,7 @@ export class Scene01 extends Phaser.Scene {
 	zoneEditor: any;
 	actorColliderProfiles: any;
 	actorColliderEntries: any[] = [];
+
 
 	actorVisualProfiles: any;
 	actorVisualEntries: any[] = [];
@@ -137,10 +143,16 @@ export class Scene01 extends Phaser.Scene {
 			repeat: -1,
 		});
 		this.physics.world.setBounds(0, 0, 48 * PX, 27 * PX);
-		this.add
+		this.background = this.add
 			.image(768, 432, "bg01")
 			.setDisplaySize(1536, 864)
 			.setDepth(-20);
+		this.foregroundOcclusion = new ForegroundOcclusionRenderer(this, {
+			background: this.background,
+			getObjects: () => (this.manifest as any).foreground_occlusion?.objects ?? [],
+			resolveDepth: (object: any) => actorDepth(foregroundBottomPx(object, PX) ?? 0) + 0.001,
+			tileSize: PX,
+		});
 		this.buildCollision();
 		this.setupZoneEditor();
 		const spawn = (id: string) =>
@@ -153,7 +165,11 @@ export class Scene01 extends Phaser.Scene {
 				modernWalkFrameKey("down", 0),
 			)
 			.setOrigin(0.5, 1)
-			.setDepth(800);
+			.setDepth(this.depthForActorAt(
+				playerSpawn.position[0] * PX,
+				playerSpawn.position[1] * PX,
+				this.actorColliderProfiles.PLAYER,
+			));
 		this.applyPlayerColliderBody();
 		this.player.setCollideWorldBounds(true);
 		this.player.setVisible(false);
@@ -202,7 +218,7 @@ export class Scene01 extends Phaser.Scene {
 		this.playerVisual = this.add
 			.sprite(this.player.x, this.player.y, modernWalkFrameKey("down", 0), 0)
 			.setOrigin(0.5, 1)
-			.setDepth(801);
+			.setDepth(this.depthForActor(this.player, this.actorColliderProfiles.PLAYER));
 		setModernPlayerDirection(this.playerVisual, "down", PLAYER_DISPLAY_HEIGHT);
 		this.applyActorVisualHeight("PLAYER", this.actorVisualProfiles.PLAYER.display_height);
 	}
@@ -210,6 +226,7 @@ export class Scene01 extends Phaser.Scene {
 	syncPlayerVisual(direction: string, moving: boolean) {
 		if (!this.playerVisual) return;
 		this.playerVisual
+
 
 			.setDepth(this.depthForActor(this.player, this.actorColliderProfiles.PLAYER))
 			.setFlipX(false);
@@ -330,6 +347,14 @@ export class Scene01 extends Phaser.Scene {
 			.setOffset(PLAYER_FRAME.width / 2 + profile.offset[0] * PX, PLAYER_FRAME.height + profile.offset[1] * PX);
 	}
 
+	depthForActorAt(x: number, y: number, profile: any): number {
+		return actorDepth(actorColliderBottomAt(x, y, profile, PX));
+	}
+
+	depthForActor(actor: { x: number; y: number }, profile: any): number {
+		return this.depthForActorAt(actor.x, actor.y, profile);
+	}
+
 	setupZoneEditor() {
 		const file = "public/data/scene01_manifest.json";
 		const documents = { [file]: this.manifest as any };
@@ -360,6 +385,7 @@ export class Scene01 extends Phaser.Scene {
 					this.buildCollision();
 					this.applyPlayerColliderBody();
 				}
+				if (!kind || kind === "foreground") this.foregroundOcclusion.rebuild();
 			},
 		});
 	}
@@ -423,6 +449,7 @@ export class Scene01 extends Phaser.Scene {
 	) {
 		const textureFacing =
 			facing === "down" ? "front" : facing === "up" ? "back" : "side";
+		const depth = this.depthForActorAt(x * PX, y * PX, this.actorColliderProfiles[id]);
 		if (id === "NPC_CH00_STUDENT_B") {
 			const image = document.createElement("img");
 			image.src = assetPath(
@@ -433,7 +460,7 @@ export class Scene01 extends Phaser.Scene {
 			const npc = this.add
 				.dom(x * PX, y * PX, image)
 				.setOrigin(0.5, 1)
-				.setDepth(550 + y * PX);
+				.setDepth(depth);
 			npc.setData("spawnId", id);
 			npc.setData("facing", facing);
 			npc.setData("action", "photo");
@@ -446,7 +473,7 @@ export class Scene01 extends Phaser.Scene {
 				.sprite(x * PX, y * PX, "student-a-reading", 0)
 				.setDisplaySize(Math.round(this.actorVisualProfiles.NPC_CH00_STUDENT_A.display_height * STUDENT_A_FRAME.width / STUDENT_A_FRAME.height), this.actorVisualProfiles.NPC_CH00_STUDENT_A.display_height)
 				.setOrigin(0.5, 1)
-				.setDepth(500 + y * PX);
+				.setDepth(depth);
 			npc.setData("spawnId", id);
 			npc.setData("facing", facing);
 			npc.setData("action", "reading");
@@ -459,7 +486,7 @@ export class Scene01 extends Phaser.Scene {
 			.sprite(x * PX, y * PX, `${prefix}-${textureFacing}-keyed`)
 			.setDisplaySize(Math.round(this.actorVisualProfiles.NPC_CH00_STUDENT_B.display_height * 84 / 188), this.actorVisualProfiles.NPC_CH00_STUDENT_B.display_height)
 			.setOrigin(0.5, 1)
-			.setDepth(500 + y * PX);
+			.setDepth(depth);
 		npc.setData("spawnId", id);
 		npc.setData("facing", facing);
 		npc.setData("action", "idle");
@@ -503,7 +530,7 @@ export class Scene01 extends Phaser.Scene {
 			.sprite(22 * PX, 25 * PX, texture)
 			.setDisplaySize(displayWidth, displayHeight)
 			.setOrigin(0.5, 1)
-			.setDepth(600);
+			.setDepth(this.depthForActorAt(22 * PX, 25 * PX, this.actorColliderProfiles.NPC_CH00_STUDENT_B));
 		this.studentBExit.setData("spawnId", "NPC_CH00_STUDENT_B");
 		this.setActorVisualBasePosition("NPC_CH00_STUDENT_B", 22 * PX, 25 * PX);
 	}
@@ -517,6 +544,7 @@ export class Scene01 extends Phaser.Scene {
 	update() {
 		if (this.physics.world.debugGraphic)
 			this.physics.world.debugGraphic.setVisible(false);
+		this.syncActorDepths();
 		const canWalk = state.mode === "explore" || state.mode === "leave_walk";
 		if (!this.player || state.playerLocked || state.paused || !canWalk) {
 			if (this.player) {
@@ -545,6 +573,14 @@ export class Scene01 extends Phaser.Scene {
 		}
 		this.syncPlayerVisual(this.playerDirection, x !== 0 || y !== 0);
 		this.updatePrompt();
+	}
+
+	syncActorDepths() {
+		if (this.player) this.player.setDepth(this.depthForActor(this.player, this.actorColliderProfiles.PLAYER));
+		if (this.playerVisual) this.playerVisual.setDepth(this.depthForActor(this.player, this.actorColliderProfiles.PLAYER));
+		if (this.studentA) this.studentA.setDepth(this.depthForActor(this.studentA, this.actorColliderProfiles.NPC_CH00_STUDENT_A));
+		if (this.studentB) this.studentB.setDepth(this.depthForActor(this.studentB, this.actorColliderProfiles.NPC_CH00_STUDENT_B));
+		if (this.studentBExit) this.studentBExit.setDepth(this.depthForActor(this.studentBExit, this.actorColliderProfiles.NPC_CH00_STUDENT_B));
 	}
 
 	tryMove(dx: number, dy: number) {

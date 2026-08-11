@@ -28,7 +28,10 @@ import {
 } from "@/common/modernPlayerWalk";
 // @ts-ignore Legacy developer editor is shared by the TS scenes.
 import { CollisionEditor } from "../../zone-editor.js";
+// @ts-ignore Shared foreground renderer is implemented in JavaScript.
+import { ForegroundOcclusionRenderer, foregroundBottomPx } from "../../foreground-occlusion.js";
 // @ts-ignore Legacy actor collider helpers are shared by the editor.
+
 
 import { actorColliderBottomAt, ensureActorColliderConfig, createActorColliderEntry, ensureActorVisualConfig, createActorVisualEntry } from "../../actor-collider.js";
 import {
@@ -86,6 +89,7 @@ export class PrologueScene02 extends Phaser.Scene {
 	playerColliderProfile: any;
 	actorColliderEntries: any[] = [];
 
+
 	actorVisualProfile: any;
 	actorVisualEntries: any[] = [];
 	background!: Phaser.GameObjects.Image;
@@ -96,7 +100,6 @@ export class PrologueScene02 extends Phaser.Scene {
 	player!: Phaser.Physics.Arcade.Sprite;
 	playerVisual!: Phaser.GameObjects.Sprite;
 	playerDirection: string = "up";
-	foreground!: Phaser.GameObjects.Container;
 	collisionRects!: {
 		id: string;
 		x: number;
@@ -138,14 +141,19 @@ export class PrologueScene02 extends Phaser.Scene {
 			this.logic.logical_grid.width * PX,
 			this.logic.logical_grid.height * PX,
 		);
-		this.add
+		this.background = this.add
 			.image(
 				this.logic.world_size[0] / 2,
 				this.logic.world_size[1] / 2,
 				"bg02",
 			)
 			.setDepth(0);
-		this.foreground = this.add.container(0, 0).setDepth(100);
+		this.foregroundOcclusion = new ForegroundOcclusionRenderer(this, {
+			background: this.background,
+			getObjects: () => (this.logic as any).foreground_layers?.objects ?? [],
+			resolveDepth: (object: any) => this.depthForBottom(foregroundBottomPx(object, PX) ?? 0) + 0.001,
+			tileSize: PX,
+		});
 		this.buildCollision();
 		this.setupZoneEditor();
 		const spawn = this.logic.player_spawn;
@@ -156,11 +164,17 @@ export class PrologueScene02 extends Phaser.Scene {
 				modernWalkFrameKey("down", 0),
 			)
 			.setOrigin(0.5, 1)
-			.setDepth(this.depthFor(spawn.position[1] * PX));
+			.setDepth(this.depthForBottom(actorColliderBottomAt(
+				spawn.position[0] * PX,
+				spawn.position[1] * PX,
+				this.playerColliderProfile,
+				PX,
+			)));
 		this.applyPlayerColliderBody();
 		this.player.setCollideWorldBounds(true);
 		this.playerDirection = spawn.facing || "up";
 		this.player.setPosition(DOOR_STAND.x, DOOR_STAND.y);
+		this.player.setDepth(this.depthForPlayer());
 		this.setupPlayerVisual();
 		if (this.textures.exists("player-side-right")) {
 			this.playerVisual.setTexture("player-side-right");
@@ -201,8 +215,12 @@ export class PrologueScene02 extends Phaser.Scene {
 		}
 	}
 
-	depthFor(yPx: number): number {
-		return 10 + yPx / PX;
+	depthForBottom(bottomY: number): number {
+		return 10 + bottomY / PX;
+	}
+
+	depthForPlayer(): number {
+		return this.depthForBottom(actorColliderBottomAt(this.player.x, this.player.y, this.playerColliderProfile, PX));
 	}
 
 	buildCollision() {
@@ -280,6 +298,7 @@ export class PrologueScene02 extends Phaser.Scene {
 					this.buildCollision();
 					this.applyPlayerColliderBody();
 				}
+				if (!kind || kind === "foreground") this.foregroundOcclusion.rebuild();
 			},
 		});
 	}
@@ -289,7 +308,7 @@ export class PrologueScene02 extends Phaser.Scene {
 		this.playerVisual = this.add
 			.sprite(this.player.x, this.player.y, modernWalkFrameKey("down", 0), 0)
 			.setOrigin(0.5, 1)
-			.setDepth(this.depthFor(this.player.y) + 0.5);
+			.setDepth(this.depthForPlayer());
 		setModernPlayerDirection(this.playerVisual, "down", PLAYER_VIEW_HEIGHT);
 		this.applyPlayerVisualHeight(this.actorVisualProfile.display_height);
 		this.player.setVisible(false);
@@ -314,6 +333,7 @@ export class PrologueScene02 extends Phaser.Scene {
 
 	syncPlayerVisual(direction: string, moving: boolean) {
 		if (!this.playerVisual) return;
+
 
 		this.applyActorVisualPosition();
 		this.playerVisual.setDepth(this.depthForPlayer());
@@ -564,7 +584,7 @@ export class PrologueScene02 extends Phaser.Scene {
 			if (Math.abs(y) >= Math.abs(x))
 				this.playerDirection = y < 0 ? "up" : "down";
 		}
-		this.player.setDepth(this.depthFor(this.player.y));
+		this.player.setDepth(this.depthForPlayer());
 		this.syncPlayerVisual(this.playerDirection, x !== 0 || y !== 0);
 		this.updatePrompt();
 	}

@@ -4,10 +4,39 @@ import { ForegroundLassoTool } from './magnetic-lasso.js';
 const COLORS = { collision: 0xff4fbf, interaction: 0xffdf32, visual: 0x55e7ff, anchor: 0xff3b30, selected: 0xffffff, rotation: 0x55e7ff };
 const HANDLE_RADIUS = 0.38;
 const ROTATION_HANDLE_OFFSET = 0.85;
+const ALIGNMENT_SNAP_PX = 8;
+const DEFAULT_REGION_SIZE_PX = {
+  collision: [128, 64],
+  interaction: [96, 64]
+};
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
 const snap = (value, step) => Math.round(value / step) * step;
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+export function nearestAlignment(value, candidates, threshold, selectedKind) {
+  const matches = candidates
+    .map((candidate, index) => ({
+      ...candidate,
+      index,
+      distance: Math.abs(value - candidate.value),
+      sameKind: candidate.kind === selectedKind
+    }))
+    .filter((candidate) => candidate.distance <= threshold)
+    .sort((first, second) => Number(second.sameKind) - Number(first.sameKind)
+      || first.distance - second.distance
+      || first.index - second.index);
+  return matches[0]?.value ?? value;
+}
+
+export function defaultRegionSize(kind, tileSize, worldSize, snapStep) {
+  const fallback = DEFAULT_REGION_SIZE_PX[kind] ?? DEFAULT_REGION_SIZE_PX.interaction;
+  return fallback.map((pixels, axis) => clamp(
+    snap(pixels / tileSize, snapStep),
+    snapStep,
+    worldSize[axis]
+  ));
+}
 
 function transformLocal(center, local, rotation) {
   const radians = rotation * Math.PI / 180;
@@ -370,6 +399,29 @@ export class CollisionEditor {
     this.selected.rect = fitRectInWorld(this.selected.rect, this.selected.rotation, this.config.getWorldSize());
   }
 
+  alignmentCandidates(axis) {
+    const edgeIndexes = axis === 'x' ? [0, 2] : [1, 3];
+    const candidates = [];
+    for (const kind of ['collision', 'interaction']) {
+      const items = kind === 'collision' ? this.config.getCollisions() : this.config.getInteractions();
+      for (const item of items) {
+        if (item === this.selected || !item?.rect || this.rotationOf(item, kind) !== 0) continue;
+        const [startIndex, sizeIndex] = edgeIndexes;
+        const start = Number(item.rect[startIndex]);
+        const size = Number(item.rect[sizeIndex]);
+        if (!Number.isFinite(start) || !Number.isFinite(size)) continue;
+        candidates.push({ value: start, kind }, { value: start + size, kind });
+      }
+    }
+    return candidates;
+  }
+
+  snapResizeEdge(value, axis) {
+    const zoom = Number(this.scene.cameras.main.zoom) || 1;
+    const threshold = ALIGNMENT_SNAP_PX / (this.tileSize * zoom);
+    return nearestAlignment(value, this.alignmentCandidates(axis), threshold, this.kind);
+  }
+
   resizeRect(point) {
     const [, , width, height] = this.drag.rect;
     const [worldWidth, worldHeight] = this.config.getWorldSize();
@@ -382,6 +434,12 @@ export class CollisionEditor {
     if (this.drag.handle.includes('e')) right = clamp(snap(local.x, this.snapStep), left + this.snapStep, left + worldWidth);
     if (this.drag.handle.includes('n')) top = clamp(snap(local.y, this.snapStep), bottom - worldHeight, bottom - this.snapStep);
     if (this.drag.handle.includes('s')) bottom = clamp(snap(local.y, this.snapStep), top + this.snapStep, top + worldHeight);
+    if (this.drag.rotation === 0) {
+      if (this.drag.handle.includes('w')) left = clamp(this.snapResizeEdge(this.drag.center.x + left, 'x') - this.drag.center.x, right - worldWidth, right - this.snapStep);
+      if (this.drag.handle.includes('e')) right = clamp(this.snapResizeEdge(this.drag.center.x + right, 'x') - this.drag.center.x, left + this.snapStep, left + worldWidth);
+      if (this.drag.handle.includes('n')) top = clamp(this.snapResizeEdge(this.drag.center.y + top, 'y') - this.drag.center.y, bottom - worldHeight, bottom - this.snapStep);
+      if (this.drag.handle.includes('s')) bottom = clamp(this.snapResizeEdge(this.drag.center.y + bottom, 'y') - this.drag.center.y, top + this.snapStep, top + worldHeight);
+    }
     const nextWidth = right - left;
     const nextHeight = bottom - top;
     const centerOffset = transformLocal({ x: 0, y: 0 }, { x: (left + right) / 2, y: (top + bottom) / 2 }, this.drag.rotation);
@@ -548,8 +606,7 @@ export class CollisionEditor {
     if (this.kind === 'visual') return;
     const prefix = this.kind === 'collision' ? 'collision' : 'interaction';
     const [worldWidth, worldHeight] = this.config.getWorldSize();
-    const width = this.kind === 'collision' ? 4 : 3;
-    const height = 2;
+    const [width, height] = defaultRegionSize(this.kind, this.tileSize, [worldWidth, worldHeight], this.snapStep);
     const item = { id: this.createId(prefix), shape: 'rect', rect: [snap((worldWidth - width) / 2, this.snapStep), snap((worldHeight - height) / 2, this.snapStep), width, height] };
     if (this.kind === 'collision') item.rotation = 0;
     if (this.kind === 'interaction') Object.assign(item, { type: 'inspect', prompt: '新交互区', action: 'inspect' });
