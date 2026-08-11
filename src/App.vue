@@ -30,56 +30,56 @@ import TransitionOverlay from "./components/TransitionOverlay.vue";
 const introPanelRef = ref<InstanceType<typeof IntroPanel> | null>(null);
 
 onMounted(() => {
-  // 初始化 Phaser
-  const game = new Phaser.Game({
-    type: Phaser.AUTO,
-    parent: "game",
-    backgroundColor: "#171715",
-    width: 1280,
-    height: 720,
-    dom: { createContainer: true },
-    physics: {
-      default: "arcade",
-      arcade: { gravity: { x: 0, y: 0 }, debug: false },
-    },
-    scale: {
-      mode: Phaser.Scale.FIT,
-      autoCenter: Phaser.Scale.CENTER_BOTH,
-      width: 1280,
-      height: 720,
-    },
-    loader: { baseURL: import.meta.env.BASE_URL },
-    scene: [Scene01, PrologueScene02],
-  });
+	// 初始化 Phaser
+	const game = new Phaser.Game({
+		type: Phaser.AUTO,
+		parent: "game",
+		backgroundColor: "#171715",
+		width: 1280,
+		height: 720,
+		dom: { createContainer: true },
+		physics: {
+			default: "arcade",
+			arcade: { gravity: { x: 0, y: 0 }, debug: false },
+		},
+		scale: {
+			mode: Phaser.Scale.FIT,
+			autoCenter: Phaser.Scale.CENTER_BOTH,
+			width: 1280,
+			height: 720,
+		},
+		loader: { baseURL: import.meta.env.BASE_URL },
+		scene: [Scene01, PrologueScene02],
+	});
 
-  const director = new GameDirector({ game });
-  director.init();
+	const director = new GameDirector({ game });
+	director.init();
 
-  // 开场视频流程：使用 IntroPanel 暴露的模板引用
-  const panel = introPanelRef.value!;
-  setupStartScene({
-    videoEl: panel.videoEl,
-    buttonEl: panel.buttonEl,
-    bgm: director.bgm,
-    transitionAudio: director.transitionAudio,
-  });
+	// 开场视频流程：使用 IntroPanel 暴露的模板引用
+	const panel = introPanelRef.value!;
+	setupStartScene({
+		videoEl: panel.videoEl,
+		buttonEl: panel.buttonEl,
+		bgm: director.bgm,
+		transitionAudio: director.transitionAudio,
+	});
 
-  // (window as any).prologueBgm = director.bgm;
+	// (window as any).prologueBgm = director.bgm;
 });
 </script>
 
 <template>
-  <div id="game"></div>
-  <IntroPanel ref="introPanelRef" />
-  <TaskCard />
-  <InteractionPrompt />
-  <DialoguePanel />
-  <ItemPanel />
-  <ChoicePanel />
-  <ResultPanel />
-  <SceneFade />
-  <PausePanel />
-  <FlavorToast />
-  <EndPanel />
-  <TransitionOverlay />
+	<div id="game"></div>
+	<IntroPanel ref="introPanelRef" />
+	<TaskCard />
+	<InteractionPrompt />
+	<DialoguePanel />
+	<ItemPanel />
+	<ChoicePanel />
+	<ResultPanel />
+	<SceneFade />
+	<PausePanel />
+	<FlavorToast />
+	<EndPanel />
+	<TransitionOverlay />
 </template>

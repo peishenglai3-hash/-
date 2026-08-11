@@ -12,13 +12,12 @@ import "@/css/base.css";
 
 import { validateNarrative } from "@/scenes/Scene01/content";
 
-
 const setup = () => {
-  validateNarrative();
+	validateNarrative();
 
-  // 1. 初始化 Vue — 接管 #app 区域
-  const app = createApp(App);
-  app.mount("#app");
+	// 1. 初始化 Vue — 接管 #app 区域
+	const app = createApp(App);
+	app.mount("#app");
 };
 
 setup();
