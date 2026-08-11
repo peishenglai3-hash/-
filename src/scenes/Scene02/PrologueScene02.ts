@@ -43,10 +43,10 @@ import {
 
 const PX = 32;
 const PLAYER_FRAME = MODERN_PLAYER_SOURCE_FRAME;
-const PLAYER_VIEW_HEIGHT = 360;
+const PLAYER_VIEW_HEIGHT = 160;
 const PLAYER_DIRECTIONS = ["down", "left", "right", "up"] as const;
 const DOOR_STAND = { x: 8.2 * PX, y: 34 * PX };
-const SIDE_VIEW_HEIGHT = 328;
+const SIDE_VIEW_HEIGHT = 160;
 const OBJECTIVE_ANCHORS: Record<string, [number, number]> = {
 	recorder: [28.25 * PX, 470],
 	notebook: [32.25 * PX, 460],

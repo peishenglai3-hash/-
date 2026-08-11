@@ -45,7 +45,7 @@ import { ensureActorColliderConfig, createActorColliderEntry } from "../../actor
 
 const PX = 32;
 const PLAYER_FRAME = MODERN_PLAYER_SOURCE_FRAME;
-const PLAYER_DISPLAY_HEIGHT = 360;
+const PLAYER_DISPLAY_HEIGHT = 160;
 const NPC_DISPLAY = { width: 77, height: 160 };
 const STUDENT_A_FRAME = { width: 453, height: 902 };
 const STUDENT_A_DISPLAY = {
