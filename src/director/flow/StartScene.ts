@@ -1,27 +1,38 @@
-import type { GameDirector } from '../GameDirector';
-import { ambience } from '@/common/ambience';
-import { hideIntro } from '@/common/ui';
+import { ambience } from "@/common/ambience";
+import { hideIntro } from "@/common/ui";
 
-export function setupStartScene(director: GameDirector): void {
-  let introStarted = false;
+export interface StartSceneOptions {
+	videoEl: HTMLVideoElement | null;
+	buttonEl: HTMLButtonElement | null;
+	bgm: HTMLAudioElement;
+	transitionAudio: { prime: () => void };
+}
 
-  const startIntro = () => {
-    if (introStarted) return;
-    introStarted = true;
-    director.transitionAudio.prime();
-    ambience.unlock();
-    director.dom.start!.textContent = '跳过开场视频';
-    director.dom.video!.play().catch(() => {});
-    director.dom.video!.onended = endIntro;
-    director.dom.start!.onclick = endIntro;
-  };
+export function setupStartScene({
+	videoEl,
+	buttonEl,
+	bgm,
+	transitionAudio,
+}: StartSceneOptions): void {
+	let introStarted = false;
 
-  const endIntro = () => {
-    hideIntro();
-    director.bgm.play().catch(() => {});
-    (window as any).scene01Game?.beginExplore();
-  };
+	const startIntro = () => {
+		if (introStarted) return;
+		introStarted = true;
+		transitionAudio.prime();
+		ambience.unlock();
+		buttonEl!.textContent = "跳过开场视频";
+		videoEl!.play().catch(() => {});
+		videoEl!.onended = endIntro;
+		buttonEl!.onclick = endIntro;
+	};
 
-  director.dom.start!.addEventListener('click', startIntro);
-  director.dom.video!.addEventListener('click', startIntro);
+	const endIntro = () => {
+		hideIntro();
+		bgm.play().catch(() => {});
+		(window as any).scene01Game?.beginExplore();
+	};
+
+	buttonEl!.addEventListener("click", startIntro);
+	videoEl!.addEventListener("click", startIntro);
 }

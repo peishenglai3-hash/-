@@ -1,52 +1,60 @@
 /* ===== 全局布局与重置 ===== */
 
 :root {
-  color-scheme: dark;
-  font-family: Georgia, 'Noto Serif SC', serif;
-  background: #161612;
+	color-scheme: dark;
+	font-family: Georgia, "Noto Serif SC", serif;
+	background: #161612;
 }
 
-* { box-sizing: border-box; }
-
-html, body {
-  margin: 0;
-  min-height: 100%;
-  background: #161612;
-  overflow: hidden;
+* {
+	box-sizing: border-box;
 }
 
-body { display: grid; place-items: center; }
+html,
+body {
+	margin: 0;
+	min-height: 100%;
+	background: #161612;
+	overflow: hidden;
+}
+
+body {
+	display: grid;
+	place-items: center;
+}
 
 #game-shell {
-  position: relative;
-  width: 100vw;
-  height: 100vh;
-  display: grid;
-  place-items: center;
-  background: #161612;
+	position: relative;
+	width: 100vw;
+	height: 100vh;
+	display: grid;
+	place-items: center;
+	background: #161612;
 }
 
 #game {
-  width: min(100vw, 177.7778vh);
-  height: min(56.25vw, 100vh);
-  position: relative;
+	width: min(100vw, 177.7778vh);
+	height: min(56.25vw, 100vh);
+	position: relative;
 }
 
 #game canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-  image-rendering: auto;
+	display: block;
+	width: 100%;
+	height: 100%;
+	image-rendering: auto;
 }
 
-#hud {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: min(100vw, 177.7778vh);
-  height: min(56.25vw, 100vh);
-  transform: translate(-50%, -50%);
-  pointer-events: none;
+#app {
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	width: min(100vw, 177.7778vh);
+	height: min(56.25vw, 100vh);
+	transform: translate(-50%, -50%);
+	pointer-events: none;
 }
 
-.hidden { display: none !important; }
+.hidden {
+	display: none !important;
+}

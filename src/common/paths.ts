@@ -2,5 +2,5 @@
 const BASE = import.meta.env.BASE_URL;
 
 export function assetPath(path: string): string {
-  return BASE + path.replace(/^\//, '');
+	return BASE + path.replace(/^\//, "");
 }

@@ -7,13 +7,18 @@
     "dev": "vite --host 127.0.0.1 --port 5175 --strictPort",
     "build": "vite build",
     "test:content": "node scripts/validate-content.mjs",
-    "e2e": "node scripts/e2e.mjs"
+    "e2e": "node scripts/e2e.mjs",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,vue,css,scss,less}\""
   },
   "dependencies": {
-    "phaser": "3.90.0"
+    "@vitejs/plugin-vue": "^6.0.8",
+    "phaser": "3.90.0",
+    "pinia": "^4.0.2",
+    "vue": "^3.5.41"
   },
   "devDependencies": {
     "@types/node": "^26.2.0",
+    "prettier": "^3.9.6",
     "typescript": "^7.0.2",
     "vite": "5.4.14"
   }
