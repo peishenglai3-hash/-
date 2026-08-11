@@ -1,4 +1,3 @@
-const TILE_SIZE = 32;
 const FOREGROUND_COLOR = 0x55e7ff;
 const SELECTED_COLOR = 0xffffff;
 const PREVIEW_COLOR = 0xffdf32;
@@ -103,10 +102,10 @@ function pointInPolygon(points, point) {
   return inside;
 }
 
-function normalizeLasso(rawPoints, [worldWidth, worldHeight]) {
+function normalizeLasso(rawPoints, [worldWidth, worldHeight], tileSize = 32) {
   const stride = Math.max(1, Math.ceil(rawPoints.length / 4096));
   const sampled = rawPoints.filter((point, index) => index % stride === 0 || index === rawPoints.length - 1);
-  let tolerance = 1.5 / TILE_SIZE;
+  let tolerance = 1.5 / tileSize;
   let simplified = simplifyPath(sampled, tolerance);
   while (simplified.length > MAX_POINTS && tolerance < 8) {
     tolerance *= 1.6;
@@ -119,8 +118,8 @@ function normalizeLasso(rawPoints, [worldWidth, worldHeight]) {
   const points = [];
   for (const point of simplified) {
     const next = [
-      snap(clamp(point.x, 0, worldWidth), 1 / TILE_SIZE),
-      snap(clamp(point.y, 0, worldHeight), 1 / TILE_SIZE)
+      snap(clamp(point.x, 0, worldWidth), 1 / tileSize),
+      snap(clamp(point.y, 0, worldHeight), 1 / tileSize)
     ];
     const previous = points.at(-1);
     if (!previous || previous[0] !== next[0] || previous[1] !== next[1]) points.push(next);
@@ -130,15 +129,16 @@ function normalizeLasso(rawPoints, [worldWidth, worldHeight]) {
 }
 
 class MagneticEdgeMap {
-  constructor(source, [worldWidth, worldHeight]) {
+  constructor(source, [worldWidth, worldHeight], tileSize = 32) {
     const maxDimension = 1024;
-    const worldPixelWidth = worldWidth * TILE_SIZE;
-    const worldPixelHeight = worldHeight * TILE_SIZE;
+    const worldPixelWidth = worldWidth * tileSize;
+    const worldPixelHeight = worldHeight * tileSize;
     this.scale = Math.min(1, maxDimension / Math.max(worldPixelWidth, worldPixelHeight));
     this.width = Math.max(2, Math.round(worldPixelWidth * this.scale));
     this.height = Math.max(2, Math.round(worldPixelHeight * this.scale));
     this.worldWidth = worldWidth;
     this.worldHeight = worldHeight;
+	this.tileSize = tileSize;
 
     const canvas = document.createElement('canvas');
     canvas.width = this.width;
@@ -167,15 +167,15 @@ class MagneticEdgeMap {
 
   toGrid(point) {
     return {
-      x: clamp(point.x * TILE_SIZE * this.scale, 0, this.width - 1),
-      y: clamp(point.y * TILE_SIZE * this.scale, 0, this.height - 1)
+      x: clamp(point.x * this.tileSize * this.scale, 0, this.width - 1),
+      y: clamp(point.y * this.tileSize * this.scale, 0, this.height - 1)
     };
   }
 
   toWorld(point) {
     return {
-      x: clamp(point.x / this.scale / TILE_SIZE, 0, this.worldWidth),
-      y: clamp(point.y / this.scale / TILE_SIZE, 0, this.worldHeight)
+      x: clamp(point.x / this.scale / this.tileSize, 0, this.worldWidth),
+      y: clamp(point.y / this.scale / this.tileSize, 0, this.worldHeight)
     };
   }
 
@@ -297,7 +297,7 @@ export class ForegroundLassoTool {
   worldPoint(pointer) {
     const point = this.editor.scene.cameras.main.getWorldPoint(pointer.x, pointer.y);
     const [worldWidth, worldHeight] = this.editor.config.getWorldSize();
-    return { x: clamp(point.x / TILE_SIZE, 0, worldWidth), y: clamp(point.y / TILE_SIZE, 0, worldHeight) };
+    return { x: clamp(point.x / this.editor.tileSize, 0, worldWidth), y: clamp(point.y / this.editor.tileSize, 0, worldHeight) };
   }
 
   ensureEdgeMap() {
@@ -305,7 +305,7 @@ export class ForegroundLassoTool {
     try {
       const source = this.editor.config.getMagneticSource?.();
       if (!source) throw new Error('missing magnetic source');
-      this.edgeMap = new MagneticEdgeMap(source, this.editor.config.getWorldSize());
+      this.edgeMap = new MagneticEdgeMap(source, this.editor.config.getWorldSize(), this.editor.tileSize);
     } catch {
       this.edgeMapFailed = true;
     }
@@ -379,7 +379,7 @@ export class ForegroundLassoTool {
       this.segments = [];
     } else if (this.anchors.length) {
       const previous = this.anchors.at(-1);
-      if (Math.hypot(anchor.x - previous.x, anchor.y - previous.y) < 2 / TILE_SIZE) return;
+      if (Math.hypot(anchor.x - previous.x, anchor.y - previous.y) < 2 / this.editor.tileSize) return;
       this.segments.push(this.magneticPath(previous, anchor));
       this.anchors.push(anchor);
     } else {
@@ -477,7 +477,7 @@ export class ForegroundLassoTool {
     }
     const closingSegment = this.magneticPath(this.anchors.at(-1), this.anchors[0]);
     const rawPoints = [...this.rawPoints, ...closingSegment.slice(1, -1)];
-    const points = normalizeLasso(rawPoints, this.editor.config.getWorldSize());
+    const points = normalizeLasso(rawPoints, this.editor.config.getWorldSize(), this.editor.tileSize);
 
     this.drawing = false;
     this.armed = false;
@@ -546,36 +546,36 @@ export class ForegroundLassoTool {
   render(graphics) {
     for (const item of this.editor.config.getForegrounds?.() ?? []) {
       if (!item.points?.length) continue;
-      const points = item.points.map(([x, y]) => ({ x: x * TILE_SIZE, y: y * TILE_SIZE }));
+      const points = item.points.map(([x, y]) => ({ x: x * this.editor.tileSize, y: y * this.editor.tileSize }));
       graphics.lineStyle(3, FOREGROUND_COLOR, item.enabled === false ? 0.45 : 1);
       graphics.fillStyle(FOREGROUND_COLOR, item.enabled === false ? 0.04 : 0.1);
       graphics.fillPoints(points, true).strokePoints(points, true);
     }
 
     if (this.editor.selected?.points) {
-      const points = this.editor.selected.points.map(([x, y]) => ({ x: x * TILE_SIZE, y: y * TILE_SIZE }));
+      const points = this.editor.selected.points.map(([x, y]) => ({ x: x * this.editor.tileSize, y: y * this.editor.tileSize }));
       graphics.lineStyle(4, SELECTED_COLOR, 1).strokePoints(points, true);
       graphics.fillStyle(SELECTED_COLOR, 1);
       for (const point of points) graphics.fillCircle(point.x, point.y, 4);
-      const sortY = this.editor.foregroundSortY(this.editor.selected) * TILE_SIZE;
+      const sortY = this.editor.foregroundSortY(this.editor.selected) * this.editor.tileSize;
       const minX = Math.min(...points.map((point) => point.x));
       const maxX = Math.max(...points.map((point) => point.x));
       graphics.lineStyle(3, PREVIEW_COLOR, 1).lineBetween(minX, sortY, maxX, sortY);
       graphics.fillStyle(PREVIEW_COLOR, 1).fillCircle(minX, sortY, 5).fillCircle(maxX, sortY, 5);
     }
 
-    const committed = this.rawPoints.map(({ x, y }) => ({ x: x * TILE_SIZE, y: y * TILE_SIZE }));
+    const committed = this.rawPoints.map(({ x, y }) => ({ x: x * this.editor.tileSize, y: y * this.editor.tileSize }));
     if (committed.length > 1) graphics.lineStyle(3, FOREGROUND_COLOR, 1).strokePoints(committed, false);
     if (this.previewPoints.length > 1) {
-      const preview = this.previewPoints.map(({ x, y }) => ({ x: x * TILE_SIZE, y: y * TILE_SIZE }));
+      const preview = this.previewPoints.map(({ x, y }) => ({ x: x * this.editor.tileSize, y: y * this.editor.tileSize }));
       graphics.lineStyle(2, PREVIEW_COLOR, 0.95).strokePoints(preview, false);
     }
     if (this.anchors.length) {
       graphics.fillStyle(SELECTED_COLOR, 1);
-      for (const anchor of this.anchors) graphics.fillCircle(anchor.x * TILE_SIZE, anchor.y * TILE_SIZE, 5);
+      for (const anchor of this.anchors) graphics.fillCircle(anchor.x * this.editor.tileSize, anchor.y * this.editor.tileSize, 5);
     }
     if (this.previewAnchor && (this.armed || this.drawing)) {
-      graphics.lineStyle(2, PREVIEW_COLOR, 1).strokeCircle(this.previewAnchor.x * TILE_SIZE, this.previewAnchor.y * TILE_SIZE, 7);
+      graphics.lineStyle(2, PREVIEW_COLOR, 1).strokeCircle(this.previewAnchor.x * this.editor.tileSize, this.previewAnchor.y * this.editor.tileSize, 7);
     }
   }
 }

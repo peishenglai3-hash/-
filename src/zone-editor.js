@@ -1,7 +1,6 @@
 import { normalizeDegrees, pointInRotatedRect, rotatedRectPoints } from './collision-geometry.js';
 import { ForegroundLassoTool } from './magnetic-lasso.js';
 
-const TILE_SIZE = 32;
 const COLORS = { collision: 0xff4fbf, interaction: 0xffdf32, selected: 0xffffff, rotation: 0x55e7ff };
 const HANDLE_RADIUS = 0.38;
 const ROTATION_HANDLE_OFFSET = 0.85;
@@ -47,9 +46,10 @@ export class CollisionEditor {
     this.config = config;
     this.enabled = false;
     this.kind = 'collision';
+	this.tileSize = config.tileSize ?? 32;
     this.selected = null;
     this.drag = null;
-    this.snapStep = 0.25;
+    this.snapStep = config.snapStep ?? 0.25;
     this.original = clone(config.documents);
     this.graphics = scene.add.graphics().setDepth(5000).setVisible(false);
     this.createPanel();
@@ -271,7 +271,7 @@ export class CollisionEditor {
 
   worldPoint(pointer) {
     const point = this.scene.cameras.main.getWorldPoint(pointer.x, pointer.y);
-    return { x: point.x / TILE_SIZE, y: point.y / TILE_SIZE };
+    return { x: point.x / this.tileSize, y: point.y / this.tileSize };
   }
 
   handlesFor(item) {
@@ -283,13 +283,13 @@ export class CollisionEditor {
       w: { x: -width / 2, y: 0 }, e: { x: width / 2, y: 0 },
       sw: { x: -width / 2, y: height / 2 }, s: { x: 0, y: height / 2 }, se: { x: width / 2, y: height / 2 }
     };
-    if (this.kind === 'collision' && !item.actorCollider) handles.rotate = { x: 0, y: -height / 2 - ROTATION_HANDLE_OFFSET };
+    if (this.kind === 'collision' && !item.actorCollider) handles.rotate = { x: 0, y: -height / 2 - ROTATION_HANDLE_OFFSET * 32 / this.tileSize };
     return Object.fromEntries(Object.entries(handles).map(([key, local]) => [key, transformLocal(center, local, rotation)]));
   }
 
   handleAt(item, point) {
     let closest = '';
-    let closestDistance = HANDLE_RADIUS;
+    let closestDistance = Math.max(HANDLE_RADIUS, 12 / this.tileSize);
     for (const [handle, position] of Object.entries(this.handlesFor(item))) {
       const distance = Math.hypot(point.x - position.x, point.y - position.y);
       if (distance <= closestDistance) {
@@ -549,7 +549,7 @@ export class CollisionEditor {
 
   renderRect(graphics, item, kind) {
     if (!item.rect) return;
-    const points = rotatedRectPoints(item.rect, this.rotationOf(item, kind)).map(({ x, y }) => ({ x: x * TILE_SIZE, y: y * TILE_SIZE }));
+    const points = rotatedRectPoints(item.rect, this.rotationOf(item, kind)).map(({ x, y }) => ({ x: x * this.tileSize, y: y * this.tileSize }));
     graphics.fillPoints(points, true).strokePoints(points, true);
   }
 
@@ -568,18 +568,18 @@ export class CollisionEditor {
 
     if (this.selected?.rect) {
       graphics.lineStyle(3, COLORS.selected, 1).fillStyle(COLORS.selected, 1);
-      const points = rotatedRectPoints(this.selected.rect, this.rotationOf(this.selected)).map(({ x, y }) => ({ x: x * TILE_SIZE, y: y * TILE_SIZE }));
+      const points = rotatedRectPoints(this.selected.rect, this.rotationOf(this.selected)).map(({ x, y }) => ({ x: x * this.tileSize, y: y * this.tileSize }));
       graphics.strokePoints(points, true);
       const handles = this.handlesFor(this.selected);
       const top = handles.n;
       if (handles.rotate) {
-        graphics.lineStyle(2, COLORS.rotation, 1).lineBetween(top.x * TILE_SIZE, top.y * TILE_SIZE, handles.rotate.x * TILE_SIZE, handles.rotate.y * TILE_SIZE);
+        graphics.lineStyle(2, COLORS.rotation, 1).lineBetween(top.x * this.tileSize, top.y * this.tileSize, handles.rotate.x * this.tileSize, handles.rotate.y * this.tileSize);
       }
       for (const [handle, point] of Object.entries(handles)) {
         if (handle === 'rotate') {
-          graphics.fillStyle(COLORS.rotation, 1).fillCircle(point.x * TILE_SIZE, point.y * TILE_SIZE, 7);
+          graphics.fillStyle(COLORS.rotation, 1).fillCircle(point.x * this.tileSize, point.y * this.tileSize, 7);
         } else {
-          graphics.fillStyle(COLORS.selected, 1).fillRect(point.x * TILE_SIZE - 6, point.y * TILE_SIZE - 6, 12, 12);
+          graphics.fillStyle(COLORS.selected, 1).fillRect(point.x * this.tileSize - 6, point.y * this.tileSize - 6, 12, 12);
         }
       }
     }
