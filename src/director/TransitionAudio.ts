@@ -1,29 +1,24 @@
-/**
- * Small, non-blocking Web Audio cue player for the prologue handoffs.
- *
- * It intentionally creates only environmental texture. Dialogue, dog calls
- * and low voices remain silent cues in the content contract so no synthetic
- * voice is mistaken for the authored performance.
- */
+import Phaser from 'phaser';
+
 export class TransitionAudioController {
-  constructor() {
-    this.context = null;
-    this.master = null;
-    this.ambient = new Map();
-    this.muted = false;
-  }
+  context: AudioContext | null = null;
+  master: GainNode | null = null;
+  ambient = new Map<string, { oscillator?: OscillatorNode; gain?: GainNode; timer?: number }>();
+  muted = false;
 
   prime() {
     try {
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContext) { this.muted = true; return false; }
+      const AC = (window as any).AudioContext || (window as any).webkitAudioContext;
+      if (!AC) { this.muted = true; return false; }
       if (!this.context) {
-        this.context = new AudioContext();
-        this.master = this.context.createGain();
-        this.master.gain.value = 0.16;
-        this.master.connect(this.context.destination);
+        const ctx = new AC();
+        this.context = ctx;
+        const master = ctx.createGain();
+        this.master = master;
+        master.gain.value = 0.16;
+        master.connect(ctx.destination);
       }
-      const result = this.context.resume?.();
+      const result = this.context!.resume?.();
       if (result?.catch) result.catch(() => { this.muted = true; });
       return true;
     } catch {
@@ -42,7 +37,7 @@ export class TransitionAudioController {
   _noise(duration = 1.2, level = 0.02, filter = 1200) {
     const output = this._output();
     if (!output) return;
-    const ctx = this.context;
+    const ctx = this.context!;
     const buffer = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * duration), ctx.sampleRate);
     const channel = buffer.getChannelData(0);
     for (let i = 0; i < channel.length; i += 1) channel[i] = (Math.random() * 2 - 1) * 0.35;
@@ -60,10 +55,10 @@ export class TransitionAudioController {
     source.stop(ctx.currentTime + duration + 0.05);
   }
 
-  _tone(frequency, duration, level = 0.03, type = 'sine', endFrequency = frequency) {
+  _tone(frequency: number, duration: number, level = 0.03, type: OscillatorType = 'sine', endFrequency = frequency) {
     const output = this._output();
     if (!output) return;
-    const ctx = this.context;
+    const ctx = this.context!;
     const oscillator = ctx.createOscillator();
     const gain = ctx.createGain();
     oscillator.type = type;
@@ -81,7 +76,7 @@ export class TransitionAudioController {
     if (this.ambient.has('fan')) return;
     const output = this._output();
     if (!output) return;
-    const ctx = this.context;
+    const ctx = this.context!;
     const oscillator = ctx.createOscillator();
     const gain = ctx.createGain();
     oscillator.type = 'sine';
@@ -96,7 +91,7 @@ export class TransitionAudioController {
     if (this.ambient.has('insects')) return;
     const output = this._output();
     if (!output) return;
-    const ctx = this.context;
+    const ctx = this.context!;
     const gain = ctx.createGain();
     gain.gain.value = 0.018;
     gain.connect(output);
@@ -116,7 +111,7 @@ export class TransitionAudioController {
     this.ambient.set('insects', { gain, timer });
   }
 
-  _fadeAmbient(key, duration = 1.2) {
+  _fadeAmbient(key: string, duration = 1.2) {
     const item = this.ambient.get(key);
     if (!item?.gain?.gain || !this.context) return;
     item.gain.gain.cancelScheduledValues(this.context.currentTime);
@@ -124,7 +119,7 @@ export class TransitionAudioController {
     item.gain.gain.exponentialRampToValueAtTime(0.0001, this.context.currentTime + duration);
   }
 
-  playCue(cueId) {
+  playCue(cueId: string) {
     if (!this._output()) return;
     switch (cueId) {
       case 'fan_low': this._ambientFan(); break;

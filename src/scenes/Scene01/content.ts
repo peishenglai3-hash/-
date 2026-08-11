@@ -1,4 +1,6 @@
-export const REQUIRED_NARRATIVE = [
+import type { NarrativeEntry } from '@/common/state';
+
+export const REQUIRED_NARRATIVE: NarrativeEntry[] = [
   { entry_id: 'N1', kind: 'narration', speaker_id: 'NARRATOR', speaker_name: '旁白', text: '昼暑将消。', style: 'narration', cps: 14, pause_before_ms: 800, advance: 'manual' },
   { entry_id: 'N2', kind: 'narration', speaker_id: 'NARRATOR', speaker_name: '旁白', text: '白天蛰伏在墓地的巨兽，此刻蠢蠢欲动。', style: 'narration', cps: 14, pause_before_ms: 400, advance: 'manual' },
   { entry_id: 'N3', kind: 'narration', speaker_id: 'NARRATOR', speaker_name: '旁白', text: '黑夜将要降临在江汉平原。', style: 'narration', cps: 14, pause_before_ms: 500, advance: 'manual' },
@@ -25,14 +27,24 @@ export const REQUIRED_NARRATIVE = [
   { entry_id: 'L4', kind: 'narration', speaker_id: 'NARRATOR', speaker_name: '旁白', text: '人声渐远，纪念碑静静矗立在昏暗的天色里。风凉了，虫鸣密了，月亮升起来了。一切的一切都一如既往，曾经陌生的名字，如今经过了你的目光，经过了你手指的抚摸，从耳畔的回响到唇齿间的轻声呼唤，也许真的驻进了你的心魂。往事泛起微澜，尘封的记忆等待着下一次被开启。', style: 'narration', cps: 14, pause_before_ms: 0, advance: 'manual' }
 ];
 
-export const CHOICES = [
+export interface Choice {
+  id: string;
+  label: string;
+  detail: string;
+  image: string;
+  flag: string;
+  echo_summary: string;
+  result: [string, string];
+}
+
+export const CHOICES: Choice[] = [
   { id: 'PRO_Q01_A', label: '逐字核对碑面姓名与采访登记', detail: '核验文字与姓名，确保记录准确', image: '/assets/choices/a.png', flag: 'FLAG_PRO_NAME_CHECKED', echo_summary: '我把碑上的名字，一个一个核对了。', result: ['就是他。', '现在，我站在纪念他的石碑前，念叨着他的名字，但好像仍然对他一无所知。'] },
   { id: 'PRO_Q01_B', label: '拍下纪念碑与周围环境', detail: '保存姓名所在的具体环境与现场关系', image: '/assets/choices/b.png', flag: 'FLAG_PRO_PHOTO_TAKEN', echo_summary: '拍下纪念碑的时候，周围安静得能听见风。', result: ['刘绍南，刘绍南……', '十八岁的你，二十五岁的你，会是什么模样？'] },
   { id: 'PRO_Q01_C', label: '向同学确认采访中是否提到刘绍南', detail: '通过他人记录和团队材料补全信息', image: '/assets/choices/c.png', flag: 'FLAG_PRO_TEAM_RECORD_FOUND', echo_summary: '同队的记录里有他的名字——找到了。', result: ['石碑上、登记表上，录音里、陌生人的记忆里，', '好像处处都有你，但好像处处又都没有你。'] },
-  { id: 'PRO_Q01_D', label: '在实践笔记上写下“刘绍南”', detail: '主动留下问题，并继续追索这个名字', image: '/assets/choices/d.png', flag: 'FLAG_PRO_NAME_WRITTEN', echo_summary: '那页纸还摊着，笔也还在。', result: ['我想继续写下去，', '我发现自己无话可说。'] }
+  { id: 'PRO_Q01_D', label: '在实践笔记上写下"刘绍南"', detail: '主动留下问题，并继续追索这个名字', image: '/assets/choices/d.png', flag: 'FLAG_PRO_NAME_WRITTEN', echo_summary: '那页纸还摊着，笔也还在。', result: ['我想继续写下去，', '我发现自己无话可说。'] }
 ];
 
-export const PROFILE_DELTAS = {
+export const PROFILE_DELTAS: Record<string, Record<string, number>> = {
   PRO_Q01_A: { C: 2, I: 1 },
   PRO_Q01_B: { C: 1, A: 2 },
   PRO_Q01_C: { I: 1, G: 2 },
@@ -44,7 +56,7 @@ export const TASKS01 = {
   afterMonument: { title: '名字留在纸上', detail: '再确认一件事——查看纪念碑、笔记或采访设备' }
 };
 
-export const LEAVE_NARRATIVE = [
+export const LEAVE_NARRATIVE: NarrativeEntry[] = [
   { entry_id: 'LEAVE_NARRATION', kind: 'narration', speaker_id: 'NARRATOR', speaker_name: '旁白', text: '纪念碑没有因实践队的离开而发生任何变化。风仍从树间穿过，虫鸣也比刚才更密了一些。只是那个原本陌生的名字，已经被带进笔记、照片或录音文件中，等待下一次被打开。', style: 'narration', cps: 14, pause_before_ms: 0, advance: 'manual' }
 ];
 
@@ -73,7 +85,7 @@ export const SCENE_EXIT = {
   historicalOutcomeChanged: false
 };
 
-export function validateNarrative() {
+export function validateNarrative(): boolean {
   const required = ['N1','N2','N3','N4','N5','N6','D1','D2','N7','N8','N9','N10','N11','N12','M1','M2','M3','M4','M5','M6','L1','L2','L3b','L4'];
   const ids = REQUIRED_NARRATIVE.map((entry) => entry.entry_id);
   if (required.some((id) => !ids.includes(id))) throw new Error('Narrative content lock failed: missing entry');

@@ -1,24 +1,65 @@
 import Phaser from 'phaser';
-import { createKeyMap, isActionDown, onAction } from './actions.js';
-import { state } from './state.js';
-import { showTask, closeTask, showPrompt, playNarrative, advanceNarrative, showItem, closeItem, itemPanelOpen, showItemPassive, hideItem, fadeToBlack, togglePause, showFlavor } from './ui.js';
-import { ambience } from './ambience.js';
-import { OPENING, AUDIO_REVIEW, WRITE_QUESTION, FALL_ASLEEP, TASKS, PROP_LINES, ONE_LINERS, FLAVOR_SPOTS } from './content02.js';
+import { createKeyMap, isActionDown, onAction } from '@/common/actions';
+import { state } from '@/common/state';
+import { showTask, closeTask, showPrompt, playNarrative, advanceNarrative, showItem, closeItem, itemPanelOpen, showItemPassive, hideItem, fadeToBlack, togglePause, showFlavor } from '@/common/ui';
+import { ambience } from '@/common/ambience';
+import { OPENING, AUDIO_REVIEW, WRITE_QUESTION, FALL_ASLEEP, TASKS, PROP_LINES, ONE_LINERS, FLAVOR_SPOTS } from './content';
 
 const PX = 32;
 const PLAYER_FRAME = { width: 332, height: 720 };
 const PLAYER_VIEW_HEIGHT = 360;
 const PLAYER_VIEW_WIDTH = Math.round(PLAYER_VIEW_HEIGHT * (PLAYER_FRAME.width / PLAYER_FRAME.height));
-const PLAYER_DIRECTIONS = ['down', 'left', 'right', 'up'];
+const PLAYER_DIRECTIONS = ['down', 'left', 'right', 'up'] as const;
 const DOOR_STAND = { x: 8.2 * PX, y: 34 * PX };
 const SIDE_VIEW_HEIGHT = 328;
-const OBJECTIVE_ANCHORS = {
+const OBJECTIVE_ANCHORS: Record<string, [number, number]> = {
   recorder: [28.25 * PX, 470],
   notebook: [32.25 * PX, 460],
   bed: [460, 560]
 };
 
+interface LogicData {
+  logical_grid: { width: number; height: number };
+  world_size: [number, number];
+  player_spawn: { position: [number, number]; facing: string };
+  collision_zones: { id: string; rect: [number, number, number, number] }[];
+  story_state_bindings: {
+    apply_order: string[];
+    flag_map: Record<string, string>;
+  };
+  walkable_area: { rect: [number, number, number, number] }[];
+}
+
+interface InteractionZone {
+  rect?: [number, number, number, number];
+  action?: string;
+  prompt?: string;
+  line?: string;
+  repeat_line?: string;
+  repeat_line_state?: Record<string, string>;
+  blocked_line?: string;
+}
+
+interface InteractionData {
+  margin_tiles: number;
+  zones: InteractionZone[];
+}
+
 export class PrologueScene02 extends Phaser.Scene {
+  logic!: LogicData;
+  interactionData!: InteractionData;
+  statesData!: Record<string, Record<string, string>>;
+  player!: Phaser.Physics.Arcade.Sprite;
+  playerVisual!: Phaser.GameObjects.Sprite;
+  playerDirection: string = 'up';
+  foreground!: Phaser.GameObjects.Container;
+  collisionRects!: { id: string; x: number; y: number; width: number; height: number }[];
+  keyMap!: ReturnType<typeof createKeyMap>;
+  objectiveMarker!: Phaser.GameObjects.Container;
+  objectiveTarget: string | null = null;
+  flavorArmed!: Map<string, boolean>;
+  introSide: boolean = false;
+
   constructor() { super('PrologueScene02'); }
 
   preload() {
@@ -52,7 +93,7 @@ export class PrologueScene02 extends Phaser.Scene {
     this.player.setPosition(DOOR_STAND.x, DOOR_STAND.y);
     this.setupPlayerVisual();
     if (this.textures.exists('player-side-right')) {
-      const source = this.textures.get('player-side-right').getSourceImage();
+      const source = this.textures.get('player-side-right').getSourceImage() as HTMLImageElement;
       this.playerVisual.setTexture('player-side-right')
         .setDisplaySize(Math.round(SIDE_VIEW_HEIGHT * (source.width / source.height)), SIDE_VIEW_HEIGHT);
       this.introSide = true;
@@ -71,7 +112,7 @@ export class PrologueScene02 extends Phaser.Scene {
     });
     onAction(this, 'PAUSE', () => togglePause());
     if (new URLSearchParams(window.location.search).get('debug') === '1') this.drawDebug();
-    window.scene02Game = this;
+    (window as any).scene02Game = this;
     this.startOpening();
   }
 
@@ -86,7 +127,7 @@ export class PrologueScene02 extends Phaser.Scene {
     }
   }
 
-  depthFor(yPx) { return 10 + yPx / PX; }
+  depthFor(yPx: number): number { return 10 + yPx / PX; }
 
   buildCollision() {
     this.collisionRects = this.logic.collision_zones.map((item) => {
@@ -111,7 +152,7 @@ export class PrologueScene02 extends Phaser.Scene {
     this.player.setVisible(false);
   }
 
-  syncPlayerVisual(direction, moving) {
+  syncPlayerVisual(direction: string, moving: boolean) {
     if (!this.playerVisual) return;
     this.playerVisual.setPosition(this.player.x, this.player.y).setDepth(this.depthFor(this.player.y) + 0.5);
     if (this.introSide) {
@@ -143,7 +184,7 @@ export class PrologueScene02 extends Phaser.Scene {
   }
 
   updateObjective() {
-    let target = null;
+    let target: string | null = null;
     if (state.mode === 'explore' && !state.sleepStarted) {
       if (!state.audioReviewed) target = 'recorder';
       else if (!state.questionWritten) target = 'notebook';
@@ -154,7 +195,6 @@ export class PrologueScene02 extends Phaser.Scene {
     const [x, y] = OBJECTIVE_ANCHORS[target];
     if (this.objectiveMarker.x !== x || this.objectiveMarker.y !== y) this.objectiveMarker.setPosition(x, y);
     this.objectiveMarker.setVisible(true);
-    return null;
   }
 
   updateFlavor() {
@@ -196,9 +236,9 @@ export class PrologueScene02 extends Phaser.Scene {
     }
   }
 
-  recorderReview(zone) {
+  recorderReview(zone: InteractionZone) {
     if (state.audioReviewed) {
-      return this.oneLine(zone.repeat_line_state?.[state.propStates.recorder] ?? zone.repeat_line);
+      return this.oneLine(zone.repeat_line_state?.[state.propStates.recorder] ?? zone.repeat_line!);
     }
     state.mode = 'narrative';
     ambience.play('tape');
@@ -213,7 +253,7 @@ export class PrologueScene02 extends Phaser.Scene {
     });
   }
 
-  notebookWrite(zone) {
+  notebookWrite(zone: InteractionZone) {
     if (!state.audioReviewed) {
       const line = `${PROP_LINES.notebook[state.propStates.notebook] ?? PROP_LINES.notebook.default} ${zone.blocked_line ?? ONE_LINERS.notebookBlocked}`;
       return this.oneLine(line);
@@ -246,7 +286,7 @@ export class PrologueScene02 extends Phaser.Scene {
     });
   }
 
-  oneLine(text) {
+  oneLine(text: string) {
     state.mode = 'narrative';
     playNarrative([{ entry_id: 'LINE', kind: 'narration', speaker_id: 'NARRATOR', speaker_name: '旁白', text, style: 'narration', cps: 16, advance: 'manual' }], () => { state.mode = 'explore'; });
   }
@@ -293,10 +333,10 @@ export class PrologueScene02 extends Phaser.Scene {
     this.updatePrompt();
   }
 
-  tryMove(dx, dy) {
+  tryMove(dx: number, dy: number) {
     const halfW = 18;
     const halfH = 26;
-    const canOccupy = (nextX, nextY) => {
+    const canOccupy = (nextX: number, nextY: number) => {
       if (nextX - halfW < 0 || nextY - halfH < 0 || nextX + halfW > this.logic.world_size[0] || nextY + halfH > this.logic.world_size[1]) return false;
       return !this.collisionRects.some((rect) => nextX + halfW > rect.x && nextX - halfW < rect.x + rect.width && nextY + halfH > rect.y && nextY - halfH < rect.y + rect.height);
     };
@@ -309,7 +349,7 @@ export class PrologueScene02 extends Phaser.Scene {
     showPrompt(zone ? `${zone.prompt}  ·  E` : '');
   }
 
-  nearby() {
+  nearby(): InteractionZone | undefined {
     const margin = this.interactionData.margin_tiles ?? 0.5;
     const px = this.player.x / PX; const py = this.player.y / PX;
     return this.interactionData.zones.find((zone) => {

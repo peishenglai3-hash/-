@@ -1,11 +1,36 @@
-/**
- * Subtitle-led black-screen handoff. The controller owns only presentation;
- * the host decides what to do with the emitted completion callback.
- * Entries / cues / reveal are injected so the same controller drives both
- * prologue transitions (scene1 -> scene2 and scene2 -> 1927).
- */
+import type { TransitionEntry, TransitionCue } from '@/types/director';
+
+interface SceneTransitionOptions {
+  root: HTMLElement;
+  subtitle: HTMLElement;
+  date: HTMLElement;
+  reveal: HTMLElement;
+  revealImage: HTMLImageElement;
+  audio: { playCue: (id: string) => void; start: () => void; stop: () => void } | null;
+  entries: TransitionEntry[];
+  cues: TransitionCue[];
+  revealEntryId: string | null;
+  revealImageSrc: string | null;
+  onComplete: (() => void) | null;
+}
+
 export class SceneTransitionController {
-  constructor({ root, subtitle, date, reveal, revealImage, audio, entries, cues, revealEntryId, revealImageSrc, onComplete }) {
+  root: HTMLElement;
+  subtitle: HTMLElement;
+  date: HTMLElement;
+  reveal: HTMLElement;
+  revealImage: HTMLImageElement;
+  audio: SceneTransitionOptions['audio'];
+  entries: TransitionEntry[];
+  cues: TransitionCue[];
+  revealEntryId: string | null;
+  revealImageSrc: string | null;
+  onComplete: (() => void) | null;
+  timers = new Set<number>();
+  index = 0;
+  active = false;
+
+  constructor({ root, subtitle, date, reveal, revealImage, audio, entries, cues, revealEntryId, revealImageSrc, onComplete }: SceneTransitionOptions) {
     this.root = root;
     this.subtitle = subtitle;
     this.date = date;
@@ -17,12 +42,9 @@ export class SceneTransitionController {
     this.revealEntryId = revealEntryId;
     this.revealImageSrc = revealImageSrc;
     this.onComplete = onComplete;
-    this.timers = new Set();
-    this.index = 0;
-    this.active = false;
   }
 
-  _timer(callback, delay) {
+  _timer(callback: () => void, delay: number) {
     const timer = window.setTimeout(() => {
       this.timers.delete(timer);
       callback();
@@ -35,16 +57,20 @@ export class SceneTransitionController {
     this.timers.clear();
   }
 
-  _cue(entryId) {
+  _cue(entryId: string) {
     for (const cue of this.cues) {
       if (cue.at_entry === entryId) this.audio?.playCue(cue.cue_id);
     }
   }
 
-  _render(entry) {
+  _render(entry: TransitionEntry) {
     this.subtitle.className = `transition-subtitle ${entry.style || 'cue'}`;
-    this.subtitle.querySelector('[data-transition-kind]').textContent = entry.kind === 'cue' ? '环境声' : entry.style === 'date' ? '' : entry.style === 'thought' ? '心理描写' : entry.style === 'dialogue' ? entry.speaker_name || '家人' : '旁白';
-    this.subtitle.querySelector('[data-transition-text]').textContent = entry.text;
+    this.subtitle.querySelector('[data-transition-kind]')!.textContent =
+      entry.kind === 'cue' ? '环境声' :
+      entry.style === 'date' ? '' :
+      entry.style === 'thought' ? '心理描写' :
+      entry.style === 'dialogue' ? entry.speaker_name || '家人' : '旁白';
+    this.subtitle.querySelector('[data-transition-text]')!.textContent = entry.text;
     this.subtitle.classList.remove('hidden');
     this.date.classList.add('hidden');
     if (entry.style === 'date') {
@@ -90,8 +116,8 @@ export class SceneTransitionController {
     this.root.classList.add('active');
     this.reveal.classList.remove('visible');
     this.reveal.classList.add('hidden');
-    this.subtitle.querySelector('[data-transition-kind]').textContent = '';
-    this.subtitle.querySelector('[data-transition-text]').textContent = '';
+    this.subtitle.querySelector('[data-transition-kind]')!.textContent = '';
+    this.subtitle.querySelector('[data-transition-text]')!.textContent = '';
     this.date.classList.add('hidden');
     this.audio?.start();
     this._next();

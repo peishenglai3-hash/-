@@ -1,40 +1,42 @@
-import { state } from './state.js';
-import { ambience } from './ambience.js';
+import { state } from '@/common/state';
+import { ambience } from '@/common/ambience';
+import type { SaveData } from '@/common/state';
 
 const dom = {
-  task: document.querySelector('#task-card'),
-  prompt: document.querySelector('#interaction-prompt'),
-  dialogue: document.querySelector('#dialogue-panel'),
-  avatar: document.querySelector('#dialogue-avatar'),
-  avatarWrap: document.querySelector('#dialogue-avatar-wrap'),
-  speaker: document.querySelector('#dialogue-speaker'),
-  text: document.querySelector('#dialogue-text'),
-  hint: document.querySelector('#dialogue-hint'),
-  item: document.querySelector('#item-panel'),
-  choices: document.querySelector('#choice-panel'),
-  result: document.querySelector('#result-panel'),
-  fade: document.querySelector('#scene-fade'),
-  intro: document.querySelector('#intro-panel'),
-  video: document.querySelector('#intro-video'),
-  start: document.querySelector('#start-button'),
-  pause: document.querySelector('#pause-panel'),
-  flavor: document.querySelector('#flavor-toast'),
-  end: document.querySelector('#end-panel'),
-  endCheckpoint: document.querySelector('#end-checkpoint'),
-  endProfile: document.querySelector('#end-profile'),
-  endTags: document.querySelector('#end-tags'),
-  endRisk: document.querySelector('#end-risk')
+  task: document.querySelector('#task-card')!,
+  prompt: document.querySelector('#interaction-prompt')!,
+  dialogue: document.querySelector('#dialogue-panel')!,
+  avatar: document.querySelector('#dialogue-avatar') as HTMLImageElement,
+  avatarWrap: document.querySelector('#dialogue-avatar-wrap')!,
+  speaker: document.querySelector('#dialogue-speaker')!,
+  text: document.querySelector('#dialogue-text')!,
+  hint: document.querySelector('#dialogue-hint')!,
+  item: document.querySelector('#item-panel')!,
+  choices: document.querySelector('#choice-panel')!,
+  result: document.querySelector('#result-panel')!,
+  fade: document.querySelector('#scene-fade')!,
+  intro: document.querySelector('#intro-panel')!,
+  video: document.querySelector('#intro-video') as HTMLVideoElement,
+  start: document.querySelector('#start-button')!,
+  pause: document.querySelector('#pause-panel')!,
+  flavor: document.querySelector('#flavor-toast')!,
+  end: document.querySelector('#end-panel')!,
+  endCheckpoint: document.querySelector('#end-checkpoint')!,
+  endProfile: document.querySelector('#end-profile')!,
+  endTags: document.querySelector('#end-tags')!,
+  endRisk: document.querySelector('#end-risk')!
 };
 
-let flavorTimer = null;
-export function showFlavor(text) {
+let flavorTimer: number | null = null;
+
+export function showFlavor(text: string) {
   dom.flavor.textContent = text;
   dom.flavor.classList.add('show');
   if (flavorTimer) window.clearTimeout(flavorTimer);
   flavorTimer = window.setTimeout(() => dom.flavor.classList.remove('show'), 2600);
 }
 
-export function showTask(task) {
+export function showTask(task: { title: string; detail: string }) {
   state.taskPreviousLock = state.playerLocked;
   state.taskOpen = true;
   state.playerLocked = true;
@@ -54,7 +56,7 @@ export function hideTask() {
   dom.task.classList.add('hidden');
 }
 
-export function showPrompt(text) {
+export function showPrompt(text: string) {
   dom.prompt.textContent = text;
   dom.prompt.classList.toggle('hidden', !text);
 }
@@ -67,10 +69,10 @@ export function hideDialogue() {
   state.inNarrative = false;
 }
 
-export function playNarrative(entries, onComplete) {
+export function playNarrative(entries: any[], onComplete?: () => void) {
   state.narrativeQueue = entries;
   state.narrativeIndex = 0;
-  state.onNarrativeComplete = onComplete;
+  state.onNarrativeComplete = onComplete ?? null;
   state.playerLocked = true;
   state.inNarrative = true;
   renderNarrativeEntry();
@@ -96,12 +98,12 @@ function renderNarrativeEntry() {
   dom.hint.textContent = 'Space 继续';
   if (entry.sfx) ambience.play(entry.sfx);
   state.typing = true;
-  const chars = [...entry.text];
+  const chars = [...entry.text] as string[];
   let cursor = 0;
   state.typingTimer = window.setInterval(() => {
     dom.text.textContent = chars.slice(0, ++cursor).join('');
     if (cursor >= chars.length) {
-      window.clearInterval(state.typingTimer);
+      window.clearInterval(state.typingTimer!);
       state.typingTimer = null;
       state.typing = false;
     }
@@ -122,11 +124,11 @@ export function advanceNarrative() {
   renderNarrativeEntry();
 }
 
-export function showItem({ icon, title, text }) {
+export function showItem({ icon, title, text }: { icon: string; title: string; text: string }) {
   dom.item.innerHTML = `<img src="${icon}" alt="${title}"/><div><strong>${title}</strong><span>${text}</span></div><button><kbd>E</kbd> 关闭</button>`;
   dom.item.classList.remove('hidden');
   state.playerLocked = true;
-  dom.item.querySelector('button').onclick = closeItem;
+  dom.item.querySelector('button')!.onclick = closeItem;
 }
 
 export function closeItem() {
@@ -134,7 +136,7 @@ export function closeItem() {
   state.playerLocked = false;
 }
 
-export function showItemPassive({ icon, title, text }) {
+export function showItemPassive({ icon, title, text }: { icon: string; title: string; text: string }) {
   dom.item.innerHTML = `<img src="${icon}" alt="${title}"/><div><strong>${title}</strong><span>${text}</span></div>`;
   dom.item.classList.remove('hidden');
 }
@@ -147,17 +149,17 @@ export function itemPanelOpen() {
   return !dom.item.classList.contains('hidden');
 }
 
-export function showChoices(choices, onChoose) {
+export function showChoices(choices: { id: string; label: string; detail: string }[], onChoose: (id: string) => void) {
   dom.choices.innerHTML = `<div class="choice-title">走访结束前，最后确认什么？</div>${choices.map((choice) => `<button class="choice" data-choice="${choice.id}"><b>[${choice.id.slice(-1)}]</b><span><strong>${choice.label}</strong><small>${choice.detail}</small></span></button>`).join('')}`;
   dom.choices.classList.remove('hidden');
-  dom.choices.querySelectorAll('[data-choice]').forEach((button) => button.addEventListener('click', () => onChoose(button.dataset.choice)));
+  dom.choices.querySelectorAll('[data-choice]').forEach((button) => button.addEventListener('click', () => onChoose((button as HTMLElement).dataset.choice!)));
 }
 
 export function hideChoices() {
   dom.choices.classList.add('hidden');
 }
 
-export function showResult(choice) {
+export function showResult(choice: { label: string; image: string; result: [string, string] }) {
   dom.result.innerHTML = `<img src="${choice.image}" alt="${choice.label}"/><div class="result-copy"><span>…${choice.result[0]}</span><span>${choice.result[1]}</span><small>Space 继续</small></div>`;
   dom.result.classList.remove('hidden');
 }
@@ -185,7 +187,7 @@ export function hideIntro() {
   dom.video.pause();
 }
 
-export function showEndPanel(save) {
+export function showEndPanel(save: SaveData) {
   dom.endCheckpoint.textContent = `固定回退点：${save.checkpointLabel}（${save.checkpoint}）`;
   dom.endProfile.textContent = `画像累计 D${save.profile.D} C${save.profile.C} I${save.profile.I} G${save.profile.G} P${save.profile.P} A${save.profile.A}`;
   dom.endTags.textContent = `选择标签 ${save.choiceTag ?? '—'} ｜ 固定标签 ${save.fixed.join(' · ')}`;

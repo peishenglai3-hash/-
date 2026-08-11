@@ -1,12 +1,14 @@
 import Phaser from 'phaser';
-import { createKeyMap, isActionDown, onAction } from './actions.js';
-import { state } from './state.js';
+import './style.css';
+import { createKeyMap, isActionDown, onAction } from '@/common/actions';
+import { state } from '@/common/state';
 import {
   showTask, closeTask, hideTask, showPrompt, playNarrative, advanceNarrative,
   showItem, closeItem, hideItem, itemPanelOpen, showChoices, hideChoices, showResult,
   hideResult, hideDialogue, fadeToBlack, togglePause
-} from './ui.js';
-import { REQUIRED_NARRATIVE, CHOICES, TASKS01, LEAVE_NARRATIVE, PROFILE_DELTAS } from './content01.js';
+} from '@/common/ui';
+import { REQUIRED_NARRATIVE, CHOICES, TASKS01, LEAVE_NARRATIVE, PROFILE_DELTAS } from './content';
+import type { Choice } from './content';
 
 const PX = 32;
 const PLAYER_FRAME = { width: 332, height: 720 };
@@ -15,7 +17,25 @@ const NPC_DISPLAY = { width: 77, height: 160 };
 const STUDENT_A_FRAME = { width: 453, height: 902 };
 const STUDENT_A_DISPLAY = { width: Math.round(NPC_DISPLAY.height * (STUDENT_A_FRAME.width / STUDENT_A_FRAME.height)), height: NPC_DISPLAY.height };
 
+interface ManifestData {
+  spawns: { id: string; position: [number, number]; facing: string }[];
+  collision: { id: string; rect: [number, number, number, number] }[];
+  interactions: { id: string; prompt?: string; rect: [number, number, number, number]; type?: string }[];
+}
+
 export class Scene01 extends Phaser.Scene {
+  manifest!: ManifestData;
+  player!: Phaser.Physics.Arcade.Sprite;
+  playerVisual!: Phaser.GameObjects.Sprite;
+  playerDirection: string = 'down';
+  keyMap!: ReturnType<typeof createKeyMap>;
+  camera!: Phaser.Cameras.Scene2D.Camera;
+  collisionRects!: { id: string; x: number; y: number; width: number; height: number }[];
+  studentA!: Phaser.GameObjects.Sprite;
+  studentB!: Phaser.GameObjects.Sprite | Phaser.GameObjects.DOMElement;
+  studentBExit: Phaser.GameObjects.Sprite | null = null;
+  leaveNpcArrived: { A: boolean; B: boolean } | null = null;
+
   constructor() { super('Scene01'); }
 
   preload() {
@@ -38,8 +58,8 @@ export class Scene01 extends Phaser.Scene {
     this.physics.world.setBounds(0, 0, 48 * PX, 27 * PX);
     this.add.image(768, 432, 'bg01').setDisplaySize(1536, 864).setDepth(-20);
     this.buildCollision();
-    const spawn = (id) => this.manifest.spawns.find((entry) => entry.id === id);
-    const playerSpawn = spawn('PLAYER_START');
+    const spawn = (id: string) => this.manifest.spawns.find((entry) => entry.id === id);
+    const playerSpawn = spawn('PLAYER_START')!;
     this.player = this.physics.add.sprite(playerSpawn.position[0] * PX, playerSpawn.position[1] * PX, 'player-walk-down').setOrigin(0.5, 1).setDepth(800);
     this.player.setSize(24, 40).setOffset(154, 680);
     this.player.setCollideWorldBounds(true);
@@ -49,8 +69,8 @@ export class Scene01 extends Phaser.Scene {
     this.keyMap = createKeyMap(this);
     this.camera = this.cameras.main.setBounds(0, 0, 1536, 864).startFollow(this.player, true, 0.08, 0.08);
     this.camera.setZoom(1);
-    const studentASpawn = spawn('NPC_CH00_STUDENT_A');
-    const studentBSpawn = spawn('NPC_CH00_STUDENT_B');
+    const studentASpawn = spawn('NPC_CH00_STUDENT_A')!;
+    const studentBSpawn = spawn('NPC_CH00_STUDENT_B')!;
     this.createNpc('student-a', 'NPC_CH00_STUDENT_A', studentASpawn.position[0], studentASpawn.position[1], studentASpawn.facing);
     this.createNpc('student-b', 'NPC_CH00_STUDENT_B', studentBSpawn.position[0], studentBSpawn.position[1], studentBSpawn.facing);
     onAction(this, 'INTERACT', () => this.handleConfirm());
@@ -60,7 +80,7 @@ export class Scene01 extends Phaser.Scene {
       else if (itemPanelOpen()) closeItem();
     });
     onAction(this, 'PAUSE', () => togglePause());
-    window.scene01Game = this;
+    (window as any).scene01Game = this;
   }
 
   beginExplore() {
@@ -83,7 +103,7 @@ export class Scene01 extends Phaser.Scene {
       .setOrigin(0.5, 1).setDisplaySize(PLAYER_DISPLAY.width, PLAYER_DISPLAY.height).setDepth(801);
   }
 
-  syncPlayerVisual(direction, moving) {
+  syncPlayerVisual(direction: string, moving: boolean) {
     if (!this.playerVisual) return;
     this.playerVisual.setPosition(this.player.x, this.player.y).setFlipX(false);
     if (moving) {
@@ -95,23 +115,23 @@ export class Scene01 extends Phaser.Scene {
     this.playerVisual.setTexture(`player-walk-${direction}`, 0);
   }
 
-  createKeyedTexture(sourceKey, targetKey) {
-    const source = this.textures.get(sourceKey).getSourceImage();
+  createKeyedTexture(sourceKey: string, targetKey: string) {
+    const source = this.textures.get(sourceKey).getSourceImage() as HTMLImageElement;
     const canvas = document.createElement('canvas');
     canvas.width = source.width;
     canvas.height = source.height;
-    const context = canvas.getContext('2d', { willReadFrequently: true });
+    const context = canvas.getContext('2d', { willReadFrequently: true })!;
     context.drawImage(source, 0, 0);
     const image = context.getImageData(0, 0, canvas.width, canvas.height);
     const data = image.data;
     const visited = new Uint8Array(canvas.width * canvas.height);
-    const queue = [];
-    const isBackground = (index) => {
+    const queue: number[] = [];
+    const isBackground = (index: number) => {
       const r = data[index]; const g = data[index + 1]; const b = data[index + 2];
       const max = Math.max(r, g, b); const min = Math.min(r, g, b);
       return max < 28 || (max - min < 12 && min > 180);
     };
-    const enqueue = (x, y) => {
+    const enqueue = (x: number, y: number) => {
       if (x < 0 || y < 0 || x >= canvas.width || y >= canvas.height) return;
       const pixel = y * canvas.width + x;
       if (visited[pixel]) return;
@@ -140,12 +160,12 @@ export class Scene01 extends Phaser.Scene {
     });
   }
 
-  createNpc(prefix, id, x, y, facing) {
+  createNpc(prefix: string, id: string, x: number, y: number, facing: string) {
     const textureFacing = facing === 'down' ? 'front' : facing === 'up' ? 'back' : 'side';
     if (id === 'NPC_CH00_STUDENT_B') {
       const image = document.createElement('img');
       image.src = '/assets/characters/student-b/actions/camera-keyed.gif';
-      image.className = 'npc-gif-mask';
+      image.className = 'scene01-npc-gif-mask';
       image.alt = '同学乙拍照';
       const npc = this.add.dom(x * PX, y * PX, image).setOrigin(0.5, 1).setDepth(550 + y * PX);
       npc.setData('spawnId', id);
@@ -167,22 +187,22 @@ export class Scene01 extends Phaser.Scene {
     npc.setData('spawnId', id);
     npc.setData('facing', facing);
     npc.setData('action', 'idle');
-    this[prefix === 'student-a' ? 'studentA' : 'studentB'] = npc;
+    (this as any)[prefix === 'student-a' ? 'studentA' : 'studentB'] = npc;
   }
 
   repositionActors() {
     this.player.setPosition(24 * PX, 25 * PX);
     this.studentA.setPosition(26 * PX, 25 * PX);
-    this.studentB.setPosition(22 * PX, 25 * PX);
+    (this.studentB as Phaser.GameObjects.Sprite).setPosition(22 * PX, 25 * PX);
     this.studentB.setVisible(false);
   }
 
   startLeaveWalk() {
     this.leaveNpcArrived = { A: true, B: true };
     this.studentA.setData('action', 'packing');
-    this.studentB.setData('action', 'returning');
+    (this.studentB as Phaser.GameObjects.Sprite).setData('action', 'returning');
     this.studentA.setPosition(26 * PX, 25 * PX);
-    this.studentB.setPosition(22 * PX, 25 * PX);
+    (this.studentB as Phaser.GameObjects.Sprite).setPosition(22 * PX, 25 * PX);
     this.swapStudentBToExitPose();
   }
 
@@ -190,7 +210,7 @@ export class Scene01 extends Phaser.Scene {
     this.studentB.setVisible(false);
     this.studentBExit?.destroy();
     const texture = this.textures.exists('student-b-front-task3') ? 'student-b-front-task3' : 'student-b-front-keyed';
-    const source = this.textures.get(texture).getSourceImage();
+    const source = this.textures.get(texture).getSourceImage() as HTMLImageElement;
     const displayHeight = NPC_DISPLAY.height;
     const displayWidth = Math.round(displayHeight * (source.width / source.height));
     this.studentBExit = this.add.sprite(22 * PX, 25 * PX, texture)
@@ -232,10 +252,10 @@ export class Scene01 extends Phaser.Scene {
     this.updatePrompt();
   }
 
-  tryMove(dx, dy) {
+  tryMove(dx: number, dy: number) {
     const halfW = 12;
     const halfH = 20;
-    const canOccupy = (nextX, nextY) => {
+    const canOccupy = (nextX: number, nextY: number) => {
       if (nextX - halfW < 0 || nextY - halfH < 0 || nextX + halfW > 48 * PX || nextY + halfH > 27 * PX) return false;
       return !this.collisionRects.some((rect) => nextX + halfW > rect.x && nextX - halfW < rect.x + rect.width && nextY + halfH > rect.y && nextY - halfH < rect.y + rect.height);
     };
@@ -248,7 +268,7 @@ export class Scene01 extends Phaser.Scene {
     showPrompt(nearby ? `${nearby.prompt || nearby.id}  ·  E` : '');
   }
 
-  nearby() {
+  nearby(): { id: string; prompt?: string; rect: [number, number, number, number]; type?: string } | undefined {
     const px = this.player.x / PX; const py = this.player.y / PX;
     const targets = [...this.manifest.interactions];
     if (state.mode === 'explore') {
@@ -287,7 +307,7 @@ export class Scene01 extends Phaser.Scene {
     showItem({ icon: '/assets/items/notebook-open.png', title: '实践笔记', text: '散落的采访记录与待确认的名字。' });
   }
 
-  openNpc(entryId) {
+  openNpc(entryId: string) {
     state.mode = 'narrative';
     playNarrative(REQUIRED_NARRATIVE.filter((entry) => entry.entry_id === entryId), () => { state.mode = 'explore'; });
   }
@@ -307,10 +327,10 @@ export class Scene01 extends Phaser.Scene {
   openChoices() {
     state.mode = 'choice';
     state.playerLocked = true;
-    showChoices(CHOICES, (id) => this.choose(id));
+    showChoices(CHOICES, (id: string) => this.choose(id));
   }
 
-  choose(id) {
+  choose(id: string) {
     const choice = CHOICES.find((item) => item.id === id);
     if (!choice) return;
     state.choice = choice;
@@ -332,7 +352,7 @@ export class Scene01 extends Phaser.Scene {
     showTask({ title: '走向南门', detail: '沿石板路向南门行走，与同学甲和同学乙汇合' });
   }
 
-  startLeaveNpcDialogue(which) {
+  startLeaveNpcDialogue(which: string) {
     const entryId = which === 'A' ? 'L1' : 'L2';
     state.mode = which === 'A' ? 'leave_npc_a' : 'leave_npc_b';
     state.leavePhase = state.mode;
