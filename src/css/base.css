@@ -94,3 +94,18 @@ body {
 .dev-zone-tabs button[data-kind="foreground"].active { border-color: #55e7ff; color: #55e7ff; box-shadow: inset 0 -2px #55e7ff; }
 .dev-zone-editor input:disabled, .dev-zone-editor select:disabled, .dev-zone-editor button:disabled { opacity: .45; cursor: not-allowed; }
 .dev-zone-actions button.armed { border-color: #55e7ff; background: #123c43; color: #bffaff; }
+
+body.dev-editor-active #app > :not(#game),
+body.dev-editor-active #app > :not(#game) * {
+	pointer-events: none !important;
+}
+
+body.dev-editor-active #game,
+body.dev-editor-active #game canvas {
+	pointer-events: auto !important;
+}
+
+body.dev-editor-active .dev-zone-editor,
+body.dev-editor-active .dev-zone-editor * {
+	pointer-events: auto;
+}

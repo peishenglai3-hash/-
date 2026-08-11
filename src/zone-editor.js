@@ -355,6 +355,7 @@ export class CollisionEditor {
 
   setEnabled(enabled) {
     this.enabled = enabled;
+    document.body.classList.toggle('dev-editor-active', enabled);
     this.graphics.setVisible(enabled);
     this.panel.classList.toggle('hidden', !enabled);
     if (enabled) this.select(this.items[0] ?? null);
