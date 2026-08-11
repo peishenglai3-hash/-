@@ -1,7 +1,7 @@
 import { state } from '@/common/state';
 import { ambience } from '@/common/ambience';
 import { assetPath } from '@/common/paths';
-import type { SaveData } from '@/common/state';
+import type { SaveData } from '@/types/common';
 
 const dom = {
   task: document.querySelector('#task-card')!,

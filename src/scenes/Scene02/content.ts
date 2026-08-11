@@ -1,4 +1,4 @@
-import type { NarrativeEntry } from '@/common/state';
+import type { NarrativeEntry } from '@/types/common';
 
 export const OPENING: NarrativeEntry[] = [
   { entry_id: 'B1', kind: 'narration', speaker_id: 'NARRATOR', speaker_name: '旁白', text: '当晚，实践驻地。', style: 'narration', cps: 12, advance: 'manual' },
