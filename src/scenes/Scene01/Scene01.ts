@@ -30,14 +30,21 @@ import {
 } from "./content";
 import type { Choice } from "./content";
 import { assetPath } from "@/common/paths";
+import {
+	createModernPlayerWalkAnimations,
+	MODERN_PLAYER_SOURCE_FRAME,
+	modernWalkFrameKey,
+	preloadModernPlayerWalk,
+	setModernPlayerDirection,
+} from "@/common/modernPlayerWalk";
 // @ts-ignore Legacy developer editor is shared by the TS scenes.
 import { CollisionEditor } from "../../zone-editor.js";
 // @ts-ignore Legacy actor collider helpers are shared by the editor.
 import { ensureActorColliderConfig, createActorColliderEntry } from "../../actor-collider.js";
 
 const PX = 32;
-const PLAYER_FRAME = { width: 332, height: 720 };
-const PLAYER_DISPLAY = { width: 83, height: 180 };
+const PLAYER_FRAME = MODERN_PLAYER_SOURCE_FRAME;
+const PLAYER_DISPLAY_HEIGHT = 360;
 const NPC_DISPLAY = { width: 77, height: 160 };
 const STUDENT_A_FRAME = { width: 453, height: 902 };
 const STUDENT_A_DISPLAY = {
@@ -87,16 +94,7 @@ export class Scene01 extends Phaser.Scene {
 	preload() {
 		this.load.json("manifest", "data/scene01_manifest.json");
 		this.load.image("bg01", "assets/map/scene01_base.png");
-		for (const direction of ["up", "down", "left", "right"]) {
-			this.load.spritesheet(
-				`player-walk-${direction}`,
-				`assets/characters/player/modern/walk-${direction}.png`,
-				{
-					frameWidth: PLAYER_FRAME.width,
-					frameHeight: PLAYER_FRAME.height,
-				},
-			);
-		}
+		preloadModernPlayerWalk(this);
 		for (const id of ["front", "back", "side"])
 			this.load.image(
 				`student-b-${id}`,
@@ -145,7 +143,7 @@ export class Scene01 extends Phaser.Scene {
 			.sprite(
 				playerSpawn.position[0] * PX,
 				playerSpawn.position[1] * PX,
-				"player-walk-down",
+				modernWalkFrameKey("down", 0),
 			)
 			.setOrigin(0.5, 1)
 			.setDepth(800);
@@ -193,22 +191,12 @@ export class Scene01 extends Phaser.Scene {
 	}
 
 	setupPlayerVisual() {
-		for (const direction of ["up", "down", "left", "right"]) {
-			this.anims.create({
-				key: `player-walk-${direction}-anim`,
-				frames: this.anims.generateFrameNumbers(
-					`player-walk-${direction}`,
-					{ start: 0, end: 7 },
-				),
-				frameRate: 8,
-				repeat: -1,
-			});
-		}
+		createModernPlayerWalkAnimations(this);
 		this.playerVisual = this.add
-			.sprite(this.player.x, this.player.y, "player-walk-down", 0)
+			.sprite(this.player.x, this.player.y, modernWalkFrameKey("down", 0), 0)
 			.setOrigin(0.5, 1)
-			.setDisplaySize(PLAYER_DISPLAY.width, PLAYER_DISPLAY.height)
 			.setDepth(801);
+		setModernPlayerDirection(this.playerVisual, "down", PLAYER_DISPLAY_HEIGHT);
 	}
 
 	syncPlayerVisual(direction: string, moving: boolean) {
@@ -216,6 +204,10 @@ export class Scene01 extends Phaser.Scene {
 		this.playerVisual
 			.setPosition(this.player.x, this.player.y)
 			.setFlipX(false);
+		const walkDirection = direction as "down" | "left" | "right" | "up";
+		const firstFrame = modernWalkFrameKey(walkDirection, 0);
+		if (!this.playerVisual.texture.key.startsWith(`modern-player-${walkDirection}-`))
+			setModernPlayerDirection(this.playerVisual, walkDirection, PLAYER_DISPLAY_HEIGHT);
 		if (moving) {
 			const animation = `player-walk-${direction}-anim`;
 			if (
@@ -226,7 +218,7 @@ export class Scene01 extends Phaser.Scene {
 			return;
 		}
 		this.playerVisual.anims.stop();
-		this.playerVisual.setTexture(`player-walk-${direction}`, 0);
+		this.playerVisual.setTexture(firstFrame, 0);
 	}
 
 	createKeyedTexture(sourceKey: string, targetKey: string) {

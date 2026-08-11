@@ -18,6 +18,13 @@ import {
 } from "@/common/ui";
 import { ambience } from "@/common/ambience";
 import { assetPath } from "@/common/paths";
+import {
+	createModernPlayerWalkAnimations,
+	MODERN_PLAYER_SOURCE_FRAME,
+	modernWalkFrameKey,
+	preloadModernPlayerWalk,
+	setModernPlayerDirection,
+} from "@/common/modernPlayerWalk";
 // @ts-ignore Legacy developer editor is shared by the TS scenes.
 import { CollisionEditor } from "../../zone-editor.js";
 // @ts-ignore Legacy actor collider helpers are shared by the editor.
@@ -34,11 +41,8 @@ import {
 } from "./content";
 
 const PX = 32;
-const PLAYER_FRAME = { width: 332, height: 720 };
+const PLAYER_FRAME = MODERN_PLAYER_SOURCE_FRAME;
 const PLAYER_VIEW_HEIGHT = 360;
-const PLAYER_VIEW_WIDTH = Math.round(
-	PLAYER_VIEW_HEIGHT * (PLAYER_FRAME.width / PLAYER_FRAME.height),
-);
 const PLAYER_DIRECTIONS = ["down", "left", "right", "up"] as const;
 const DOOR_STAND = { x: 8.2 * PX, y: 34 * PX };
 const SIDE_VIEW_HEIGHT = 328;
@@ -108,16 +112,7 @@ export class PrologueScene02 extends Phaser.Scene {
 		this.load.json("interactions", "data/PRO02_interactions.json");
 		this.load.json("states", "data/PRO02_states.json");
 		this.load.image("bg02", "assets/map/pro02_base.png");
-		for (const direction of PLAYER_DIRECTIONS) {
-			this.load.spritesheet(
-				`player-walk-${direction}`,
-				`assets/characters/player/modern/walk-${direction}.png`,
-				{
-					frameWidth: PLAYER_FRAME.width,
-					frameHeight: PLAYER_FRAME.height,
-				},
-			);
-		}
+		preloadModernPlayerWalk(this);
 		this.load.image(
 			"player-side-right",
 			"assets/characters/player/modern/side-right.png",
@@ -151,7 +146,7 @@ export class PrologueScene02 extends Phaser.Scene {
 			.sprite(
 				spawn.position[0] * PX,
 				spawn.position[1] * PX,
-				"player-walk-down",
+				modernWalkFrameKey("down", 0),
 			)
 			.setOrigin(0.5, 1)
 			.setDepth(this.depthFor(spawn.position[1] * PX));
@@ -280,22 +275,12 @@ export class PrologueScene02 extends Phaser.Scene {
 	}
 
 	setupPlayerVisual() {
-		for (const direction of PLAYER_DIRECTIONS) {
-			this.anims.create({
-				key: `player-walk-${direction}-anim`,
-				frames: this.anims.generateFrameNumbers(
-					`player-walk-${direction}`,
-					{ start: 0, end: 7 },
-				),
-				frameRate: 8,
-				repeat: -1,
-			});
-		}
+		createModernPlayerWalkAnimations(this);
 		this.playerVisual = this.add
-			.sprite(this.player.x, this.player.y, "player-walk-down", 0)
+			.sprite(this.player.x, this.player.y, modernWalkFrameKey("down", 0), 0)
 			.setOrigin(0.5, 1)
-			.setDisplaySize(PLAYER_VIEW_WIDTH, PLAYER_VIEW_HEIGHT)
 			.setDepth(this.depthFor(this.player.y) + 0.5);
+		setModernPlayerDirection(this.playerVisual, "down", PLAYER_VIEW_HEIGHT);
 		this.player.setVisible(false);
 	}
 
@@ -307,10 +292,12 @@ export class PrologueScene02 extends Phaser.Scene {
 		if (this.introSide) {
 			if (!moving) return;
 			this.introSide = false;
-			this.playerVisual
-				.setTexture(`player-walk-${direction}`, 0)
-				.setDisplaySize(PLAYER_VIEW_WIDTH, PLAYER_VIEW_HEIGHT);
+			setModernPlayerDirection(this.playerVisual, direction as "down" | "left" | "right" | "up", PLAYER_VIEW_HEIGHT);
 		}
+		const walkDirection = direction as "down" | "left" | "right" | "up";
+		const firstFrame = modernWalkFrameKey(walkDirection, 0);
+		if (!this.playerVisual.texture.key.startsWith(`modern-player-${walkDirection}-`))
+			setModernPlayerDirection(this.playerVisual, walkDirection, PLAYER_VIEW_HEIGHT);
 		if (moving) {
 			const animation = `player-walk-${direction}-anim`;
 			if (
@@ -321,7 +308,7 @@ export class PrologueScene02 extends Phaser.Scene {
 			return;
 		}
 		this.playerVisual.anims.stop();
-		this.playerVisual.setTexture(`player-walk-${direction}`, 0);
+		this.playerVisual.setTexture(firstFrame, 0);
 	}
 
 	setupObjectiveMarker() {
