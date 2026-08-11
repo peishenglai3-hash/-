@@ -201,7 +201,12 @@ export class CollisionEditor {
   }
 
   bindInput() {
-    this.scene.input.on('pointerdown', (pointer) => {
+    const canvas = this.scene.game.canvas;
+    const toPointer = (event, isDown = false) => {
+      const rect = canvas.getBoundingClientRect();
+      return { x: (event.clientX - rect.left) * canvas.width / rect.width, y: (event.clientY - rect.top) * canvas.height / rect.height, button: event.button, isDown, event };
+    };
+    const pointerDown = (pointer) => {
       if (!this.enabled) return;
       if (this.kind === 'foreground') return this.lasso.pointerDown(pointer);
       const point = this.worldPoint(pointer);
@@ -218,8 +223,8 @@ export class CollisionEditor {
         rotation: this.rotationOf(hit),
         center: rectCenter(hit.rect)
       };
-    });
-    this.scene.input.on('pointermove', (pointer) => {
+    };
+    const pointerMove = (pointer) => {
       if (!this.enabled) return;
       if (this.kind === 'foreground') return this.lasso.pointerMove(pointer);
       const point = this.worldPoint(pointer);
@@ -231,21 +236,36 @@ export class CollisionEditor {
       else if (this.drag.mode === 'rotate') this.rotateRect(point);
       else this.resizeRect(point);
       this.changed();
-    });
+    };
     const pointerUp = (pointer) => {
       if (!this.enabled) return this.setCursor('default');
       if (this.kind === 'foreground') return this.lasso.pointerUp(pointer);
       this.drag = null;
       this.updateCursor(this.worldPoint(pointer));
     };
-    this.scene.input.on('pointerup', pointerUp);
-    this.scene.input.on('pointerupoutside', (pointer) => {
+    const onDown = (event) => {
       if (!this.enabled) return;
-      pointerUp(pointer);
-    });
-    this.scene.input.on('pointerout', () => {
+      event.preventDefault();
+      canvas.setPointerCapture?.(event.pointerId);
+      pointerDown(toPointer(event, true));
+    };
+    const onMove = (event) => pointerMove(toPointer(event, event.buttons !== 0));
+    const onUp = (event) => pointerUp(toPointer(event, false));
+    const onLeave = () => {
       if (this.kind === 'foreground') this.lasso.pointerOut();
       else this.setCursor('default');
+    };
+    canvas.addEventListener('pointerdown', onDown);
+    canvas.addEventListener('pointermove', onMove);
+    canvas.addEventListener('pointerup', onUp);
+    canvas.addEventListener('pointercancel', onUp);
+    canvas.addEventListener('pointerleave', onLeave);
+    this.scene.events.once('shutdown', () => {
+      canvas.removeEventListener('pointerdown', onDown);
+      canvas.removeEventListener('pointermove', onMove);
+      canvas.removeEventListener('pointerup', onUp);
+      canvas.removeEventListener('pointercancel', onUp);
+      canvas.removeEventListener('pointerleave', onLeave);
     });
   }
 
