@@ -12,6 +12,7 @@
   "dependencies": {
     "@vitejs/plugin-vue": "^6.0.8",
     "phaser": "3.90.0",
+    "pinia": "^4.0.2",
     "vue": "^3.5.41"
   },
   "devDependencies": {

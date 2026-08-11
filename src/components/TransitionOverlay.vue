@@ -3,14 +3,28 @@ import { hud } from '@/common/store';
 </script>
 
 <template>
-  <div class="scene-transition">
-    <div class="transition-subtitle hidden">
-      <div class="transition-kind" data-transition-kind></div>
-      <div class="transition-text" data-transition-text></div>
+  <div
+    class="scene-transition"
+    :class="{ active: hud.transition.active }"
+  >
+    <div
+      v-show="hud.transition.subtitleVisible"
+      class="transition-subtitle"
+      :class="hud.transition.subtitleStyle"
+    >
+      <div class="transition-kind">{{ hud.transition.kindText }}</div>
+      <div class="transition-text">{{ hud.transition.text }}</div>
     </div>
-    <div class="transition-date hidden"></div>
-    <div class="transition-reveal hidden">
-      <img data-transition-reveal-image alt="" />
+    <div
+      v-show="hud.transition.dateVisible"
+      class="transition-date"
+    >{{ hud.transition.dateText }}</div>
+    <div
+      v-show="hud.transition.revealShown"
+      class="transition-reveal"
+      :class="{ visible: hud.transition.revealFadeIn }"
+    >
+      <img :src="hud.transition.revealSrc" alt="" />
     </div>
   </div>
 </template>
@@ -118,6 +132,4 @@ import { hud } from '@/common/store';
   object-fit: cover;
   image-rendering: auto;
 }
-
-.hidden { display: none !important; }
 </style>

@@ -95,6 +95,20 @@ export const hud = reactive({
   // --- end panel ---
   endPanel: null as EndPanel | null,
 
+  // --- transition overlay ---
+  transition: {
+    active: false,
+    subtitleVisible: true,
+    subtitleStyle: 'cue' as string,
+    kindText: '',
+    text: '',
+    dateVisible: false,
+    dateText: '',
+    revealShown: false,
+    revealFadeIn: false,
+    revealSrc: '',
+  },
+
   // --- global lock (allows Vue components to also set) ---
   playerLocked: false,
 });

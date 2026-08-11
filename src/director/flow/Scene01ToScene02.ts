@@ -25,7 +25,6 @@ export const TRANSITION_A: TransitionConfig = {
 export function setupScene01ToScene02(director: GameDirector): void {
   director.game.events.on('prologue:scene01-complete', () => {
     director.runTransition(TRANSITION_A, () => {
-      director.dom.transition!.classList.remove('active');
       clearFade();
       director.game.scene.stop('Scene01');
       state.mode = 'intro';

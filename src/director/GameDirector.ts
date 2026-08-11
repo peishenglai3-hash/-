@@ -7,37 +7,22 @@ import { state } from '@/common/state';
 import type { SaveData } from '@/types/common';
 import { assetPath } from '@/common/paths';
 import { showEndPanel } from '@/common/ui';
-import { setupStartScene } from './flow/StartScene';
 import { setupScene01ToScene02 } from './flow/Scene01ToScene02';
 import { setupScene02ToSettlement } from './flow/Scene02ToSettlement';
 import { setupDebugRoute } from './flow/DebugRoute';
 
-export interface DirectorDom {
-  intro: HTMLElement | null;
-  video: HTMLVideoElement | null;
-  start: HTMLButtonElement | null;
-  transition: HTMLElement | null;
-  subtitle: HTMLElement | null;
-  date: HTMLElement | null;
-  reveal: HTMLElement | null;
-  revealImage: HTMLImageElement | null;
-}
-
 export interface DirectorOptions {
   game: Phaser.Game;
-  dom: DirectorDom;
 }
 
 export class GameDirector {
   game: Phaser.Game;
-  dom: DirectorDom;
   transitionAudio: TransitionAudioController;
   bgm: HTMLAudioElement;
   controller: SceneTransitionController | null = null;
 
-  constructor({ game, dom }: DirectorOptions) {
+  constructor({ game }: DirectorOptions) {
     this.game = game;
-    this.dom = dom;
     this.transitionAudio = new TransitionAudioController();
     this.bgm = new Audio(assetPath('/assets/audio/prologue_bgm.wav'));
     this.bgm.loop = true;
@@ -45,7 +30,6 @@ export class GameDirector {
   }
 
   init(): void {
-    setupStartScene(this);
     setupDebugRoute(this);
     setupScene01ToScene02(this);
     setupScene02ToSettlement(this);
@@ -56,11 +40,6 @@ export class GameDirector {
   runTransition(config: TransitionConfig, onComplete: () => void): void {
     this.controller?.cancel();
     this.controller = new SceneTransitionController({
-      root: this.dom.transition!,
-      subtitle: this.dom.subtitle!,
-      date: this.dom.date!,
-      reveal: this.dom.reveal!,
-      revealImage: this.dom.revealImage!,
       audio: this.transitionAudio,
       entries: config.entries,
       cues: config.cues,

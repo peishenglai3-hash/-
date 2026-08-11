@@ -1,11 +1,17 @@
 <script setup lang="ts">
+import { ref } from 'vue';
 import { hud } from '@/common/store';
+
+const videoEl = ref<HTMLVideoElement | null>(null);
+const buttonEl = ref<HTMLButtonElement | null>(null);
+
+defineExpose({ videoEl, buttonEl });
 </script>
 
 <template>
   <div v-if="hud.introVisible" class="intro-panel">
     <video
-      id="intro-video"
+      ref="videoEl"
       src="/assets/video/intro.mp4"
       playsinline
       preload="auto"
@@ -14,7 +20,7 @@ import { hud } from '@/common/store';
       <div>红色源代码·洪湖篇</div>
       <small>序章｜名字留在纸上</small>
     </div>
-    <button id="start-button">开始进入序章</button>
+    <button ref="buttonEl">开始进入序章</button>
   </div>
 </template>
 
