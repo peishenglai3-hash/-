@@ -32,6 +32,8 @@ import type { Choice } from "./content";
 import { assetPath } from "@/common/paths";
 // @ts-ignore Legacy developer editor is shared by the TS scenes.
 import { CollisionEditor } from "../../zone-editor.js";
+// @ts-ignore Legacy actor collider helpers are shared by the editor.
+import { ensureActorColliderConfig, createActorColliderEntry } from "../../actor-collider.js";
 
 const PX = 32;
 const PLAYER_FRAME = { width: 332, height: 720 };
@@ -58,6 +60,8 @@ interface ManifestData {
 
 export class Scene01 extends Phaser.Scene {
 	zoneEditor: any;
+	actorColliderProfiles: any;
+	actorColliderEntries: any[] = [];
 	manifest!: ManifestData;
 	player!: Phaser.Physics.Arcade.Sprite;
 	playerVisual!: Phaser.GameObjects.Sprite;
@@ -114,6 +118,7 @@ export class Scene01 extends Phaser.Scene {
 
 	create() {
 		this.manifest = this.cache.json.get("manifest");
+		this.setupActorColliders();
 		this.createKeyedTexture("student-b-front", "student-b-front-keyed");
 		this.createKeyedTexture("student-b-back", "student-b-back-keyed");
 		this.createKeyedTexture("student-b-side", "student-b-side-keyed");
@@ -144,7 +149,7 @@ export class Scene01 extends Phaser.Scene {
 			)
 			.setOrigin(0.5, 1)
 			.setDepth(800);
-		this.player.setSize(24, 40).setOffset(154, 680);
+		this.applyPlayerColliderBody();
 		this.player.setCollideWorldBounds(true);
 		this.player.setVisible(false);
 		this.playerDirection = "down";
@@ -291,6 +296,28 @@ export class Scene01 extends Phaser.Scene {
 		});
 	}
 
+	setupActorColliders() {
+		const defaults = { offset: [-0.375, -0.625], size: [0.75, 1.25] };
+		const manifest = this.manifest as any;
+		this.actorColliderProfiles = {
+			PLAYER: ensureActorColliderConfig(manifest, "PLAYER", defaults),
+			NPC_CH00_STUDENT_A: ensureActorColliderConfig(manifest, "NPC_CH00_STUDENT_A", defaults),
+			NPC_CH00_STUDENT_B: ensureActorColliderConfig(manifest, "NPC_CH00_STUDENT_B", defaults),
+		};
+		this.actorColliderEntries = [
+			createActorColliderEntry({ id: "ACTOR_PLAYER", label: "玩家", getActor: () => this.player, getProfile: () => this.actorColliderProfiles.PLAYER }),
+			createActorColliderEntry({ id: "ACTOR_STUDENT_A", label: "学生甲", getActor: () => this.studentA, getProfile: () => this.actorColliderProfiles.NPC_CH00_STUDENT_A }),
+			createActorColliderEntry({ id: "ACTOR_STUDENT_B", label: "学生乙", getActor: () => this.studentB, getProfile: () => this.actorColliderProfiles.NPC_CH00_STUDENT_B }),
+		];
+	}
+
+	applyPlayerColliderBody() {
+		const profile = this.actorColliderProfiles?.PLAYER;
+		if (!profile || !this.player) return;
+		this.player.setSize(profile.size[0] * PX, profile.size[1] * PX)
+			.setOffset(PLAYER_FRAME.width / 2 + profile.offset[0] * PX, PLAYER_FRAME.height + profile.offset[1] * PX);
+	}
+
 	setupZoneEditor() {
 		const file = "public/data/scene01_manifest.json";
 		const documents = { [file]: this.manifest as any };
@@ -306,14 +333,18 @@ export class Scene01 extends Phaser.Scene {
 			},
 			getDefaultForegroundDepth: () => 2000,
 			getWorldSize: () => [48, 27],
-			getActorColliders: () => [],
+			getActorColliders: () => this.actorColliderEntries,
 			getMagneticSource: () => this.textures.get("bg01").getSourceImage(),
 			replaceDocuments: (next: any) => {
 				this.manifest = next[file];
 				documents[file] = this.manifest as any;
+				this.setupActorColliders();
 			},
 			onChange: (kind: string) => {
-				if (!kind || kind === "collision") this.buildCollision();
+				if (!kind || kind === "collision") {
+					this.buildCollision();
+					this.applyPlayerColliderBody();
+				}
 			},
 		});
 	}
@@ -457,22 +488,22 @@ export class Scene01 extends Phaser.Scene {
 	}
 
 	tryMove(dx: number, dy: number) {
-		const halfW = 12;
-		const halfH = 20;
+		const profile = this.actorColliderProfiles.PLAYER;
 		const canOccupy = (nextX: number, nextY: number) => {
+			const left = nextX + profile.offset[0] * PX;
+			const top = nextY + profile.offset[1] * PX;
+			const width = profile.size[0] * PX;
+			const height = profile.size[1] * PX;
 			if (
-				nextX - halfW < 0 ||
-				nextY - halfH < 0 ||
-				nextX + halfW > 48 * PX ||
-				nextY + halfH > 27 * PX
+				left < 0 || top < 0 || left + width > 48 * PX || top + height > 27 * PX
 			)
 				return false;
 			return !this.collisionRects.some(
 				(rect) =>
-					nextX + halfW > rect.x &&
-					nextX - halfW < rect.x + rect.width &&
-					nextY + halfH > rect.y &&
-					nextY - halfH < rect.y + rect.height,
+					left + width > rect.x &&
+					left < rect.x + rect.width &&
+					top + height > rect.y &&
+					top < rect.y + rect.height,
 			);
 		};
 		if (canOccupy(this.player.x + dx, this.player.y)) this.player.x += dx;

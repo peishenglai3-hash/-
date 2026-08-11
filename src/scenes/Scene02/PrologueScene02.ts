@@ -20,6 +20,8 @@ import { ambience } from "@/common/ambience";
 import { assetPath } from "@/common/paths";
 // @ts-ignore Legacy developer editor is shared by the TS scenes.
 import { CollisionEditor } from "../../zone-editor.js";
+// @ts-ignore Legacy actor collider helpers are shared by the editor.
+import { ensureActorColliderConfig, createActorColliderEntry } from "../../actor-collider.js";
 import {
 	OPENING,
 	AUDIO_REVIEW,
@@ -75,6 +77,8 @@ interface InteractionData {
 
 export class PrologueScene02 extends Phaser.Scene {
 	zoneEditor: any;
+	playerColliderProfile: any;
+	actorColliderEntries: any[] = [];
 	logic!: LogicData;
 	interactionData!: InteractionData;
 	statesData!: Record<string, Record<string, string>>;
@@ -122,6 +126,7 @@ export class PrologueScene02 extends Phaser.Scene {
 
 	create() {
 		this.logic = this.cache.json.get("logic");
+		this.setupActorCollider();
 		this.interactionData = this.cache.json.get("interactions");
 		this.statesData = this.cache.json.get("states");
 		this.applyInjectedStates();
@@ -150,7 +155,7 @@ export class PrologueScene02 extends Phaser.Scene {
 			)
 			.setOrigin(0.5, 1)
 			.setDepth(this.depthFor(spawn.position[1] * PX));
-		this.player.setSize(36, 52).setOffset(148, 668);
+		this.applyPlayerColliderBody();
 		this.player.setCollideWorldBounds(true);
 		this.playerDirection = spawn.facing || "up";
 		this.player.setPosition(DOOR_STAND.x, DOOR_STAND.y);
@@ -220,6 +225,26 @@ export class PrologueScene02 extends Phaser.Scene {
 		});
 	}
 
+	setupActorCollider() {
+		this.playerColliderProfile = ensureActorColliderConfig(this.logic as any, "PLAYER", {
+			offset: [-0.5625, -0.8125],
+			size: [1.125, 1.625],
+		});
+		this.actorColliderEntries = [createActorColliderEntry({
+			id: "ACTOR_PLAYER",
+			label: "玩家",
+			getActor: () => this.player,
+			getProfile: () => this.playerColliderProfile,
+		})];
+	}
+
+	applyPlayerColliderBody() {
+		const profile = this.playerColliderProfile;
+		if (!profile || !this.player) return;
+		this.player.setSize(profile.size[0] * PX, profile.size[1] * PX)
+			.setOffset(PLAYER_FRAME.width / 2 + profile.offset[0] * PX, PLAYER_FRAME.height + profile.offset[1] * PX);
+	}
+
 	setupZoneEditor() {
 		const logicFile = "public/data/PRO02_logic.json";
 		const interactionsFile = "public/data/PRO02_interactions.json";
@@ -236,16 +261,20 @@ export class PrologueScene02 extends Phaser.Scene {
 			},
 			getDefaultForegroundDepth: () => 100,
 			getWorldSize: () => this.logic.world_size,
-			getActorColliders: () => [],
+			getActorColliders: () => this.actorColliderEntries,
 			getMagneticSource: () => this.textures.get("bg02").getSourceImage(),
 			replaceDocuments: (next: any) => {
 				this.logic = next[logicFile];
 				this.interactionData = next[interactionsFile];
 				documents[logicFile] = this.logic as any;
 				documents[interactionsFile] = this.interactionData as any;
+				this.setupActorCollider();
 			},
 			onChange: (kind: string) => {
-				if (!kind || kind === "collision") this.buildCollision();
+				if (!kind || kind === "collision") {
+					this.buildCollision();
+					this.applyPlayerColliderBody();
+				}
 			},
 		});
 	}
@@ -526,22 +555,22 @@ export class PrologueScene02 extends Phaser.Scene {
 	}
 
 	tryMove(dx: number, dy: number) {
-		const halfW = 18;
-		const halfH = 26;
+		const profile = this.playerColliderProfile;
 		const canOccupy = (nextX: number, nextY: number) => {
+			const left = nextX + profile.offset[0] * PX;
+			const top = nextY + profile.offset[1] * PX;
+			const width = profile.size[0] * PX;
+			const height = profile.size[1] * PX;
 			if (
-				nextX - halfW < 0 ||
-				nextY - halfH < 0 ||
-				nextX + halfW > this.logic.world_size[0] ||
-				nextY + halfH > this.logic.world_size[1]
+				left < 0 || top < 0 || left + width > this.logic.world_size[0] || top + height > this.logic.world_size[1]
 			)
 				return false;
 			return !this.collisionRects.some(
 				(rect) =>
-					nextX + halfW > rect.x &&
-					nextX - halfW < rect.x + rect.width &&
-					nextY + halfH > rect.y &&
-					nextY - halfH < rect.y + rect.height,
+					left + width > rect.x &&
+					left < rect.x + rect.width &&
+					top + height > rect.y &&
+					top < rect.y + rect.height,
 			);
 		};
 		if (canOccupy(this.player.x + dx, this.player.y)) this.player.x += dx;
