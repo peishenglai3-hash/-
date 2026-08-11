@@ -58,3 +58,39 @@ body {
 .hidden {
 	display: none !important;
 }
+
+.dev-zone-editor {
+	position: fixed;
+	top: 14px;
+	left: 14px;
+	z-index: 101;
+	width: 304px;
+	max-height: calc(100vh - 28px);
+	overflow: auto;
+	padding: 12px;
+	border: 1px solid #ffdf32;
+	background: linear-gradient(145deg, #191919f5, #090909f8);
+	color: #f5f1df;
+	font: 12px/1.35 Consolas, "Courier New", monospace;
+	box-shadow: 6px 6px 0 #ff4fbf66;
+}
+.dev-zone-editor header { display: flex; align-items: center; justify-content: space-between; margin: -6px -6px 10px; padding: 6px; color: #ffdf32; letter-spacing: .15em; cursor: grab; user-select: none; touch-action: none; }
+.dev-zone-editor header.dragging { cursor: grabbing; }
+.dev-zone-editor header button { width: 25px; height: 25px; padding: 0; border: 1px solid #666; background: #222; color: #fff; cursor: pointer; }
+.dev-zone-tabs, .dev-zone-actions { display: flex; gap: 6px; }
+.dev-zone-editor button, .dev-zone-editor select, .dev-zone-editor input { border: 1px solid #5c5c5c; border-radius: 0; background: #242424; color: #fff; font: inherit; }
+.dev-zone-tabs button { flex: 1; min-width: 0; padding: 7px 3px; white-space: nowrap; }
+.dev-zone-tabs button.active { border-color: #ffdf32; color: #ffdf32; box-shadow: inset 0 -2px #ff4fbf; }
+.dev-zone-editor > label { display: grid; gap: 4px; margin-top: 9px; color: #aaa; }
+.dev-zone-editor select, .dev-zone-editor input { width: 100%; padding: 6px; }
+.dev-zone-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 9px; }
+.dev-zone-grid label { display: grid; gap: 3px; color: #aaa; }
+.dev-zone-editor p { margin: 9px 0; color: #aaa; font-size: 10px; white-space: pre-line; }
+.dev-zone-actions { flex-wrap: wrap; }
+.dev-zone-actions button { flex: 1 0 45%; padding: 7px 5px; }
+.dev-zone-actions button.primary { border-color: #ffdf32; background: #514811; color: #fff8b2; }
+.dev-zone-actions button.dev-next-chapter { flex-basis: 100%; border-color: #ff4fbf; background: #4b1733; color: #ffd7ed; }
+.dev-zone-editor output { display: block; margin-top: 9px; padding-top: 8px; border-top: 1px dashed #555; color: #ffbfdf; font-size: 10px; }
+.dev-zone-tabs button[data-kind="foreground"].active { border-color: #55e7ff; color: #55e7ff; box-shadow: inset 0 -2px #55e7ff; }
+.dev-zone-editor input:disabled, .dev-zone-editor select:disabled, .dev-zone-editor button:disabled { opacity: .45; cursor: not-allowed; }
+.dev-zone-actions button.armed { border-color: #55e7ff; background: #123c43; color: #bffaff; }
