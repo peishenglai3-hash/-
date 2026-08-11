@@ -30,6 +30,8 @@ import {
 } from "./content";
 import type { Choice } from "./content";
 import { assetPath } from "@/common/paths";
+// @ts-ignore Legacy developer editor is shared by the TS scenes.
+import { CollisionEditor } from "../../zone-editor.js";
 
 const PX = 32;
 const PLAYER_FRAME = { width: 332, height: 720 };
@@ -55,6 +57,7 @@ interface ManifestData {
 }
 
 export class Scene01 extends Phaser.Scene {
+	zoneEditor: any;
 	manifest!: ManifestData;
 	player!: Phaser.Physics.Arcade.Sprite;
 	playerVisual!: Phaser.GameObjects.Sprite;
@@ -129,6 +132,7 @@ export class Scene01 extends Phaser.Scene {
 			.setDisplaySize(1536, 864)
 			.setDepth(-20);
 		this.buildCollision();
+		this.setupZoneEditor();
 		const spawn = (id: string) =>
 			this.manifest.spawns.find((entry) => entry.id === id);
 		const playerSpawn = spawn("PLAYER_START")!;
@@ -284,6 +288,33 @@ export class Scene01 extends Phaser.Scene {
 				width: width * PX,
 				height: height * PX,
 			};
+		});
+	}
+
+	setupZoneEditor() {
+		const file = "public/data/scene01_manifest.json";
+		const documents = { [file]: this.manifest as any };
+		this.zoneEditor = new CollisionEditor(this, {
+			documents,
+			getCollisions: () => (this.manifest as any).collision,
+			getInteractions: () => (this.manifest as any).interactions,
+			getForegrounds: () => {
+				const manifest = this.manifest as any;
+				manifest.foreground_occlusion ??= { reserved: true, objects: [] };
+				manifest.foreground_occlusion.objects ??= [];
+				return manifest.foreground_occlusion.objects;
+			},
+			getDefaultForegroundDepth: () => 2000,
+			getWorldSize: () => [48, 27],
+			getActorColliders: () => [],
+			getMagneticSource: () => this.textures.get("bg01").getSourceImage(),
+			replaceDocuments: (next: any) => {
+				this.manifest = next[file];
+				documents[file] = this.manifest as any;
+			},
+			onChange: (kind: string) => {
+				if (!kind || kind === "collision") this.buildCollision();
+			},
 		});
 	}
 

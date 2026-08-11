@@ -11,13 +11,13 @@
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,vue,css,scss,less}\""
   },
   "dependencies": {
-    "@vitejs/plugin-vue": "^6.0.8",
     "phaser": "3.90.0",
     "pinia": "^4.0.2",
     "vue": "^3.5.41"
   },
   "devDependencies": {
     "@types/node": "^26.2.0",
+    "@vitejs/plugin-vue": "^5.2.4",
     "playwright": "^1.62.1",
     "prettier": "^3.9.6",
     "tsx": "^4.23.12",

@@ -18,6 +18,8 @@ import {
 } from "@/common/ui";
 import { ambience } from "@/common/ambience";
 import { assetPath } from "@/common/paths";
+// @ts-ignore Legacy developer editor is shared by the TS scenes.
+import { CollisionEditor } from "../../zone-editor.js";
 import {
 	OPENING,
 	AUDIO_REVIEW,
@@ -72,6 +74,7 @@ interface InteractionData {
 }
 
 export class PrologueScene02 extends Phaser.Scene {
+	zoneEditor: any;
 	logic!: LogicData;
 	interactionData!: InteractionData;
 	statesData!: Record<string, Record<string, string>>;
@@ -137,6 +140,7 @@ export class PrologueScene02 extends Phaser.Scene {
 			.setDepth(0);
 		this.foreground = this.add.container(0, 0).setDepth(100);
 		this.buildCollision();
+		this.setupZoneEditor();
 		const spawn = this.logic.player_spawn;
 		this.player = this.physics.add
 			.sprite(
@@ -213,6 +217,36 @@ export class PrologueScene02 extends Phaser.Scene {
 				width: width * PX,
 				height: height * PX,
 			};
+		});
+	}
+
+	setupZoneEditor() {
+		const logicFile = "public/data/PRO02_logic.json";
+		const interactionsFile = "public/data/PRO02_interactions.json";
+		const documents = { [logicFile]: this.logic as any, [interactionsFile]: this.interactionData as any };
+		this.zoneEditor = new CollisionEditor(this, {
+			documents,
+			getCollisions: () => (this.logic as any).collision_zones,
+			getInteractions: () => (this.interactionData as any).zones,
+			getForegrounds: () => {
+				const logic = this.logic as any;
+				logic.foreground_layers ??= { reserved: true, objects: [] };
+				logic.foreground_layers.objects ??= [];
+				return logic.foreground_layers.objects;
+			},
+			getDefaultForegroundDepth: () => 100,
+			getWorldSize: () => this.logic.world_size,
+			getActorColliders: () => [],
+			getMagneticSource: () => this.textures.get("bg02").getSourceImage(),
+			replaceDocuments: (next: any) => {
+				this.logic = next[logicFile];
+				this.interactionData = next[interactionsFile];
+				documents[logicFile] = this.logic as any;
+				documents[interactionsFile] = this.interactionData as any;
+			},
+			onChange: (kind: string) => {
+				if (!kind || kind === "collision") this.buildCollision();
+			},
 		});
 	}
 

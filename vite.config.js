@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite';
+import vue from '@vitejs/plugin-vue';
 import { writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
@@ -36,4 +37,7 @@ function zoneEditorApi() {
   };
 }
 
-export default defineConfig({ plugins: [zoneEditorApi()] });
+export default defineConfig({
+  plugins: [vue(), zoneEditorApi()],
+  resolve: { alias: { '@': resolve(process.cwd(), 'src') } },
+});
