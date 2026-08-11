@@ -9,6 +9,7 @@ import { assetPath } from "@/common/paths";
 import { showEndPanel } from "@/common/ui";
 import { setupScene01ToScene02 } from "./flow/Scene01ToScene02";
 import { setupScene02ToSettlement } from "./flow/Scene02ToSettlement";
+import { setupSettlementToCh01Sc01 } from "./flow/SettlementToCh01Sc01";
 import { setupDebugRoute } from "./flow/DebugRoute";
 
 export interface DirectorOptions {
@@ -33,6 +34,7 @@ export class GameDirector {
 		setupDebugRoute(this);
 		setupScene01ToScene02(this);
 		setupScene02ToSettlement(this);
+		setupSettlementToCh01Sc01(this);
 	}
 
 	/* ===== 通用 ===== */
@@ -77,11 +79,22 @@ export class GameDirector {
 		} catch {
 			/* storage unavailable */
 		}
+		// Stop prologue BGM before Chapter 1 scene starts to avoid overlap.
+		this.stopPrologueBgm();
 		window.dispatchEvent(
 			new CustomEvent("prologue:scene-exit", {
 				detail: structuredClone(save),
 			}),
 		);
 		showEndPanel(save);
+	}
+
+	stopPrologueBgm(): void {
+		try {
+			this.bgm.pause();
+			this.bgm.currentTime = 0;
+		} catch {
+			/* ignore */
+		}
 	}
 }

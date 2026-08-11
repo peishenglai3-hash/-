@@ -1,16 +1,32 @@
 <script setup lang="ts">
-import { hud } from "@/common/store";
+import { onMounted, onUnmounted } from "vue";
+import { hud, hideEndPanel } from "@/common/store";
+
+const onClose = () => hideEndPanel();
+
+function onKeyDown(e: KeyboardEvent) {
+	if (hud.endPanel) hideEndPanel();
+}
+
+onMounted(() => {
+	window.addEventListener("keydown", onKeyDown);
+});
+
+onUnmounted(() => {
+	window.removeEventListener("keydown", onKeyDown);
+});
 </script>
 
 <template>
-	<div v-if="hud.endPanel" class="end-panel">
+	<div v-if="hud.endPanel" class="end-panel" @click.self="onClose">
 		<div class="end-card">
 			<strong>序章·名字留在纸上｜完成</strong>
 			<span>{{ hud.endPanel.checkpoint }}</span>
 			<span>{{ hud.endPanel.profile }}</span>
 			<span>{{ hud.endPanel.tags }}</span>
 			<span>{{ hud.endPanel.risk }}</span>
-			<small>第一章·陈继南家中醒来｜敬请期待</small>
+			<small>第一章·陈继南家中醒来</small>
+			<button class="enter-chapter" @click="onClose">进入第一章</button>
 		</div>
 	</div>
 </template>
@@ -57,5 +73,23 @@ import { hud } from "@/common/store";
 	font-size: 11px;
 	letter-spacing: 0.2em;
 	color: #c7b897;
+}
+
+.enter-chapter {
+	display: block;
+	width: 100%;
+	margin-top: 18px;
+	padding: 12px 16px;
+	border: 1px solid #a98a57;
+	background: #241e17;
+	color: #f6ead0;
+	font-size: 14px;
+	letter-spacing: 0.15em;
+	cursor: pointer;
+	transition: background 0.15s ease;
+}
+
+.enter-chapter:hover {
+	background: #3a2f23;
 }
 </style>

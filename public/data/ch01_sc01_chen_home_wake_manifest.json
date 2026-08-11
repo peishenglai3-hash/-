@@ -1,0 +1,608 @@
+{
+  "scene_id": "CH01_SC01_CHEN_HOME_WAKE",
+  "background": {
+    "image": "ch01/sc01/map/ch01_sc01_base.png",
+    "source_width_px": 1672,
+    "source_height_px": 941,
+    "display_world_size": [
+      1672,
+      941
+    ],
+    "pixels_per_unit": 1,
+    "visual_master_locked": true
+  },
+  "grid": {
+    "width": 52,
+    "height": 29,
+    "tile_size_px": 32,
+    "coordinate_origin": "top_left"
+  },
+  "layers": [
+    "background",
+    "walkable",
+    "collision",
+    "interactions",
+    "spawns",
+    "camera_bounds",
+    "foreground_occlusion"
+  ],
+  "walkable": [
+    {
+      "id": "floor_main",
+      "rect": [
+        160,
+        416,
+        1180,
+        448
+      ],
+      "surface": "wood_floor"
+    },
+    {
+      "id": "floor_left",
+      "rect": [
+        64,
+        416,
+        320,
+        448
+      ],
+      "surface": "wood_floor"
+    },
+    {
+      "id": "floor_right",
+      "rect": [
+        1184,
+        96,
+        320,
+        672
+      ],
+      "surface": "wood_floor"
+    }
+  ],
+  "collision": [
+    {
+      "id": "wall_top",
+      "shape": "rect",
+      "rect": [
+        0,
+        0,
+        1664,
+        64
+      ],
+      "kind": "boundary"
+    },
+    {
+      "id": "wall_left",
+      "shape": "rect",
+      "rect": [
+        0,
+        0,
+        32,
+        928
+      ],
+      "kind": "boundary"
+    },
+    {
+      "id": "wall_right",
+      "shape": "rect",
+      "rect": [
+        1632,
+        0,
+        32,
+        928
+      ],
+      "kind": "boundary"
+    },
+    {
+      "id": "wardrobe",
+      "shape": "rect",
+      "rect": [
+        160,
+        128,
+        288,
+        320
+      ],
+      "kind": "furniture"
+    },
+    {
+      "id": "basin_stand",
+      "shape": "rect",
+      "rect": [
+        128,
+        544,
+        128,
+        192
+      ],
+      "kind": "furniture"
+    },
+    {
+      "id": "left_stool",
+      "shape": "rect",
+      "rect": [
+        256,
+        736,
+        64,
+        64
+      ],
+      "kind": "furniture"
+    },
+    {
+      "id": "side_table",
+      "shape": "rect",
+      "rect": [
+        416,
+        224,
+        192,
+        160
+      ],
+      "kind": "furniture"
+    },
+    {
+      "id": "main_table",
+      "shape": "rect",
+      "rect": [
+        672,
+        448,
+        512,
+        352
+      ],
+      "kind": "furniture"
+    },
+    {
+      "id": "chair_mother",
+      "shape": "rect",
+      "rect": [
+        608,
+        512,
+        64,
+        64
+      ],
+      "kind": "furniture"
+    },
+    {
+      "id": "chair_father_back",
+      "shape": "rect",
+      "rect": [
+        896,
+        416,
+        64,
+        64
+      ],
+      "kind": "furniture"
+    },
+    {
+      "id": "chair_child",
+      "shape": "rect",
+      "rect": [
+        1248,
+        512,
+        64,
+        64
+      ],
+      "kind": "furniture"
+    },
+    {
+      "id": "stool_center_front",
+      "shape": "rect",
+      "rect": [
+        896,
+        800,
+        64,
+        64
+      ],
+      "kind": "furniture"
+    },
+    {
+      "id": "desk_scholar",
+      "shape": "rect",
+      "rect": [
+        1248,
+        576,
+        320,
+        224
+      ],
+      "kind": "furniture"
+    },
+    {
+      "id": "chair_desk",
+      "shape": "rect",
+      "rect": [
+        1344,
+        800,
+        64,
+        64
+      ],
+      "kind": "furniture"
+    },
+    {
+      "id": "basket_right",
+      "shape": "rect",
+      "rect": [
+        1472,
+        800,
+        96,
+        96
+      ],
+      "kind": "furniture"
+    },
+    {
+      "id": "door_frame",
+      "shape": "rect",
+      "rect": [
+        1248,
+        96,
+        32,
+        416
+      ],
+      "kind": "furniture"
+    },
+    {
+      "id": "door_leaf",
+      "shape": "rect",
+      "rect": [
+        1408,
+        96,
+        160,
+        416
+      ],
+      "kind": "furniture"
+    }
+  ],
+  "interactions": [
+    {
+      "id": "lamp",
+      "type": "inspect",
+      "rect": [
+        864,
+        544,
+        96,
+        96
+      ],
+      "prompt": "查看油灯",
+      "prompt_anchor": [
+        896,
+        512
+      ],
+      "text_id": "ITM_LAMP_EXAMINE",
+      "repeatable": true,
+      "prop_icon": "PROP013"
+    },
+    {
+      "id": "bowl_left",
+      "type": "inspect",
+      "rect": [
+        736,
+        544,
+        64,
+        64
+      ],
+      "prompt": "查看粗瓷碗",
+      "prompt_anchor": [
+        768,
+        512
+      ],
+      "text_id": "ITM_BOWL_LEFT",
+      "repeatable": true,
+      "prop_icon": "PROP028"
+    },
+    {
+      "id": "bowl_right",
+      "type": "inspect",
+      "rect": [
+        1056,
+        576,
+        64,
+        64
+      ],
+      "prompt": "查看粗瓷碗",
+      "prompt_anchor": [
+        1088,
+        544
+      ],
+      "text_id": "ITM_BOWL_RIGHT",
+      "repeatable": true,
+      "prop_icon": "PROP028"
+    },
+    {
+      "id": "book",
+      "type": "inspect",
+      "rect": [
+        1408,
+        640,
+        96,
+        64
+      ],
+      "prompt": "查看线装书",
+      "prompt_anchor": [
+        1440,
+        608
+      ],
+      "text_id": "ITM_BOOK_EXAMINE",
+      "repeatable": true,
+      "prop_icon": "PROP004"
+    },
+    {
+      "id": "inkstone_paper",
+      "type": "inspect",
+      "rect": [
+        1312,
+        672,
+        128,
+        96
+      ],
+      "prompt": "查看纸与笔",
+      "prompt_anchor": [
+        1376,
+        640
+      ],
+      "text_id": "ITM_INK_PAPER",
+      "repeatable": true,
+      "prop_icon": "PROP009"
+    },
+    {
+      "id": "copper_basin",
+      "type": "observe",
+      "rect": [
+        128,
+        544,
+        96,
+        64
+      ],
+      "prompt": "观察铜盆",
+      "prompt_anchor": [
+        192,
+        512
+      ],
+      "text_id": "ITM_BASIN_EXAMINE",
+      "repeatable": true,
+      "prop_icon": "PROP026"
+    },
+    {
+      "id": "cloth_towel",
+      "type": "inspect",
+      "rect": [
+        96,
+        128,
+        64,
+        160
+      ],
+      "prompt": "查看布巾",
+      "prompt_anchor": [
+        128,
+        96
+      ],
+      "text_id": "ITM_TOWEL_EXAMINE",
+      "repeatable": true
+    },
+    {
+      "id": "outer_gown",
+      "type": "observe",
+      "rect": [
+        1472,
+        192,
+        96,
+        128
+      ],
+      "prompt": "观察门边衣物",
+      "prompt_anchor": [
+        1536,
+        160
+      ],
+      "text_id": "ITM_GOWN_EXAMINE",
+      "repeatable": true,
+      "prop_icon": "PROP018"
+    },
+    {
+      "id": "straw_sandals",
+      "type": "inspect",
+      "rect": [
+        128,
+        736,
+        96,
+        64
+      ],
+      "prompt": "查看草鞋",
+      "prompt_anchor": [
+        192,
+        704
+      ],
+      "text_id": "ITM_SANDALS_EXAMINE",
+      "repeatable": true
+    },
+    {
+      "id": "half_door",
+      "type": "inspect",
+      "rect": [
+        1280,
+        96,
+        160,
+        416
+      ],
+      "prompt": "查看半掩木门",
+      "prompt_anchor": [
+        1344,
+        64
+      ],
+      "text_id": "ITM_DOOR_EXAMINE",
+      "repeatable": false
+    }
+  ],
+  "spawns": [
+    {
+      "id": "PLAYER_CHENJINNAN",
+      "position": [
+        224,
+        480
+      ],
+      "facing": "right"
+    },
+    {
+      "id": "NPC_MOTHER",
+      "position": [
+        704,
+        512
+      ],
+      "facing": "right"
+    },
+    {
+      "id": "NPC_FATHER",
+      "position": [
+        928,
+        480
+      ],
+      "facing": "down"
+    },
+    {
+      "id": "NPC_BROTHER",
+      "position": [
+        1120,
+        512
+      ],
+      "facing": "left"
+    }
+  ],
+  "anchors": [
+    {
+      "id": "intro",
+      "position": [
+        832,
+        448
+      ],
+      "facing": "down"
+    },
+    {
+      "id": "table_focus",
+      "position": [
+        928,
+        608
+      ],
+      "facing": "down"
+    },
+    {
+      "id": "door_focus",
+      "position": [
+        1376,
+        288
+      ],
+      "facing": "down"
+    }
+  ],
+  "camera_bounds": {
+    "rect": [
+      0,
+      0,
+      1672,
+      941
+    ]
+  },
+  "foreground_occlusion": {
+    "reserved": true,
+    "objects": []
+  },
+  "objectives": [
+    {
+      "id": "OBS_BASIN",
+      "kind": "observation",
+      "position": [
+        192,
+        480
+      ],
+      "anchor": [
+        192,
+        448
+      ],
+      "text_id": "OBS_BASIN_TEXT"
+    },
+    {
+      "id": "OBS_DESK",
+      "kind": "observation",
+      "position": [
+        1440,
+        576
+      ],
+      "anchor": [
+        1440,
+        544
+      ],
+      "text_id": "OBS_DESK_TEXT"
+    },
+    {
+      "id": "OBS_DOOR",
+      "kind": "observation",
+      "position": [
+        1536,
+        160
+      ],
+      "anchor": [
+        1536,
+        128
+      ],
+      "text_id": "OBS_DOOR_TEXT"
+    },
+    {
+      "id": "OBJ_WASH",
+      "kind": "task",
+      "position": [
+        192,
+        480
+      ],
+      "anchor": [
+        192,
+        448
+      ],
+      "text_id": "OBJ_WASH_TEXT"
+    },
+    {
+      "id": "OBJ_PREPARE",
+      "kind": "task",
+      "position": [
+        1536,
+        160
+      ],
+      "anchor": [
+        1536,
+        128
+      ],
+      "text_id": "OBJ_PREPARE_TEXT"
+    },
+    {
+      "id": "OBJ_TALK_MOTHER",
+      "kind": "task",
+      "position": [
+        704,
+        448
+      ],
+      "anchor": [
+        704,
+        416
+      ],
+      "text_id": "OBJ_TALK_MOTHER_TEXT"
+    },
+    {
+      "id": "EXIT_DOOR",
+      "kind": "exit",
+      "position": [
+        1344,
+        416
+      ],
+      "anchor": [
+        1344,
+        384
+      ],
+      "text_id": "EXIT_DOOR_PROMPT"
+    }
+  ],
+  "exits": [
+    {
+      "id": "EXIT_COURTYARD",
+      "rect": [
+        1280,
+        128,
+        160,
+        384
+      ],
+      "target_scene": "CH01_SC02_COURTYARD",
+      "initially_blocked": true,
+      "unblock_objective": "EXIT_DOOR"
+    }
+  ]
+}

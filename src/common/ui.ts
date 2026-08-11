@@ -20,11 +20,13 @@ import {
 	closeTask,
 	hideTask,
 	showPrompt,
+	hidePrompt,
 	fadeToBlack,
 	clearFade,
 	togglePause,
 	hideIntro,
 	showEndPanel,
+	hideEndPanel,
 } from "@/common/store";
 
 export { hud };
@@ -46,9 +48,11 @@ export {
 	closeTask,
 	hideTask,
 	showPrompt,
+	hidePrompt,
 	fadeToBlack,
 	clearFade,
 	togglePause,
 	hideIntro,
 	showEndPanel,
+	hideEndPanel,
 };

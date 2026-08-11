@@ -25,3 +25,7 @@ export const state: GameState = {
 	leavePhase: null,
 	leaveNpcArrived: null,
 };
+
+if (typeof window !== "undefined") {
+	(window as any).prologueState = state;
+}

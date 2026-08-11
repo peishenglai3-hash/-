@@ -11,6 +11,7 @@ import { GameDirector } from "@/director/GameDirector";
 import { setupStartScene } from "@/director/flow/StartScene";
 import { Scene01 } from "@/scenes/Scene01/Scene01";
 import { PrologueScene02 } from "@/scenes/Scene02/PrologueScene02";
+import { Ch01Sc01Scene } from "@/scenes/Scene03/Ch01Sc01Scene";
 import Phaser from "phaser";
 
 import { onMounted, ref } from "vue";
@@ -49,11 +50,12 @@ onMounted(() => {
 			height: 720,
 		},
 		loader: { baseURL: import.meta.env.BASE_URL },
-		scene: [Scene01, PrologueScene02],
+		scene: [Scene01, PrologueScene02, Ch01Sc01Scene],
 	});
 
 	const director = new GameDirector({ game });
 	director.init();
+	(window as any).gameDirector = director;
 
 	// 开场视频流程：使用 IntroPanel 暴露的模板引用
 	const panel = introPanelRef.value!;

@@ -246,8 +246,9 @@ export function itemPanelOpen(): boolean {
 export function showChoices(
 	items: ChoiceItem[],
 	onChoose: (id: string) => void,
+	title: string = "走访结束前，最后确认什么？",
 ) {
-	hud.choicePanel = { title: "走访结束前，最后确认什么？", items, onChoose };
+	hud.choicePanel = { title, items, onChoose };
 }
 
 export function hideChoices() {
@@ -293,6 +294,10 @@ export function showPrompt(text: string) {
 	hud.prompt = text;
 }
 
+export function hidePrompt() {
+	hud.prompt = "";
+}
+
 // --- 淡入淡出 ---
 export function fadeToBlack() {
 	hud.sceneFade = true;
@@ -327,4 +332,8 @@ export function showEndPanel(save: {
 		tags: `选择标签 ${save.choiceTag ?? "—"} ｜ 固定标签 ${save.fixed.join(" · ")}`,
 		risk: `行动风险 身份${save.risk.identity} 执行${save.risk.execution} 协同${save.risk.coordination}`,
 	};
+}
+
+export function hideEndPanel() {
+	hud.endPanel = null;
 }
