@@ -38,6 +38,10 @@ import type { Choice } from "./ch01Sc01.content";
 import { FLAGS } from "./ch01Sc01.flags";
 import { assetPath } from "@/common/paths";
 import { SaveManager } from "@/common/save";
+// @ts-ignore Shared developer tools support both grid and pixel-coordinate scenes.
+import { CollisionEditor } from "../../zone-editor.js";
+// @ts-ignore Legacy actor collider helpers are shared by the editor.
+import { ensureActorColliderConfig, createActorColliderEntry } from "../../actor-collider.js";
 
 const WORLD_W = 1672;
 const WORLD_H = 941;
@@ -80,6 +84,9 @@ interface ManifestData {
 }
 
 export class Ch01Sc01Scene extends Phaser.Scene {
+	zoneEditor: any;
+	playerColliderProfile: any;
+	actorColliderEntries: any[] = [];
 	manifest!: ManifestData;
 	player!: Phaser.Physics.Arcade.Sprite;
 	playerVisual!: Phaser.GameObjects.Sprite;
@@ -149,6 +156,7 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	create() {
 		this.resetHud();
 		this.manifest = this.cache.json.get("ch01_sc01_manifest");
+		this.setupActorCollider();
 		this.physics.world.setBounds(0, 0, WORLD_W, WORLD_H);
 		this.add.image(WORLD_W / 2, WORLD_H / 2, "ch01_sc01_bg").setDepth(-20);
 		this.buildCollision();
@@ -164,12 +172,7 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 			)
 			.setOrigin(0.5, 1)
 			.setDepth(800);
-		this.player
-			.setSize(56, 36)
-			.setOffset(
-				PLAYER_FRAME.down.width / 2 - 28,
-				PLAYER_FRAME.down.height - 36,
-			);
+		this.applyPlayerColliderBody();
 		this.player.setCollideWorldBounds(true);
 		this.player.setVisible(false);
 		this.setupPlayerVisual();
@@ -179,6 +182,7 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 			.setBounds(0, 0, WORLD_W, WORLD_H)
 			.setZoom(CAMERA_ZOOM)
 			.centerOn(WORLD_W / 2, WORLD_H / 2);
+		this.setupZoneEditor();
 
 		this.keyMap = createKeyMap(this);
 		onAction(this, "INTERACT", () => this.handleConfirm());
@@ -299,6 +303,60 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 		});
 	}
 
+	setupActorCollider() {
+		this.playerColliderProfile = ensureActorColliderConfig(this.manifest as any, "PLAYER", {
+			offset: [-28, -36],
+			size: [56, 36],
+		});
+		this.actorColliderEntries = [createActorColliderEntry({
+			id: "ACTOR_PLAYER",
+			label: "玩家",
+			getActor: () => this.player,
+			getProfile: () => this.playerColliderProfile,
+			tileSize: 1,
+		})];
+	}
+
+	applyPlayerColliderBody() {
+		const profile = this.playerColliderProfile;
+		if (!profile || !this.player) return;
+		this.player.setSize(profile.size[0], profile.size[1])
+			.setOffset(PLAYER_FRAME.down.width / 2 + profile.offset[0], PLAYER_FRAME.down.height + profile.offset[1]);
+	}
+
+	setupZoneEditor() {
+		const file = "public/data/ch01_sc01_chen_home_wake_manifest.json";
+		const documents = { [file]: this.manifest as any };
+		this.zoneEditor = new CollisionEditor(this, {
+			documents,
+			tileSize: 1,
+			snapStep: 1,
+			getCollisions: () => (this.manifest as any).collision,
+			getInteractions: () => (this.manifest as any).interactions,
+			getForegrounds: () => {
+				const manifest = this.manifest as any;
+				manifest.foreground_occlusion ??= { reserved: true, objects: [] };
+				manifest.foreground_occlusion.objects ??= [];
+				return manifest.foreground_occlusion.objects;
+			},
+			getDefaultForegroundDepth: () => 2000,
+			getWorldSize: () => [WORLD_W, WORLD_H],
+			getActorColliders: () => this.actorColliderEntries,
+			getMagneticSource: () => this.textures.get("ch01_sc01_bg").getSourceImage(),
+			replaceDocuments: (next: any) => {
+				this.manifest = next[file];
+				documents[file] = this.manifest as any;
+				this.setupActorCollider();
+			},
+			onChange: (kind: string) => {
+				if (!kind || kind === "collision") {
+					this.buildCollision();
+					this.applyPlayerColliderBody();
+				}
+			},
+		});
+	}
+
 	updateObservationMarks() {
 		for (const mark of this.observationMarks) mark.destroy();
 		this.observationMarks = [];
@@ -375,22 +433,22 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	}
 
 	tryMove(dx: number, dy: number) {
-		const halfW = 28;
-		const halfH = 18;
+		const profile = this.playerColliderProfile;
 		const canOccupy = (nextX: number, nextY: number) => {
+			const left = nextX + profile.offset[0];
+			const top = nextY + profile.offset[1];
+			const width = profile.size[0];
+			const height = profile.size[1];
 			if (
-				nextX - halfW < 0 ||
-				nextY - halfH < 0 ||
-				nextX + halfW > WORLD_W ||
-				nextY + halfH > WORLD_H
+				left < 0 || top < 0 || left + width > WORLD_W || top + height > WORLD_H
 			)
 				return false;
 			return !this.collisionRects.some(
 				(rect) =>
-					nextX + halfW > rect.x &&
-					nextX - halfW < rect.x + rect.width &&
-					nextY + halfH > rect.y &&
-					nextY - halfH < rect.y + rect.height,
+					left + width > rect.x &&
+					left < rect.x + rect.width &&
+					top + height > rect.y &&
+					top < rect.y + rect.height,
 			);
 		};
 		if (canOccupy(this.player.x + dx, this.player.y)) this.player.x += dx;

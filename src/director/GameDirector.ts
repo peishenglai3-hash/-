@@ -3,10 +3,22 @@ import type { TransitionConfig } from "@/types/director";
 import type { RunSave, SaveData, SceneId } from "@/types/common";
 import { TransitionAudioController } from "./TransitionAudio";
 import { SceneTransitionController } from "./SceneTransition";
-import { SCENE_EXIT } from "@/scenes/Scene01/content";
+import { CHOICES, PROFILE_DELTAS, SCENE_EXIT } from "@/scenes/Scene01/content";
 import { state, resetRunState } from "@/common/state";
 import { assetPath } from "@/common/paths";
-import { showEndPanel, showFlavor, hud } from "@/common/ui";
+import {
+	showEndPanel,
+	showFlavor,
+	hud,
+	hideIntro,
+	hideTask,
+	hideItem,
+	hideDialogue,
+	hideChoices,
+	hideResult,
+	showPrompt,
+	clearFade,
+} from "@/common/ui";
 import {
 	SaveManager,
 	SCENE_KEY,
@@ -51,11 +63,68 @@ export class GameDirector {
 		onSettingsChange((s) => this.applySettings(s));
 		this.applySettings(getSettings());
 		this.ensureTitleBgm();
+		window.addEventListener("honghu:dev-next-chapter", ((event: CustomEvent<{ sceneKey?: string }>) => {
+			this.handleDevNextChapter(event.detail?.sceneKey);
+		}) as EventListener);
 
 		// 测试/调试钩子：失败回退链路
 		(window as any).gameDirector = this;
 		(window as any).rollbackToCheckpoint = () =>
 			this.rollbackToCheckpoint();
+	}
+
+	randomizePrologueChoice(): void {
+		const choice = CHOICES[Math.floor(Math.random() * CHOICES.length)];
+		state.choice = choice;
+		for (const axis of Object.keys(state.profile)) state.profile[axis] = 0;
+		for (const [axis, delta] of Object.entries(PROFILE_DELTAS[choice.id] ?? {}))
+			state.profile[axis] = delta;
+		for (const candidate of CHOICES) state.flags.delete(candidate.flag);
+		state.flags.add(choice.flag);
+	}
+
+	clearStoryUi(): void {
+		hideIntro();
+		hideTask();
+		hideItem();
+		hideDialogue();
+		hideChoices();
+		hideResult();
+		showPrompt("");
+		clearFade();
+	}
+
+	handleDevNextChapter(sceneKey?: string): void {
+		const activeKey = sceneKey ?? (this.game.scene.getScenes(true).find((scene: any) => scene.zoneEditor) as any)?.scene.key;
+		this.randomizePrologueChoice();
+		state.flags.add("FLAG_PRO_Q01_COMPLETED");
+		this.controller?.cancel();
+		this.clearStoryUi();
+
+		if (activeKey === "Scene01") {
+			for (const flag of ["FLAG_PRO02_AUDIO_REVIEWED", "FLAG_PRO02_QUESTION_WRITTEN", "PROLOGUE_COMPLETED", "TIME_TRAVEL_CHECKPOINT"])
+				state.flags.delete(flag);
+			state.mode = "intro";
+			state.playerLocked = true;
+			state.taskOpen = false;
+			state.paused = false;
+			state.narrativeQueue = [];
+			state.narrativeIndex = 0;
+			state.inNarrative = false;
+			this.game.scene.stop("Scene01");
+			ambience.unlock();
+			ambience.startRoom();
+			this.enterScene("PrologueScene02", "PROLOGUE_SC02");
+			return;
+		}
+
+		for (const flag of ["FLAG_PRO02_AUDIO_REVIEWED", "FLAG_PRO02_QUESTION_WRITTEN", "PROLOGUE_COMPLETED", "TIME_TRAVEL_CHECKPOINT"])
+			state.flags.add(flag);
+		state.audioReviewed = true;
+		state.questionWritten = true;
+		state.playerLocked = true;
+		state.mode = "transition";
+		this.finishPrologue();
 	}
 
 	/* ===== 设置生效 ===== */

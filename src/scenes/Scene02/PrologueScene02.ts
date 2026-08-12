@@ -19,6 +19,17 @@ import {
 import { ambience } from "@/common/ambience";
 import { assetPath } from "@/common/paths";
 import {
+	createModernPlayerWalkAnimations,
+	MODERN_PLAYER_SOURCE_FRAME,
+	modernWalkFrameKey,
+	preloadModernPlayerWalk,
+	setModernPlayerDirection,
+} from "@/common/modernPlayerWalk";
+// @ts-ignore Legacy developer editor is shared by the TS scenes.
+import { CollisionEditor } from "../../zone-editor.js";
+// @ts-ignore Legacy actor collider helpers are shared by the editor.
+import { ensureActorColliderConfig, createActorColliderEntry } from "../../actor-collider.js";
+import {
 	OPENING,
 	AUDIO_REVIEW,
 	WRITE_QUESTION,
@@ -30,11 +41,8 @@ import {
 } from "./content";
 
 const PX = 32;
-const PLAYER_FRAME = { width: 332, height: 720 };
+const PLAYER_FRAME = MODERN_PLAYER_SOURCE_FRAME;
 const PLAYER_VIEW_HEIGHT = 360;
-const PLAYER_VIEW_WIDTH = Math.round(
-	PLAYER_VIEW_HEIGHT * (PLAYER_FRAME.width / PLAYER_FRAME.height),
-);
 const PLAYER_DIRECTIONS = ["down", "left", "right", "up"] as const;
 const DOOR_STAND = { x: 8.2 * PX, y: 34 * PX };
 const SIDE_VIEW_HEIGHT = 328;
@@ -72,6 +80,9 @@ interface InteractionData {
 }
 
 export class PrologueScene02 extends Phaser.Scene {
+	zoneEditor: any;
+	playerColliderProfile: any;
+	actorColliderEntries: any[] = [];
 	logic!: LogicData;
 	interactionData!: InteractionData;
 	statesData!: Record<string, Record<string, string>>;
@@ -101,16 +112,7 @@ export class PrologueScene02 extends Phaser.Scene {
 		this.load.json("interactions", "data/PRO02_interactions.json");
 		this.load.json("states", "data/PRO02_states.json");
 		this.load.image("bg02", "assets/map/pro02_base.png");
-		for (const direction of PLAYER_DIRECTIONS) {
-			this.load.spritesheet(
-				`player-walk-${direction}`,
-				`assets/characters/player/modern/walk-${direction}.png`,
-				{
-					frameWidth: PLAYER_FRAME.width,
-					frameHeight: PLAYER_FRAME.height,
-				},
-			);
-		}
+		preloadModernPlayerWalk(this);
 		this.load.image(
 			"player-side-right",
 			"assets/characters/player/modern/side-right.png",
@@ -119,6 +121,7 @@ export class PrologueScene02 extends Phaser.Scene {
 
 	create() {
 		this.logic = this.cache.json.get("logic");
+		this.setupActorCollider();
 		this.interactionData = this.cache.json.get("interactions");
 		this.statesData = this.cache.json.get("states");
 		this.applyInjectedStates();
@@ -137,16 +140,17 @@ export class PrologueScene02 extends Phaser.Scene {
 			.setDepth(0);
 		this.foreground = this.add.container(0, 0).setDepth(100);
 		this.buildCollision();
+		this.setupZoneEditor();
 		const spawn = this.logic.player_spawn;
 		this.player = this.physics.add
 			.sprite(
 				spawn.position[0] * PX,
 				spawn.position[1] * PX,
-				"player-walk-down",
+				modernWalkFrameKey("down", 0),
 			)
 			.setOrigin(0.5, 1)
 			.setDepth(this.depthFor(spawn.position[1] * PX));
-		this.player.setSize(36, 52).setOffset(148, 668);
+		this.applyPlayerColliderBody();
 		this.player.setCollideWorldBounds(true);
 		this.playerDirection = spawn.facing || "up";
 		this.player.setPosition(DOOR_STAND.x, DOOR_STAND.y);
@@ -216,23 +220,67 @@ export class PrologueScene02 extends Phaser.Scene {
 		});
 	}
 
+	setupActorCollider() {
+		this.playerColliderProfile = ensureActorColliderConfig(this.logic as any, "PLAYER", {
+			offset: [-0.5625, -0.8125],
+			size: [1.125, 1.625],
+		});
+		this.actorColliderEntries = [createActorColliderEntry({
+			id: "ACTOR_PLAYER",
+			label: "玩家",
+			getActor: () => this.player,
+			getProfile: () => this.playerColliderProfile,
+		})];
+	}
+
+	applyPlayerColliderBody() {
+		const profile = this.playerColliderProfile;
+		if (!profile || !this.player) return;
+		this.player.setSize(profile.size[0] * PX, profile.size[1] * PX)
+			.setOffset(PLAYER_FRAME.width / 2 + profile.offset[0] * PX, PLAYER_FRAME.height + profile.offset[1] * PX);
+	}
+
+	setupZoneEditor() {
+		const logicFile = "public/data/PRO02_logic.json";
+		const interactionsFile = "public/data/PRO02_interactions.json";
+		const documents = { [logicFile]: this.logic as any, [interactionsFile]: this.interactionData as any };
+		this.zoneEditor = new CollisionEditor(this, {
+			documents,
+			getCollisions: () => (this.logic as any).collision_zones,
+			getInteractions: () => (this.interactionData as any).zones,
+			getForegrounds: () => {
+				const logic = this.logic as any;
+				logic.foreground_layers ??= { reserved: true, objects: [] };
+				logic.foreground_layers.objects ??= [];
+				return logic.foreground_layers.objects;
+			},
+			getDefaultForegroundDepth: () => 100,
+			getWorldSize: () => this.logic.world_size,
+			getActorColliders: () => this.actorColliderEntries,
+			getMagneticSource: () => this.textures.get("bg02").getSourceImage(),
+			replaceDocuments: (next: any) => {
+				this.logic = next[logicFile];
+				this.interactionData = next[interactionsFile];
+				documents[logicFile] = this.logic as any;
+				documents[interactionsFile] = this.interactionData as any;
+				this.setupActorCollider();
+			},
+			onChange: (kind: string) => {
+				if (!kind || kind === "collision") {
+					this.buildCollision();
+					this.applyPlayerColliderBody();
+				}
+			},
+		});
+	}
+
 	setupPlayerVisual() {
-		for (const direction of PLAYER_DIRECTIONS) {
-			this.anims.create({
-				key: `player-walk-${direction}-anim`,
-				frames: this.anims.generateFrameNumbers(
-					`player-walk-${direction}`,
-					{ start: 0, end: 7 },
-				),
-				frameRate: 8,
-				repeat: -1,
-			});
-		}
+		createModernPlayerWalkAnimations(this);
 		this.playerVisual = this.add
-			.sprite(this.player.x, this.player.y, "player-walk-down", 0)
+			.sprite(this.player.x, this.player.y, modernWalkFrameKey("down", 0), 0)
 			.setOrigin(0.5, 1)
-			.setDisplaySize(PLAYER_VIEW_WIDTH, PLAYER_VIEW_HEIGHT)
 			.setDepth(this.depthFor(this.player.y) + 0.5);
+		setModernPlayerDirection(this.playerVisual, "down", PLAYER_VIEW_HEIGHT);
 		this.player.setVisible(false);
 	}
 
@@ -244,10 +292,12 @@ export class PrologueScene02 extends Phaser.Scene {
 		if (this.introSide) {
 			if (!moving) return;
 			this.introSide = false;
-			this.playerVisual
-				.setTexture(`player-walk-${direction}`, 0)
-				.setDisplaySize(PLAYER_VIEW_WIDTH, PLAYER_VIEW_HEIGHT);
+			setModernPlayerDirection(this.playerVisual, direction as "down" | "left" | "right" | "up", PLAYER_VIEW_HEIGHT);
 		}
+		const walkDirection = direction as "down" | "left" | "right" | "up";
+		const firstFrame = modernWalkFrameKey(walkDirection, 0);
+		if (!this.playerVisual.texture.key.startsWith(`modern-player-${walkDirection}-`))
+			setModernPlayerDirection(this.playerVisual, walkDirection, PLAYER_VIEW_HEIGHT);
 		if (moving) {
 			const animation = `player-walk-${direction}-anim`;
 			if (
@@ -258,7 +308,7 @@ export class PrologueScene02 extends Phaser.Scene {
 			return;
 		}
 		this.playerVisual.anims.stop();
-		this.playerVisual.setTexture(`player-walk-${direction}`, 0);
+		this.playerVisual.setTexture(firstFrame, 0);
 	}
 
 	setupObjectiveMarker() {
@@ -492,22 +542,22 @@ export class PrologueScene02 extends Phaser.Scene {
 	}
 
 	tryMove(dx: number, dy: number) {
-		const halfW = 18;
-		const halfH = 26;
+		const profile = this.playerColliderProfile;
 		const canOccupy = (nextX: number, nextY: number) => {
+			const left = nextX + profile.offset[0] * PX;
+			const top = nextY + profile.offset[1] * PX;
+			const width = profile.size[0] * PX;
+			const height = profile.size[1] * PX;
 			if (
-				nextX - halfW < 0 ||
-				nextY - halfH < 0 ||
-				nextX + halfW > this.logic.world_size[0] ||
-				nextY + halfH > this.logic.world_size[1]
+				left < 0 || top < 0 || left + width > this.logic.world_size[0] || top + height > this.logic.world_size[1]
 			)
 				return false;
 			return !this.collisionRects.some(
 				(rect) =>
-					nextX + halfW > rect.x &&
-					nextX - halfW < rect.x + rect.width &&
-					nextY + halfH > rect.y &&
-					nextY - halfH < rect.y + rect.height,
+					left + width > rect.x &&
+					left < rect.x + rect.width &&
+					top + height > rect.y &&
+					top < rect.y + rect.height,
 			);
 		};
 		if (canOccupy(this.player.x + dx, this.player.y)) this.player.x += dx;
