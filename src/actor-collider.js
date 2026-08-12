@@ -23,11 +23,12 @@ export function ensureActorVisualConfig(document, id, defaultHeight) {
   const current = document.actor_visuals[id] ?? {};
   const height = Number(current.display_height);
   current.display_height = Number.isFinite(height) && height > 0 ? height : defaultHeight;
+  current.offset = finitePair(current.offset, [0, 0]);
   document.actor_visuals[id] = current;
   return current;
 }
 
-export function createActorVisualEntry({ id, label, getActor, getProfile, tileSize = DEFAULT_TILE_SIZE }) {
+export function createActorVisualEntry({ id, label, getActor, getProfile, getAnchor, onPositionChange, tileSize = DEFAULT_TILE_SIZE }) {
   return {
     id,
     label,
@@ -44,10 +45,30 @@ export function createActorVisualEntry({ id, label, getActor, getProfile, tileSi
       const actor = getActor();
       return actor?.displayWidth ?? '';
     },
-    containsPoint(point) {
+    get bounds() {
       const bounds = getActor()?.getBounds?.();
+      if (!bounds) return null;
+      return { x: bounds.x / tileSize, y: bounds.y / tileSize, width: bounds.width / tileSize, height: bounds.height / tileSize };
+    },
+    get position() {
+      const actor = getActor();
+      return actor ? { x: actor.x / tileSize, y: actor.y / tileSize } : null;
+    },
+    set position(value) {
+      const profile = getProfile();
+      const anchor = getAnchor?.() ?? this.position;
+      if (!profile || !anchor || !value) return;
+      profile.offset = [value.x - anchor.x, value.y - anchor.y];
+      onPositionChange?.(id, profile.offset);
+    },
+    get anchor() {
+      return getAnchor?.() ?? this.position;
+    },
+    containsPoint(point) {
+      const bounds = this.bounds;
       if (!bounds) return false;
-      return bounds.contains(point.x * tileSize, point.y * tileSize);
+      return point.x >= bounds.x && point.x <= bounds.x + bounds.width
+        && point.y >= bounds.y && point.y <= bounds.y + bounds.height;
     }
   };
 }

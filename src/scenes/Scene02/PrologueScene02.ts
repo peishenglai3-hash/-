@@ -235,6 +235,8 @@ export class PrologueScene02 extends Phaser.Scene {
 			label: "玩家",
 			getActor: () => this.playerVisual,
 			getProfile: () => this.actorVisualProfile,
+			getAnchor: () => ({ x: this.player.x / PX, y: this.player.y / PX }),
+			onPositionChange: () => this.applyActorVisualPosition(),
 		})];
 	}
 
@@ -298,16 +300,23 @@ export class PrologueScene02 extends Phaser.Scene {
 		if (this.introSide && this.textures.exists("player-side-right")) {
 			const source = this.textures.get("player-side-right").getSourceImage() as HTMLImageElement;
 			this.playerVisual.setDisplaySize(Math.round(height * source.width / source.height), height);
+			this.applyActorVisualPosition();
 			return;
 		}
 		setModernPlayerDirection(this.playerVisual, this.playerDirection as "down" | "left" | "right" | "up", height);
+		this.applyActorVisualPosition();
+	}
+
+	applyActorVisualPosition() {
+		const offset = this.actorVisualProfile?.offset ?? [0, 0];
+		this.playerVisual?.setPosition(this.player.x + offset[0] * PX, this.player.y + offset[1] * PX);
 	}
 
 	syncPlayerVisual(direction: string, moving: boolean) {
 		if (!this.playerVisual) return;
-		this.playerVisual
-			.setPosition(this.player.x, this.player.y)
-			.setDepth(this.depthFor(this.player.y) + 0.5);
+
+		this.applyActorVisualPosition();
+		this.playerVisual.setDepth(this.depthForPlayer());
 		if (this.introSide) {
 			if (!moving) return;
 			this.introSide = false;

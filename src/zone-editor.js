@@ -1,7 +1,7 @@
 import { normalizeDegrees, pointInRotatedRect, rotatedRectPoints } from './collision-geometry.js';
 import { ForegroundLassoTool } from './magnetic-lasso.js';
 
-const COLORS = { collision: 0xff4fbf, interaction: 0xffdf32, selected: 0xffffff, rotation: 0x55e7ff };
+const COLORS = { collision: 0xff4fbf, interaction: 0xffdf32, visual: 0x55e7ff, anchor: 0xff3b30, selected: 0xffffff, rotation: 0x55e7ff };
 const HANDLE_RADIUS = 0.38;
 const ROTATION_HANDLE_OFFSET = 0.85;
 
@@ -221,8 +221,13 @@ export class CollisionEditor {
       if (this.kind === 'foreground') return this.lasso.pointerDown(pointer);
       const point = this.worldPoint(pointer);
       if (this.kind === 'visual') {
-        const hit = [...this.items].reverse().find((item) => item.containsPoint?.(point));
-        return this.select(hit ?? null);
+        const handleItem = [...this.items].reverse().find((item) => this.visualHandleAt(item, point));
+        const handle = handleItem ? this.visualHandleAt(handleItem, point) : '';
+        const hit = handleItem ?? [...this.items].reverse().find((item) => item.containsPoint?.(point));
+        if (!hit) return this.select(null);
+        this.select(hit);
+        this.drag = { mode: handle ? 'visual-resize' : 'visual-move', handle, start: point, position: { ...hit.position }, bounds: { ...hit.bounds }, height: Number(hit.displayHeight), ratio: hit.bounds.width / hit.bounds.height };
+        return;
       }
       const selectedHandle = this.selected?.rect ? this.handleAt(this.selected, point) : '';
       const hit = selectedHandle ? this.selected : [...this.items].reverse().find((item) => item.rect && pointInRotatedRect(item.rect, this.rotationOf(item), point, 0.12));
@@ -246,7 +251,10 @@ export class CollisionEditor {
         this.updateCursor(point);
         return;
       }
-      if (this.drag.mode === 'move') this.moveRect(point);
+      if (this.kind === 'visual') {
+        if (this.drag.mode === 'visual-move') this.moveVisual(point);
+        else this.resizeVisual(point);
+      } else if (this.drag.mode === 'move') this.moveRect(point);
       else if (this.drag.mode === 'rotate') this.rotateRect(point);
       else this.resizeRect(point);
       this.changed();
@@ -314,6 +322,35 @@ export class CollisionEditor {
     return closest;
   }
 
+  visualHandleAt(item, point) {
+    const bounds = item?.bounds;
+    if (!bounds) return '';
+    const threshold = Math.max(0.5, 12 / this.tileSize);
+    const handles = { nw: [bounds.x, bounds.y], ne: [bounds.x + bounds.width, bounds.y], sw: [bounds.x, bounds.y + bounds.height], se: [bounds.x + bounds.width, bounds.y + bounds.height] };
+    return Object.entries(handles).find(([, [x, y]]) => Math.hypot(point.x - x, point.y - y) <= threshold)?.[0] ?? '';
+  }
+
+  moveVisual(point) {
+    const dx = point.x - this.drag.start.x;
+    const dy = point.y - this.drag.start.y;
+    this.selected.position = { x: this.drag.position.x + dx, y: this.drag.position.y + dy };
+  }
+
+  resizeVisual(point) {
+    const b = this.drag.bounds;
+    const signX = this.drag.handle.includes('w') ? -1 : 1;
+    const signY = this.drag.handle.includes('n') ? -1 : 1;
+    const oppositeX = this.drag.handle.includes('w') ? b.x + b.width : b.x;
+    const oppositeY = this.drag.handle.includes('n') ? b.y + b.height : b.y;
+    const height = Math.max(1 / this.tileSize, Math.max(Math.abs(point.y - oppositeY), Math.abs(point.x - oppositeX) / Math.max(0.01, this.drag.ratio)));
+    const width = height * this.drag.ratio;
+    const x = signX < 0 ? oppositeX - width : oppositeX;
+    const y = signY < 0 ? oppositeY - height : oppositeY;
+    this.selected.displayHeight = height * this.tileSize;
+    this.selected.position = { x: x + width / 2, y: y + height };
+    this.config.onActorVisualChange?.(this.selected.id, this.selected.displayHeight);
+  }
+
   moveRect(point) {
     const [, , width, height] = this.drag.rect;
     const nextCenter = {
@@ -357,6 +394,12 @@ export class CollisionEditor {
   }
 
   updateCursor(point) {
+    if (this.kind === 'visual') {
+      const handle = this.selected ? this.visualHandleAt(this.selected, point) : '';
+      const cursors = { nw: 'nwse-resize', se: 'nwse-resize', ne: 'nesw-resize', sw: 'nesw-resize' };
+      this.setCursor(cursors[handle] ?? (this.selected?.containsPoint?.(point) ? 'move' : 'default'));
+      return;
+    }
     if (!this.selected?.rect) return this.setCursor('default');
     const handle = this.handleAt(this.selected, point);
     const cursors = { n: 'ns-resize', s: 'ns-resize', e: 'ew-resize', w: 'ew-resize', ne: 'nesw-resize', sw: 'nesw-resize', nw: 'nwse-resize', se: 'nwse-resize', rotate: 'grab' };
@@ -393,7 +436,7 @@ export class CollisionEditor {
     this.panel.querySelector('[data-section="visual-size"]').classList.toggle('hidden', !visual);
     this.panel.querySelector('[data-section="snap"]').classList.toggle('hidden', visual);
     if (visual) {
-      this.help.textContent = '选择当前章节的角色，调整贴图高度；宽度按原始比例自动计算。仅影响当前章节，点击保存 JSON 写入。';
+      this.help.textContent = '拖动人物调整贴图位置；拖动四角圆点等比缩放。玩家红色十字表示真实移动点。仅影响当前章节，点击保存 JSON 写入。';
     } else if (foreground) {
       this.help.textContent = '左键：添加锚点并磁吸图像边缘\n右键：撤销上一步 · 双击：自动闭合完成 · Esc：取消\n遮挡顺序自动比较套索最低点与人物脚底碰撞箱底边；最低点更靠下的一方显示在前。';
     } else if (actorCollider) {
@@ -588,6 +631,23 @@ export class CollisionEditor {
   render() {
     const graphics = this.graphics.clear();
     if (!this.enabled) return;
+    if (this.kind === 'visual') {
+      for (const item of this.items) {
+        const bounds = item.bounds;
+        if (!bounds) continue;
+        const selected = item === this.selected;
+        graphics.lineStyle(selected ? 4 : 2, selected ? COLORS.selected : COLORS.visual, 1);
+        graphics.strokeRect(bounds.x * this.tileSize, bounds.y * this.tileSize, bounds.width * this.tileSize, bounds.height * this.tileSize);
+        graphics.fillStyle(selected ? COLORS.selected : COLORS.visual, 1);
+        for (const [x, y] of [[bounds.x, bounds.y], [bounds.x + bounds.width, bounds.y], [bounds.x, bounds.y + bounds.height], [bounds.x + bounds.width, bounds.y + bounds.height]]) graphics.fillCircle(x * this.tileSize, y * this.tileSize, 6);
+        if (item.id === 'PLAYER' && item.anchor) {
+          graphics.lineStyle(2, COLORS.anchor, 1).strokeCircle(item.anchor.x * this.tileSize, item.anchor.y * this.tileSize, 9);
+          graphics.lineBetween(item.anchor.x * this.tileSize - 12, item.anchor.y * this.tileSize, item.anchor.x * this.tileSize + 12, item.anchor.y * this.tileSize);
+          graphics.lineBetween(item.anchor.x * this.tileSize, item.anchor.y * this.tileSize - 12, item.anchor.x * this.tileSize, item.anchor.y * this.tileSize + 12);
+        }
+      }
+      return;
+    }
     for (const kind of ['collision', 'interaction']) {
       const items = kind === 'collision'
         ? [...this.config.getCollisions(), ...this.actorItems]

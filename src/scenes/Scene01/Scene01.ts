@@ -210,8 +210,10 @@ export class Scene01 extends Phaser.Scene {
 	syncPlayerVisual(direction: string, moving: boolean) {
 		if (!this.playerVisual) return;
 		this.playerVisual
-			.setPosition(this.player.x, this.player.y)
+
+			.setDepth(this.depthForActor(this.player, this.actorColliderProfiles.PLAYER))
 			.setFlipX(false);
+		this.applyActorVisualPosition("PLAYER");
 		const walkDirection = direction as "down" | "left" | "right" | "up";
 		const firstFrame = modernWalkFrameKey(walkDirection, 0);
 		if (!this.playerVisual.texture.key.startsWith(`modern-player-${walkDirection}-`))
@@ -315,9 +317,9 @@ export class Scene01 extends Phaser.Scene {
 			NPC_CH00_STUDENT_B: ensureActorVisualConfig(manifest, "NPC_CH00_STUDENT_B", 188),
 		};
 		this.actorVisualEntries = [
-			createActorVisualEntry({ id: "PLAYER", label: "玩家", getActor: () => this.playerVisual, getProfile: () => this.actorVisualProfiles.PLAYER, tileSize: PX }),
-			createActorVisualEntry({ id: "NPC_CH00_STUDENT_A", label: "学生甲", getActor: () => this.studentA, getProfile: () => this.actorVisualProfiles.NPC_CH00_STUDENT_A, tileSize: PX }),
-			createActorVisualEntry({ id: "NPC_CH00_STUDENT_B", label: "学生乙", getActor: () => this.studentB, getProfile: () => this.actorVisualProfiles.NPC_CH00_STUDENT_B, tileSize: PX }),
+			createActorVisualEntry({ id: "PLAYER", label: "玩家", getActor: () => this.playerVisual, getProfile: () => this.actorVisualProfiles.PLAYER, getAnchor: () => ({ x: this.player.x / PX, y: this.player.y / PX }), onPositionChange: (id: string) => this.applyActorVisualPosition(id), tileSize: PX }),
+			createActorVisualEntry({ id: "NPC_CH00_STUDENT_A", label: "学生甲", getActor: () => this.studentA, getProfile: () => this.actorVisualProfiles.NPC_CH00_STUDENT_A, getAnchor: () => this.visualAnchor("NPC_CH00_STUDENT_A"), onPositionChange: (id: string) => this.applyActorVisualPosition(id), tileSize: PX }),
+			createActorVisualEntry({ id: "NPC_CH00_STUDENT_B", label: "学生乙", getActor: () => this.studentBExit ?? this.studentB, getProfile: () => this.actorVisualProfiles.NPC_CH00_STUDENT_B, getAnchor: () => this.visualAnchor("NPC_CH00_STUDENT_B"), onPositionChange: (id: string) => this.applyActorVisualPosition(id), tileSize: PX }),
 		];
 	}
 
@@ -379,6 +381,37 @@ export class Scene01 extends Phaser.Scene {
 				this.studentBExit.setDisplaySize(Math.round(height * source.width / source.height), height);
 			}
 		}
+		this.applyActorVisualPosition(id);
+	}
+
+	visualActor(id: string): any {
+		return id === "PLAYER" ? this.playerVisual : id === "NPC_CH00_STUDENT_A" ? this.studentA : this.studentBExit ?? this.studentB;
+	}
+
+	visualAnchor(id: string) {
+		const actor = this.visualActor(id);
+		if (id !== "PLAYER" && actor) {
+			const x = actor.getData?.("visualBaseX");
+			const y = actor.getData?.("visualBaseY");
+			if (Number.isFinite(x) && Number.isFinite(y)) return { x: x / PX, y: y / PX };
+		}
+		const offset = this.actorVisualProfiles?.[id]?.offset ?? [0, 0];
+		return actor ? { x: actor.x / PX - offset[0], y: actor.y / PX - offset[1] } : { x: 0, y: 0 };
+	}
+
+	applyActorVisualPosition(id: string) {
+		const visual = this.visualActor(id);
+		const base = id === "PLAYER" ? { x: this.player.x / PX, y: this.player.y / PX } : this.visualAnchor(id);
+		const offset = this.actorVisualProfiles?.[id]?.offset ?? [0, 0];
+		visual?.setPosition((base.x + offset[0]) * PX, (base.y + offset[1]) * PX);
+	}
+
+	setActorVisualBasePosition(id: string, x: number, y: number) {
+		const visual = this.visualActor(id);
+		const offset = this.actorVisualProfiles?.[id]?.offset ?? [0, 0];
+		visual?.setData?.("visualBaseX", x);
+		visual?.setData?.("visualBaseY", y);
+		visual?.setPosition(x + offset[0] * PX, y + offset[1] * PX);
 	}
 
 	createNpc(
@@ -405,6 +438,7 @@ export class Scene01 extends Phaser.Scene {
 			npc.setData("facing", facing);
 			npc.setData("action", "photo");
 			this.studentB = npc;
+			this.setActorVisualBasePosition(id, x * PX, y * PX);
 			return;
 		}
 		if (id === "NPC_CH00_STUDENT_A") {
@@ -418,6 +452,7 @@ export class Scene01 extends Phaser.Scene {
 			npc.setData("action", "reading");
 			npc.play("student-a-reading-anim");
 			this.studentA = npc;
+			this.setActorVisualBasePosition(id, x * PX, y * PX);
 			return;
 		}
 		const npc = this.add
@@ -429,15 +464,13 @@ export class Scene01 extends Phaser.Scene {
 		npc.setData("facing", facing);
 		npc.setData("action", "idle");
 		(this as any)[prefix === "student-a" ? "studentA" : "studentB"] = npc;
+		this.setActorVisualBasePosition(id, x * PX, y * PX);
 	}
 
 	repositionActors() {
 		this.player.setPosition(24 * PX, 25 * PX);
-		this.studentA.setPosition(26 * PX, 25 * PX);
-		(this.studentB as Phaser.GameObjects.Sprite).setPosition(
-			22 * PX,
-			25 * PX,
-		);
+		this.setActorVisualBasePosition("NPC_CH00_STUDENT_A", 26 * PX, 25 * PX);
+		this.setActorVisualBasePosition("NPC_CH00_STUDENT_B", 22 * PX, 25 * PX);
 		this.studentB.setVisible(false);
 	}
 
@@ -448,11 +481,8 @@ export class Scene01 extends Phaser.Scene {
 			"action",
 			"returning",
 		);
-		this.studentA.setPosition(26 * PX, 25 * PX);
-		(this.studentB as Phaser.GameObjects.Sprite).setPosition(
-			22 * PX,
-			25 * PX,
-		);
+		this.setActorVisualBasePosition("NPC_CH00_STUDENT_A", 26 * PX, 25 * PX);
+		this.setActorVisualBasePosition("NPC_CH00_STUDENT_B", 22 * PX, 25 * PX);
 		this.swapStudentBToExitPose();
 	}
 
@@ -475,6 +505,7 @@ export class Scene01 extends Phaser.Scene {
 			.setOrigin(0.5, 1)
 			.setDepth(600);
 		this.studentBExit.setData("spawnId", "NPC_CH00_STUDENT_B");
+		this.setActorVisualBasePosition("NPC_CH00_STUDENT_B", 22 * PX, 25 * PX);
 	}
 
 	handleConfirm() {

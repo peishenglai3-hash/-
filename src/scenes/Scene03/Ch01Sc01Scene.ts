@@ -314,11 +314,11 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 		const displayHeight = this.actorVisualProfile.display_height;
 		const displayWidth = Math.round((frame.width / frame.height) * displayHeight);
 		this.playerVisual
-			.setPosition(this.player.x, this.player.y)
 
 			.setDisplaySize(displayWidth, displayHeight)
 			.setDepth(this.depthForPlayer())
 			.setFlipX(false);
+		this.applyActorVisualPosition();
 		if (moving) {
 			const animation = `chen-walk-${direction}-anim`;
 			if (
@@ -355,6 +355,8 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 			label: "陈继南",
 			getActor: () => this.playerVisual,
 			getProfile: () => this.actorVisualProfile,
+			getAnchor: () => ({ x: this.player.x, y: this.player.y }),
+			onPositionChange: () => this.applyActorVisualPosition(),
 			tileSize: 1,
 		})];
 	}
@@ -363,6 +365,12 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 		if (!this.playerVisual || !Number.isFinite(height) || height <= 0) return;
 		const frame = PLAYER_FRAME[this.playerDirection as keyof typeof PLAYER_FRAME];
 		this.playerVisual.setDisplaySize(Math.round((frame.width / frame.height) * height), height);
+		this.applyActorVisualPosition();
+	}
+
+	applyActorVisualPosition() {
+		const offset = this.actorVisualProfile?.offset ?? [0, 0];
+		this.playerVisual?.setPosition(this.player.x + offset[0], this.player.y + offset[1]);
 	}
 
 	applyPlayerColliderBody() {
