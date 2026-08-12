@@ -1,5 +1,5 @@
 import type { TransitionEntry, TransitionCue } from "@/types/director";
-import { hud } from "@/common/store";
+import { useHudStore } from "@/stores/modules/hud";
 import { nextTick } from "vue";
 
 interface SceneTransitionOptions {
@@ -25,6 +25,10 @@ export class SceneTransitionController {
 	timers = new Set<number>();
 	index = 0;
 	active = false;
+
+	private get store() {
+		return useHudStore();
+	}
 
 	constructor({
 		audio,
@@ -62,8 +66,8 @@ export class SceneTransitionController {
 	}
 
 	_render(entry: TransitionEntry) {
-		hud.transition.subtitleStyle = entry.style || "cue";
-		hud.transition.kindText =
+		this.store.transition.subtitleStyle = entry.style || "cue";
+		this.store.transition.kindText =
 			entry.kind === "cue"
 				? "环境声"
 				: entry.style === "date"
@@ -73,28 +77,28 @@ export class SceneTransitionController {
 						: entry.style === "dialogue"
 							? entry.speaker_name || "家人"
 							: "旁白";
-		hud.transition.text = entry.text;
-		hud.transition.subtitleVisible = true;
-		hud.transition.dateVisible = false;
+		this.store.transition.text = entry.text;
+		this.store.transition.subtitleVisible = true;
+		this.store.transition.dateVisible = false;
 		if (entry.style === "date") {
-			hud.transition.subtitleVisible = false;
-			hud.transition.dateText = entry.text;
-			hud.transition.dateVisible = true;
+			this.store.transition.subtitleVisible = false;
+			this.store.transition.dateText = entry.text;
+			this.store.transition.dateVisible = true;
 		}
 	}
 
 	async _showReveal() {
-		if (this.revealImageSrc) hud.transition.revealSrc = this.revealImageSrc;
-		hud.transition.revealShown = true;
+		if (this.revealImageSrc) this.store.transition.revealSrc = this.revealImageSrc;
+		this.store.transition.revealShown = true;
 		await nextTick();
-		hud.transition.revealFadeIn = true;
+		this.store.transition.revealFadeIn = true;
 	}
 
 	_next() {
 		if (!this.active) return;
 		const entry = this.entries[this.index++];
 		if (!entry) {
-			hud.transition.active = false;
+			this.store.transition.active = false;
 			this.audio?.stop();
 			this.active = false;
 			this.onComplete?.();
@@ -117,13 +121,13 @@ export class SceneTransitionController {
 		this.cancel();
 		this.active = true;
 		this.index = 0;
-		hud.transition.active = true;
-		hud.transition.revealShown = false;
-		hud.transition.revealFadeIn = false;
-		hud.transition.kindText = "";
-		hud.transition.text = "";
-		hud.transition.subtitleVisible = true;
-		hud.transition.dateVisible = false;
+		this.store.transition.active = true;
+		this.store.transition.revealShown = false;
+		this.store.transition.revealFadeIn = false;
+		this.store.transition.kindText = "";
+		this.store.transition.text = "";
+		this.store.transition.subtitleVisible = true;
+		this.store.transition.dateVisible = false;
 		this.audio?.start();
 		this._next();
 	}
