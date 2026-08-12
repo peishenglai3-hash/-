@@ -59,7 +59,7 @@ let _narrativeOnComplete: (() => void) | null = null;
 
 // ===== 覆盖层场景类型（全屏流程组件，同一时刻只显示一个） =====
 
-export type SceneOverlay = "Scene1Overlay" | null;
+export type SceneOverlay = "Scene1Overlay" | "Scene2Overlay" | "Scene3Overlay" | null;
 
 // ===== Pinia Store（Setup Store 风格） =====
 

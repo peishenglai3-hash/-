@@ -1,12 +1,19 @@
-import type { GameDirector } from "../GameDirector";
+<script setup lang="ts">
+import { computed, onMounted } from "vue";
+import { useHudStore } from "@/stores/modules/hud";
+import { useDirectorStore } from "@/stores/modules/director";
+import TransitionOverlay from "@/components/ui/TransitionOverlay.vue";
+import { assetPath } from "@/common/paths";
 import type { TransitionConfig } from "@/types/director";
 
-import { assetPath } from "@/common/paths";
+const hud = useHudStore();
+const directorStore = useDirectorStore();
+
 const TRANSITION_REVEAL_IMAGE = assetPath(
 	"/assets/transition/ch01-chenjinnan-home-reveal.png",
 );
 
-export const TRANSITION_B: TransitionConfig = {
+const TRANSITION_B: TransitionConfig = {
 	revealEntryId: "SC02_THOUGHT_04",
 	revealImage: TRANSITION_REVEAL_IMAGE,
 	entries: [
@@ -161,71 +168,45 @@ export const TRANSITION_B: TransitionConfig = {
 		},
 	],
 	cues: [
-		{
-			cue_id: "fan_low",
-			at_entry: "SC02_CUE_MODERN_SOUND",
-			kind: "ambient",
-		},
-		{
-			cue_id: "recorder_noise",
-			at_entry: "SC02_CUE_MODERN_SOUND",
-			kind: "ambient",
-		},
-		{
-			cue_id: "pen_slide",
-			at_entry: "SC02_CUE_MODERN_SOUND",
-			kind: "one_shot",
-		},
-		{
-			cue_id: "footsteps_silent",
-			at_entry: "SC02_NARRATION_01",
-			kind: "silent",
-		},
-		{
-			cue_id: "insects_near",
-			at_entry: "SC02_CUE_NIGHT_SOUNDS",
-			kind: "ambient",
-		},
-		{
-			cue_id: "plastic_to_ceramic",
-			at_entry: "SC02_CUE_NIGHT_SOUNDS",
-			kind: "one_shot",
-		},
-		{
-			cue_id: "chopsticks_bowl",
-			at_entry: "SC02_CUE_CHOPSTICKS",
-			kind: "one_shot",
-		},
-		{
-			cue_id: "door_creak",
-			at_entry: "SC02_CUE_DOOR_VOICES",
-			kind: "one_shot",
-		},
-		{
-			cue_id: "dog_silent",
-			at_entry: "SC02_CUE_DOOR_VOICES",
-			kind: "silent",
-		},
-		{
-			cue_id: "low_voice_silent",
-			at_entry: "SC02_CUE_DOOR_VOICES",
-			kind: "silent",
-		},
-		{
-			cue_id: "family_silent",
-			at_entry: "SC02_DIALOGUE_FAMILY_01",
-			kind: "silent",
-		},
-		{
-			cue_id: "family_silent",
-			at_entry: "SC02_DIALOGUE_FAMILY_02",
-			kind: "silent",
-		},
+		{ cue_id: "fan_low", at_entry: "SC02_CUE_MODERN_SOUND", kind: "ambient" },
+		{ cue_id: "recorder_noise", at_entry: "SC02_CUE_MODERN_SOUND", kind: "ambient" },
+		{ cue_id: "pen_slide", at_entry: "SC02_CUE_MODERN_SOUND", kind: "one_shot" },
+		{ cue_id: "footsteps_silent", at_entry: "SC02_NARRATION_01", kind: "silent" },
+		{ cue_id: "insects_near", at_entry: "SC02_CUE_NIGHT_SOUNDS", kind: "ambient" },
+		{ cue_id: "plastic_to_ceramic", at_entry: "SC02_CUE_NIGHT_SOUNDS", kind: "one_shot" },
+		{ cue_id: "chopsticks_bowl", at_entry: "SC02_CUE_CHOPSTICKS", kind: "one_shot" },
+		{ cue_id: "door_creak", at_entry: "SC02_CUE_DOOR_VOICES", kind: "one_shot" },
+		{ cue_id: "dog_silent", at_entry: "SC02_CUE_DOOR_VOICES", kind: "silent" },
+		{ cue_id: "low_voice_silent", at_entry: "SC02_CUE_DOOR_VOICES", kind: "silent" },
+		{ cue_id: "family_silent", at_entry: "SC02_DIALOGUE_FAMILY_01", kind: "silent" },
+		{ cue_id: "family_silent", at_entry: "SC02_DIALOGUE_FAMILY_02", kind: "silent" },
 	],
 };
 
-export function setupScene02ToSettlement(director: GameDirector): void {
-	director.game.events.on("prologue:sleep-complete", () => {
-		director.runTransition(TRANSITION_B, () => director.finishPrologue());
+const transitionProps = computed(() => ({
+	active: hud.transition.active,
+	subtitleVisible: hud.transition.subtitleVisible,
+	subtitleStyle: hud.transition.subtitleStyle,
+	kindText: hud.transition.kindText,
+	text: hud.transition.text,
+	dateVisible: hud.transition.dateVisible,
+	dateText: hud.transition.dateText,
+	revealShown: hud.transition.revealShown,
+	revealFadeIn: hud.transition.revealFadeIn,
+	revealSrc: hud.transition.revealSrc,
+}));
+
+onMounted(() => {
+	const director = directorStore.instance;
+	if (!director) return;
+
+	director.runTransition(TRANSITION_B, () => {
+		director.finishPrologue();
+		hud.hideOverlay();
 	});
-}
+});
+</script>
+
+<template>
+	<TransitionOverlay v-bind="transitionProps" />
+</template>

@@ -1,27 +1,37 @@
 <script setup lang="ts">
-import { useHudStore } from "@/stores/modules/hud";
-const hud = useHudStore();
+defineProps<{
+	active: boolean;
+	subtitleVisible: boolean;
+	subtitleStyle: string;
+	kindText: string;
+	text: string;
+	dateVisible: boolean;
+	dateText: string;
+	revealShown: boolean;
+	revealFadeIn: boolean;
+	revealSrc: string;
+}>();
 </script>
 
 <template>
-	<div class="scene-transition" :class="{ active: hud.transition.active }">
+	<div class="scene-transition" :class="{ active }">
 		<div
-			v-show="hud.transition.subtitleVisible"
+			v-show="subtitleVisible"
 			class="transition-subtitle"
-			:class="hud.transition.subtitleStyle"
+			:class="subtitleStyle"
 		>
-			<div class="transition-kind">{{ hud.transition.kindText }}</div>
-			<div class="transition-text">{{ hud.transition.text }}</div>
+			<div class="transition-kind">{{ kindText }}</div>
+			<div class="transition-text">{{ text }}</div>
 		</div>
-		<div v-show="hud.transition.dateVisible" class="transition-date">
-			{{ hud.transition.dateText }}
+		<div v-show="dateVisible" class="transition-date">
+			{{ dateText }}
 		</div>
 		<div
-			v-show="hud.transition.revealShown"
+			v-show="revealShown"
 			class="transition-reveal"
-			:class="{ visible: hud.transition.revealFadeIn }"
+			:class="{ visible: revealFadeIn }"
 		>
-			<img :src="hud.transition.revealSrc" alt="" />
+			<img :src="revealSrc" alt="" />
 		</div>
 	</div>
 </template>

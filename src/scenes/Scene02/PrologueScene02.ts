@@ -16,6 +16,7 @@ import {
 	togglePause,
 	showFlavor,
 } from "@/common/ui";
+import { useHudStore } from "@/stores/modules/hud";
 import { ambience } from "@/common/ambience";
 import { assetPath } from "@/common/paths";
 import {
@@ -468,7 +469,7 @@ export class PrologueScene02 extends Phaser.Scene {
 		playNarrative(FALL_ASLEEP, () => {
 			ambience.play("sleepFade");
 			fadeToBlack();
-			this.game.events.emit("prologue:sleep-complete");
+			useHudStore().showOverlay("Scene3Overlay");
 		});
 	}
 

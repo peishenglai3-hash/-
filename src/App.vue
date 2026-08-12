@@ -2,7 +2,7 @@
  * @Author: 吴世扬 18368095041@163.com
  * @Date: 2026-08-11 11:46:35
  * @LastEditors: 吴世扬 18368095041@163.com
- * @LastEditTime: 2026-08-12 16:20:23
+ * @LastEditTime: 2026-08-12 17:06:36
  * @FilePath: /honghu_game/src/App.vue
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
 -->
@@ -11,6 +11,8 @@ import { onMounted, ref } from "vue";
 import { useHudStore } from "@/stores/modules/hud";
 import { useDirectorStore } from "@/stores/modules/director";
 import Scene1Overlay from "@/components/biz/Scene1Overlay.vue";
+import Scene2Overlay from "@/components/biz/Scene2Overlay.vue";
+import Scene3Overlay from "@/components/biz/Scene3Overlay.vue";
 import TitleLoadPanel from "@/components/ui/TitleLoadPanel.vue";
 import TitleSettingsPanel from "@/components/ui/TitleSettingsPanel.vue";
 import TaskCard from "@/components/ui/TaskCard.vue";
@@ -23,7 +25,6 @@ import SceneFade from "@/components/ui/SceneFade.vue";
 import PausePanel from "@/components/ui/PausePanel.vue";
 import FlavorToast from "@/components/ui/FlavorToast.vue";
 import EndPanel from "@/components/ui/EndPanel.vue";
-import TransitionOverlay from "@/components/ui/TransitionOverlay.vue";
 
 const hud = useHudStore();
 const directorStore = useDirectorStore();
@@ -64,6 +65,8 @@ function onDone() {
 	<TitleLoadPanel />
 	<TitleSettingsPanel />
 	<Scene1Overlay v-if="hud.overlay === 'Scene1Overlay'" @start="onStart" @done="onDone" />
+	<Scene2Overlay v-if="hud.overlay === 'Scene2Overlay'" />
+	<Scene3Overlay v-if="hud.overlay === 'Scene3Overlay'" />
 	<TaskCard />
 	<InteractionPrompt />
 	<DialoguePanel />
@@ -74,5 +77,4 @@ function onDone() {
 	<PausePanel />
 	<FlavorToast />
 	<EndPanel />
-	<TransitionOverlay />
 </template>

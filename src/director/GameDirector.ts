@@ -24,8 +24,6 @@ import {
 	onSettingsChange,
 } from "@/common/save";
 import { ambience } from "@/common/ambience";
-import { setupScene01ToScene02 } from "./flow/Scene01ToScene02";
-import { setupScene02ToSettlement } from "./flow/Scene02ToSettlement";
 import { setupSettlementToCh01Sc01 } from "./flow/SettlementToCh01Sc01";
 
 export interface DirectorOptions {
@@ -46,8 +44,6 @@ export class GameDirector {
 	}
 
 	init(): void {
-		setupScene01ToScene02(this);
-		setupScene02ToSettlement(this);
 		setupSettlementToCh01Sc01(this);
 
 		onSettingsChange((s) => this.applySettings(s));
