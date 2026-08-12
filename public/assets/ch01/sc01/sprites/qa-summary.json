@@ -1,0 +1,16 @@
+{
+  "variant": "version-rekeyed",
+  "allDirectionsPassed": true,
+  "directionScores": {
+    "down": 101.952,
+    "left": 101.718,
+    "right": 101.292,
+    "up": 101.865
+  },
+  "warnings": {
+    "down": [],
+    "left": [],
+    "right": [],
+    "up": []
+  }
+}
