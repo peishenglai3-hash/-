@@ -206,10 +206,10 @@
       "id": "collision_msp68xsl",
       "shape": "rect",
       "rect": [
-        1410,
-        66.75,
+        1412.5,
+        58.375,
         175,
-        323.25
+        332.625
       ],
       "rotation": 0
     },
@@ -223,6 +223,17 @@
         180.25
       ],
       "rotation": -25
+    },
+    {
+      "id": "collision_msq8xhwy",
+      "shape": "rect",
+      "rect": [
+        1129,
+        327,
+        283,
+        64
+      ],
+      "rotation": 0
     }
   ],
   "interactions": [
@@ -1889,5 +1900,26 @@
       "initially_blocked": true,
       "unblock_objective": "EXIT_DOOR"
     }
-  ]
+  ],
+  "actor_colliders": {
+    "PLAYER": {
+      "offset": [
+        -28,
+        -36
+      ],
+      "size": [
+        56,
+        36
+      ]
+    }
+  },
+  "actor_visuals": {
+    "PLAYER": {
+      "display_height": 280,
+      "offset": [
+        0,
+        0
+      ]
+    }
+  }
 }
