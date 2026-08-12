@@ -22,7 +22,6 @@ import {
 	togglePause,
 	clearFade,
 } from "@/common/ui";
-import { useHudStore } from "@/stores/modules/hud";
 import {
 	INTRO_NARRATIVE,
 	OBS_BASIN_NARRATIVE,
@@ -37,8 +36,12 @@ import {
 } from "./ch01Sc01.content";
 import type { Choice } from "./ch01Sc01.content";
 import { FLAGS } from "./ch01Sc01.flags";
+import { FLAGS2 } from "./ch01Sc02.flags";
 import { assetPath } from "@/common/paths";
 import { SaveManager } from "@/common/save";
+import { playInkTransition } from "@/common/inkTransition";
+import { RETURN_NARRATIVE } from "./ch01Sc02.content";
+import { KNOCK_CHAIN } from "./ch01Return.content";
 // @ts-ignore Shared developer tools support both grid and pixel-coordinate scenes.
 import { CollisionEditor } from "../../zone-editor.js";
 // @ts-ignore Legacy actor collider helpers are shared by the editor.
@@ -243,11 +246,34 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	}
 
 	beginExplore() {
+		// 固定存档点：玩家进入陈继南家中、场景整体呈现时后台自动建立（幂等）
+		SaveManager.writeFixedCheckpoint();
+		// 从 SC02 闪回返回 → 播放归位叙述 + 敲门暗号
+		if (
+			state.flags.has(FLAGS2.COMPLETE) &&
+			!state.flags.has(FLAGS.INK_DONE)
+		) {
+			state.flags.add(FLAGS.INK_DONE);
+			state.mode = "narrative";
+			state.playerLocked = true;
+			playNarrative([...RETURN_NARRATIVE, ...KNOCK_CHAIN], () => {
+				state.mode = "explore";
+				state.playerLocked = false;
+				showTask(TASKS_CH01_SC01.leave);
+				this.saveProgress();
+			});
+			return;
+		}
+		// 从 SC03 院墙返回 → 场景已标记完成，直接探索模式
+		if (state.flags.has(FLAGS.YARD_DONE)) {
+			state.mode = "explore";
+			state.playerLocked = false;
+			showTask({ title: "第一章·待续", detail: "陈继南的故事暂告一段落。" });
+			return;
+		}
 		state.mode = "explore";
 		state.playerLocked = false;
 		showTask(TASKS_CH01_SC01.explore);
-		// 固定存档点：玩家进入陈继南家中、场景整体呈现时后台自动建立（幂等）
-		SaveManager.writeFixedCheckpoint();
 	}
 
 	setupPlayerVisual() {
@@ -298,10 +324,8 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	}
 
 	buildCollision() {
-		this.collisionRects = this.manifest.collision.map((item) => {
-			const [x, y, width, height] = item.rect;
-			return { id: item.id, x, y, width, height };
-		});
+		// TODO: 碰撞墙暂时禁用，全地图自由移动。后续专人修复。
+		this.collisionRects = [];
 	}
 
 	setupActorCollider() {
@@ -405,6 +429,8 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 		if (this.physics.world.debugGraphic)
 			this.physics.world.debugGraphic.setVisible(false);
 		const canWalk = state.mode === "explore";
+		// 交互提示始终更新——即使玩家被任务卡锁定也要显示
+		if (canWalk) this.updatePrompt();
 		if (!this.player || state.playerLocked || state.paused || !canWalk) {
 			if (this.player) {
 				this.player.setVelocity(0, 0);
@@ -430,7 +456,6 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 				this.playerDirection = y < 0 ? "up" : "down";
 		}
 		this.syncPlayerVisual(this.playerDirection, x !== 0 || y !== 0);
-		this.updatePrompt();
 	}
 
 	tryMove(dx: number, dy: number) {
@@ -638,12 +663,14 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 			text: "砚中的墨还没有完全干透，笔杆磨得光滑。",
 		});
 		playNarrative(INK_NARRATIVE, () => {
-			state.flags.add(FLAGS.INK_DONE);
+			// 墨色漫开 → 墨水痕迹转场 → 进入闪回一·状纸（SC02）
 			hideItem();
-			showTask(TASKS_CH01_SC01.leave);
-			state.mode = "explore";
-			state.playerLocked = false;
-			this.saveProgress();
+			state.mode = "transition";
+			state.playerLocked = true;
+			playInkTransition(this, {
+				fadeOut: false,
+				onCovered: () => this.game.events.emit("ch01:sc02-enter"),
+			});
 		});
 	}
 
@@ -657,7 +684,10 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 		hideDialogue();
 		fadeToBlack();
 		this.saveProgress();
-		useHudStore().showOverlay("Scene3Overlay");
+		// 黑屏后进入外景院墙（SC03：联络通知）
+		this.time.delayedCall(900, () =>
+			this.game.events.emit("ch01:sc03-enter"),
+		);
 	}
 
 	saveProgress() {

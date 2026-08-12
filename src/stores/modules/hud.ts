@@ -72,6 +72,7 @@ export const useHudStore = defineStore("hud", () => {
 
   // --- task card ---
   const taskCard = ref<TaskCard | null>(null);
+  const taskCenter = ref(false);
 
   // --- interaction prompt ---
   const prompt = ref("");
@@ -269,16 +270,23 @@ export const useHudStore = defineStore("hud", () => {
     resultPanel.value = null;
   }
 
-  // --- 任务卡片 ---
+  // --- 任务卡片（两段式：居中强制确认 → 右上角待办） ---
   function showTask(task: TaskCard) {
     state.taskPreviousLock = state.playerLocked;
     state.taskOpen = true;
     state.playerLocked = true;
+    taskCenter.value = true;
     taskCard.value = task;
   }
 
   function closeTask() {
     if (!state.taskOpen) return;
+    // 第一段：居中 → 缩到右上角
+    if (taskCenter.value) {
+      taskCenter.value = false;
+      return;
+    }
+    // 第二段：右上角 → 彻底关闭
     state.taskOpen = false;
     taskCard.value = null;
     state.playerLocked = state.taskPreviousLock;
@@ -350,6 +358,7 @@ export const useHudStore = defineStore("hud", () => {
     overlay,
     title,
     taskCard,
+    taskCenter,
     prompt,
     dialogue,
     itemPanel,

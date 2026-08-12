@@ -8,6 +8,9 @@ import { TitleScene } from "@/scenes/Title/TitleScene";
 import { Scene01 } from "@/scenes/Scene01/Scene01";
 import { PrologueScene02 } from "@/scenes/Scene02/PrologueScene02";
 import { Ch01Sc01Scene } from "@/scenes/Scene03/Ch01Sc01Scene";
+import { Ch01Sc02Scene } from "@/scenes/Scene03/Ch01Sc02Scene";
+import { Ch01Sc03Scene } from "@/scenes/Scene03/Ch01Sc03Scene";
+import { setupFlashbackFlow } from "@/components/biz/FlashbackFlow";
 import { state } from "@/common/state";
 import { assetPath } from "@/common/paths";
 import {
@@ -48,7 +51,7 @@ function createGame(parent: HTMLElement): Phaser.Game {
 			height: 720,
 		},
 		loader: { baseURL: import.meta.env.BASE_URL },
-		scene: [TitleScene, Scene01, PrologueScene02, Ch01Sc01Scene],
+		scene: [TitleScene, Scene01, PrologueScene02, Ch01Sc01Scene, Ch01Sc02Scene, Ch01Sc03Scene],
 	});
 }
 
@@ -64,6 +67,10 @@ export const useDirectorStore = defineStore("director", () => {
 		const g = createGame(parent);
 		game.value = g;
 		(window as any).game = g;
+		(window as any).gameDirector = { game: g, enterScene };
+
+		// 闪回流程路由（SC01 ↔ SC02 / SC01 ↔ SC03）
+		setupFlashbackFlow({ game: g, enterScene });
 
 		// 结算 → 第一章
 		window.addEventListener("prologue:scene-exit", ((event: CustomEvent<SaveData>) => {

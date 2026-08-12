@@ -1,0 +1,16 @@
+export const FLAGS2 = {
+	// 渔民对话（beat1）完成
+	BEAT1: "CH01_SC02_BEAT1",
+	// 状纸递交 + 墨水转场完成（渔民切状态2→3）
+	HANDOFF: "CH01_SC02_HANDOFF",
+	// 干鱼对话（谢绝渔民）完成
+	BEAT3: "CH01_SC02_BEAT3",
+	CHOICE2_A: "CH01_SC02_CHOICE2_A",
+	CHOICE2_B: "CH01_SC02_CHOICE2_B",
+	CHOICE2_C: "CH01_SC02_CHOICE2_C",
+	CHOICE2_D: "CH01_SC02_CHOICE2_D",
+	COMPLETE: "CH01_SC02_COMPLETE",
+	RETURN_SEEN: "CH01_SC02_RETURN_SEEN",
+} as const;
+
+export type Ch01Sc02Flag = (typeof FLAGS2)[keyof typeof FLAGS2];

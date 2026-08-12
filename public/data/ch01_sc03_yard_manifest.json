@@ -1,0 +1,28 @@
+{
+	"spawns": [
+		{ "id": "PLAYER_CHENJINNAN", "position": [400, 560], "facing": "right" },
+		{ "id": "NPC_LIAISON", "position": [1240, 480], "facing": "left" }
+	],
+	"collision": [
+		{ "id": "wall_north_left", "rect": [20, 158, 720, 240] },
+		{ "id": "wall_north_right", "rect": [1028, 158, 528, 240] },
+		{ "id": "wall_west", "rect": [20, 206, 144, 576] },
+		{ "id": "wall_east", "rect": [1508, 206, 144, 576] },
+		{ "id": "house_south_left", "rect": [20, 734, 720, 192] },
+		{ "id": "house_south_right", "rect": [980, 734, 672, 192] },
+		{ "id": "prop_left", "rect": [212, 446, 144, 144] },
+		{ "id": "prop_right", "rect": [1364, 398, 144, 144] }
+	],
+	"interactions": [
+		{
+			"id": "wall_shadow",
+			"type": "event",
+			"rect": [1172, 398, 144, 96],
+			"prompt": "低声交谈"
+		}
+	],
+	"foreground_occlusion": {
+		"reserved": true,
+		"objects": []
+	}
+}

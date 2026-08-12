@@ -18,6 +18,8 @@ export const SCENE_KEY: Record<SceneId, string> = {
 	PROLOGUE_SC01: "Scene01",
 	PROLOGUE_SC02: "PrologueScene02",
 	CH01_SC01: "Ch01Sc01Scene",
+	CH01_SC02: "Ch01Sc02Scene",
+	CH01_SC03: "Ch01Sc03Scene",
 };
 
 export const SCENE_META: Record<
@@ -32,6 +34,14 @@ export const SCENE_META: Record<
 	CH01_SC01: {
 		label: "第一章·陈继南家中",
 		checkpoint: "CH01_SC01_CHEN_HOME_WAKE",
+	},
+	CH01_SC02: {
+		label: "第一章·闪回·状纸",
+		checkpoint: "CH01_SC02_FLASHBACK_PETITION",
+	},
+	CH01_SC03: {
+		label: "第一章·外景院墙",
+		checkpoint: "CH01_SC03_YARD",
 	},
 };
 
