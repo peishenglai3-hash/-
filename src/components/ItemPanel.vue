@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { hud, closeItem } from "@/common/store";
+import { useHudStore } from "@/stores/modules/hud";
+const hud = useHudStore();
 
 function onClose() {
-	closeItem();
+	hud.closeItem();
 }
 </script>
 

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { hud } from "@/common/store";
+import { useHudStore } from "@/stores/modules/hud";
+const hud = useHudStore();
 
 const videoEl = ref<HTMLVideoElement | null>(null);
 const buttonEl = ref<HTMLButtonElement | null>(null);

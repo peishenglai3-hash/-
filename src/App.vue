@@ -16,7 +16,8 @@ import { Ch01Sc01Scene } from "@/scenes/Scene03/Ch01Sc01Scene";
 import Phaser from "phaser";
 
 import { onMounted, ref, nextTick } from "vue";
-import { hud } from "@/common/store";
+import { useHudStore } from "@/stores/modules/hud";
+const hud = useHudStore();
 import IntroPanel from "./components/IntroPanel.vue";
 import TitleLoadPanel from "./components/TitleLoadPanel.vue";
 import TitleSettingsPanel from "./components/TitleSettingsPanel.vue";

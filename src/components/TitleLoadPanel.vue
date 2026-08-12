@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { hud } from "@/common/store";
+import { useHudStore } from "@/stores/modules/hud";
+const hud = useHudStore();
 import { SaveManager } from "@/common/save";
 import type { RunSave } from "@/types/common";
 
