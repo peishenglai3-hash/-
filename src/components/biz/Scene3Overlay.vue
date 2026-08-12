@@ -1,13 +1,16 @@
 <script setup lang="ts">
-import { computed, onMounted } from "vue";
+import { computed, nextTick, onMounted } from "vue";
 import { useHudStore } from "@/stores/modules/hud";
 import { useDirectorStore } from "@/stores/modules/director";
 import TransitionOverlay from "@/components/ui/TransitionOverlay.vue";
+import { createTransitionState } from "@/common/transition";
 import { assetPath } from "@/common/paths";
 import type { TransitionConfig } from "@/types/director";
 
 const hud = useHudStore();
 const directorStore = useDirectorStore();
+
+const local = createTransitionState();
 
 const TRANSITION_REVEAL_IMAGE = assetPath(
 	"/assets/transition/ch01-chenjinnan-home-reveal.png",
@@ -183,27 +186,92 @@ const TRANSITION_B: TransitionConfig = {
 	],
 };
 
-const transitionProps = computed(() => ({
-	active: hud.transition.active,
-	subtitleVisible: hud.transition.subtitleVisible,
-	subtitleStyle: hud.transition.subtitleStyle,
-	kindText: hud.transition.kindText,
-	text: hud.transition.text,
-	dateVisible: hud.transition.dateVisible,
-	dateText: hud.transition.dateText,
-	revealShown: hud.transition.revealShown,
-	revealFadeIn: hud.transition.revealFadeIn,
-	revealSrc: hud.transition.revealSrc,
-}));
+const transitionProps = computed(() => local);
 
 onMounted(() => {
-	const director = directorStore.instance;
-	if (!director) return;
+	if (!directorStore.game) return;
+	const g = directorStore.game!;
 
-	director.runTransition(TRANSITION_B, () => {
-		director.finishPrologue();
-		hud.hideOverlay();
-	});
+	/* ---- 内联转场播放 ---- */
+	const timers: number[] = [];
+	let index = 0;
+
+	function clearTimers() {
+		for (const t of timers) clearTimeout(t);
+		timers.length = 0;
+	}
+
+	function playCues(entryId: string) {
+		for (const cue of TRANSITION_B.cues) {
+			if (cue.at_entry === entryId) directorStore.transitionAudio.playCue(cue.cue_id);
+		}
+	}
+
+	function render(entry: (typeof TRANSITION_B.entries)[number]) {
+		local.subtitleStyle = entry.style || "cue";
+		local.kindText =
+			entry.kind === "cue"
+				? "环境声"
+				: entry.style === "date"
+					? ""
+					: entry.style === "thought"
+						? "心理描写"
+						: entry.style === "dialogue"
+							? entry.speaker_name || "家人"
+							: "旁白";
+		local.text = entry.text;
+		local.subtitleVisible = true;
+		local.dateVisible = false;
+		if (entry.style === "date") {
+			local.subtitleVisible = false;
+			local.dateText = entry.text;
+			local.dateVisible = true;
+		}
+	}
+
+	async function showReveal() {
+		local.revealSrc = TRANSITION_B.revealImage!;
+		local.revealShown = true;
+		await nextTick();
+		local.revealFadeIn = true;
+	}
+
+	function next() {
+		const entry = TRANSITION_B.entries[index++];
+		if (!entry) {
+			directorStore.transitionAudio.stop();
+			directorStore.finishPrologue();
+			hud.hideOverlay();
+			return;
+		}
+
+		playCues(entry.entry_id);
+
+		if (entry.entry_id === TRANSITION_B.revealEntryId) {
+			showReveal();
+			timers.push(
+				window.setTimeout(() => {
+					render(entry);
+					timers.push(window.setTimeout(next, entry.duration_ms));
+				}, 820),
+			);
+			return;
+		}
+
+		render(entry);
+		timers.push(window.setTimeout(next, entry.duration_ms));
+	}
+
+	/* ---- start ---- */
+	local.active = true;
+	local.revealShown = false;
+	local.revealFadeIn = false;
+	local.kindText = "";
+	local.text = "";
+	local.subtitleVisible = true;
+	local.dateVisible = false;
+	directorStore.transitionAudio.start();
+	next();
 });
 </script>
 

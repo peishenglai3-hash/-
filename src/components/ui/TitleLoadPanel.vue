@@ -15,7 +15,7 @@ function fmtTime(ts: number): string {
 
 function pick(save: RunSave) {
 	hud.title.loadOpen = false;
-	useDirectorStore().instance?.startFromSave(save);
+	useDirectorStore().startFromSave(save);
 }
 
 function close() {

@@ -50,12 +50,12 @@ onMounted(() => {
 
 // 开场视频开始播放：解锁 Web Audio
 function onStart() {
-	directorStore.instance?.transitionAudio.prime();
+	directorStore.transitionAudio.prime();
 }
 
 // 开场视频结束（或被跳过）：起 BGM 并放开场景探索
 function onDone() {
-	directorStore.instance?.bgm.play().catch(() => {});
+	directorStore.bgm.play().catch(() => {});
 	(window as any).scene01Game?.beginExplore();
 }
 </script>

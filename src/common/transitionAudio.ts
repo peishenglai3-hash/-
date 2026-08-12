@@ -1,5 +1,3 @@
-import Phaser from "phaser";
-
 export class TransitionAudioController {
 	context: AudioContext | null = null;
 	master: GainNode | null = null;

@@ -3,6 +3,7 @@ import { computed, onMounted } from "vue";
 import { useHudStore } from "@/stores/modules/hud";
 import { useDirectorStore } from "@/stores/modules/director";
 import TransitionOverlay from "@/components/ui/TransitionOverlay.vue";
+import { createTransitionState } from "@/common/transition";
 import { clearFade } from "@/common/ui";
 import { state } from "@/common/state";
 import { ambience } from "@/common/ambience";
@@ -10,6 +11,8 @@ import type { TransitionConfig } from "@/types/director";
 
 const hud = useHudStore();
 const directorStore = useDirectorStore();
+
+const local = createTransitionState();
 
 const TRANSITION_A: TransitionConfig = {
 	revealEntryId: null,
@@ -59,38 +62,80 @@ const TRANSITION_A: TransitionConfig = {
 	],
 };
 
-const transitionProps = computed(() => ({
-	active: hud.transition.active,
-	subtitleVisible: hud.transition.subtitleVisible,
-	subtitleStyle: hud.transition.subtitleStyle,
-	kindText: hud.transition.kindText,
-	text: hud.transition.text,
-	dateVisible: hud.transition.dateVisible,
-	dateText: hud.transition.dateText,
-	revealShown: hud.transition.revealShown,
-	revealFadeIn: hud.transition.revealFadeIn,
-	revealSrc: hud.transition.revealSrc,
-}));
+const transitionProps = computed(() => local);
 
 onMounted(() => {
-	const director = directorStore.instance;
-	if (!director) return;
+	if (!directorStore.game) return;
+	const g = directorStore.game!;
 
-	director.runTransition(TRANSITION_A, () => {
-		clearFade();
-		director.game.scene.stop("Scene01");
-		state.mode = "intro";
-		state.playerLocked = true;
-		state.taskOpen = false;
-		state.paused = false;
-		state.narrativeQueue = [];
-		state.narrativeIndex = 0;
-		state.inNarrative = false;
-		ambience.unlock();
-		ambience.startRoom();
-		director.enterScene("PrologueScene02", "PROLOGUE_SC02");
-		hud.hideOverlay();
-	});
+	/* ---- 内联转场播放 ---- */
+	const timers: number[] = [];
+	let index = 0;
+
+	function clearTimers() {
+		for (const t of timers) clearTimeout(t);
+		timers.length = 0;
+	}
+
+	function playCues(entryId: string) {
+		for (const cue of TRANSITION_A.cues) {
+			if (cue.at_entry === entryId) directorStore.transitionAudio.playCue(cue.cue_id);
+		}
+	}
+
+	function render(entry: (typeof TRANSITION_A.entries)[number]) {
+		local.subtitleStyle = entry.style || "cue";
+		local.kindText =
+			entry.kind === "cue"
+				? "环境声"
+				: entry.style === "date"
+					? ""
+					: "旁白";
+		local.text = entry.text;
+		local.subtitleVisible = true;
+		local.dateVisible = false;
+		if (entry.style === "date") {
+			local.subtitleVisible = false;
+			local.dateText = entry.text;
+			local.dateVisible = true;
+		}
+	}
+
+	function next() {
+		const entry = TRANSITION_A.entries[index++];
+		if (!entry) {
+			directorStore.transitionAudio.stop();
+			/* ---- onComplete ---- */
+			clearFade();
+			g.scene.stop("Scene01");
+			state.mode = "intro";
+			state.playerLocked = true;
+			state.taskOpen = false;
+			state.paused = false;
+			state.narrativeQueue = [];
+			state.narrativeIndex = 0;
+			state.inNarrative = false;
+			ambience.unlock();
+			ambience.startRoom();
+			directorStore.enterScene("PrologueScene02", "PROLOGUE_SC02");
+			hud.hideOverlay();
+			return;
+		}
+
+		playCues(entry.entry_id);
+		render(entry);
+		const timer = window.setTimeout(next, entry.duration_ms);
+		timers.push(timer);
+	}
+
+	/* ---- start ---- */
+	local.active = true;
+	local.kindText = "";
+	local.text = "";
+	local.subtitleVisible = true;
+	local.dateVisible = false;
+	directorStore.transitionAudio.start();
+	next();
 });
 </script>
 
