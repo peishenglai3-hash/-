@@ -53,29 +53,32 @@ honghu_game/
 ├── src/
 │   ├── main.ts                      # 游戏入口：Vue app 初始化 + Phaser 初始化 + GameDirector
 │   ├── App.vue                      # Vue 根组件，组装所有 HUD 子组件
-│   ├── components/                  # Vue 3 HUD 组件（scoped CSS）
-│   │   ├── IntroPanel.vue           # 开场视频面板
-│   │   ├── TaskCard.vue             # 任务卡片
-│   │   ├── InteractionPrompt.vue    # 交互提示（"查看碑文 · E"）
-│   │   ├── DialoguePanel.vue        # 对话面板（带打字机动画）
-│   │   ├── ItemPanel.vue            # 物品/道具面板
-│   │   ├── ChoicePanel.vue          # 四选一面板
-│   │   ├── ResultPanel.vue          # 选择结果展示
-│   │   ├── SceneFade.vue            # 淡入淡出层
-│   │   ├── PausePanel.vue           # 暂停面板
-│   │   ├── FlavorToast.vue          # 风味气泡
-│   │   ├── EndPanel.vue             # 序章结算面板
-│   │   ├── TitleLoadPanel.vue       # 标题读档面板（槽位列表）
-│   │   ├── TitleSettingsPanel.vue   # 标题设置面板（音量/文字速度）
-│   │   └── TransitionOverlay.vue    # 转场覆盖层（提供 DOM 给 SceneTransitionController 操控）
+│   ├── components/
+│   │   └── ui/                      # Vue 3 HUD 组件（scoped CSS）
+│   │       ├── IntroPanel.vue       # 开场视频面板
+│   │       ├── TaskCard.vue         # 任务卡片
+│   │       ├── InteractionPrompt.vue # 交互提示（"查看碑文 · E"）
+│   │       ├── DialoguePanel.vue    # 对话面板（带打字机动画）
+│   │       ├── ItemPanel.vue        # 物品/道具面板
+│   │       ├── ChoicePanel.vue      # 四选一面板
+│   │       ├── ResultPanel.vue      # 选择结果展示
+│   │       ├── SceneFade.vue        # 淡入淡出层
+│   │       ├── PausePanel.vue       # 暂停面板
+│   │       ├── FlavorToast.vue      # 风味气泡
+│   │       ├── EndPanel.vue         # 序章结算面板
+│   │       ├── TitleLoadPanel.vue   # 标题读档面板（槽位列表）
+│   │       ├── TitleSettingsPanel.vue # 标题设置面板（音量/文字速度）
+│   │       └── TransitionOverlay.vue # 转场覆盖层（读取 Pinia hud.transition 渲染黑幕/字幕/揭示图）
 │   ├── common/
 │   │   ├── actions.ts               # 键位映射（WASD/方向键/E/Space/ESC）
 │   │   ├── ambience.ts              # 环境音引擎（风扇/虫鸣/磁带底噪，Web Audio）
 │   │   ├── paths.ts                 # 资源路径工具（assetPath，自动拼接 BASE_URL）
 │   │   ├── save.ts                  # 本地存档系统（SaveManager：auto/fixed 槽+设置+回退）
 │   │   ├── state.ts                 # 游戏状态（flags/profile/risk/propStates/mode 等）
-│   │   ├── store.ts                 # HUD reactive 数据层（Vue + Phaser 共用）
-│   │   └── ui.ts                    # HUD 控制转发层（对 Scene 兼容旧接口，转发至 store.ts）
+│   │   └── ui.ts                    # HUD 控制转发层（对 Scene 兼容旧接口，转发至 Pinia hud store）
+│   ├── stores/
+│   │   └── modules/
+│   │       └── hud.ts               # HUD reactive 数据层（Pinia store，Vue + Phaser 共用）
 │   ├── css/
 │   │   └── base.css                 # 全局布局/重置样式
 │   ├── director/
@@ -162,16 +165,16 @@ export function assetPath(path: string): string {
 - `mode: string` — 控制玩家行为模式（`intro`/`explore`/`narrative`/`choice`/`result`/`leave_walk` 等）
 - `playerLocked: boolean` — 控制玩家移动和交互锁定
 
-**HUD 状态** — [src/common/store.ts](src/common/store.ts)，Vue `reactive()` 对象，Vue 组件 + Phaser Scene 共用：
+**HUD 状态** — [src/stores/modules/hud.ts](src/stores/modules/hud.ts)，Pinia store（Options API），Vue 组件 + Phaser Scene 共用：
 
-- `hud.taskCard` / `hud.dialogue` / `hud.item` / `hud.choices` / ... — 各面板数据
+- `hud.taskCard` / `hud.dialogue` / `hud.itemPanel` / `hud.choicePanel` / ... — 各面板数据
 - `hud.playerLocked` — 同步至 `state.playerLocked`，控制场景侧输入锁定
 - Scene 通过 `ui.ts` 转发层修改 store，Vue 组件通过 `v-if` / `watch` 自动响应渲染
 
 ### Vue HUD 架构
 
 ```
-src/common/store.ts (reactive)
+src/stores/modules/hud.ts (Pinia)
         │
    ┌────┴────┐
    │         │
@@ -181,7 +184,7 @@ src/common/store.ts (reactive)
 └────────┘  └───────────┘
 ```
 
-Vue 通过 `v-if` 按可见性渲染面板，转场系统采用混合模式：`TransitionOverlay.vue` 提供 scoped DOM 初始渲染，`SceneTransitionController` 直接操作 DOM（`classList` 切换），Vue 不干预更新周期。
+Vue 通过 `v-if` 按可见性渲染面板，转场系统由 `useTransition` composable 写入 `hud.transition.*`，`TransitionOverlay.vue` 响应式渲染黑幕/字幕/揭示图。
 
 ### 场景1 → 场景2 状态传递
 
@@ -294,17 +297,18 @@ pnpm run build        # 生产构建
 
 ### 添加新 HUD 面板
 
-1. 在 `src/components/` 创建 `NewPanel.vue`，使用 scoped CSS：
+1. 在 `src/components/ui/` 创建 `NewPanel.vue`，使用 scoped CSS：
    ```vue
    <script setup lang="ts">
-   import { hud } from '@/common/store';
+   import { useHudStore } from '@/stores/modules/hud';
+   const hud = useHudStore();
    </script>
    <template>
      <div v-if="hud.newPanel.visible" class="new-panel">...</div>
    </template>
    <style scoped>.new-panel { ... }</style>
    ```
-2. 在 [src/common/store.ts](src/common/store.ts) 的 `hud` 对象中添加对应字段
+2. 在 [src/stores/modules/hud.ts](src/stores/modules/hud.ts) 的 `state` / `actions` 中添加对应字段
 3. 在 [src/common/ui.ts](src/common/ui.ts) 中添加转发函数（如需要 Scene 侧兼容调用）
 4. 在 [src/App.vue](src/App.vue) 中引入并组装组件
 

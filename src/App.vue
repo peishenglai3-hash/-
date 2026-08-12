@@ -2,7 +2,7 @@
  * @Author: 吴世扬 18368095041@163.com
  * @Date: 2026-08-11 11:46:35
  * @LastEditors: 吴世扬 18368095041@163.com
- * @LastEditTime: 2026-08-11 16:35:12
+ * @LastEditTime: 2026-08-12 11:51:16
  * @FilePath: /honghu_game/src/App.vue
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
 -->
@@ -18,20 +18,20 @@ import Phaser from "phaser";
 import { onMounted, ref, nextTick } from "vue";
 import { useHudStore } from "@/stores/modules/hud";
 const hud = useHudStore();
-import IntroPanel from "./components/IntroPanel.vue";
-import TitleLoadPanel from "./components/TitleLoadPanel.vue";
-import TitleSettingsPanel from "./components/TitleSettingsPanel.vue";
-import TaskCard from "./components/TaskCard.vue";
-import InteractionPrompt from "./components/InteractionPrompt.vue";
-import DialoguePanel from "./components/DialoguePanel.vue";
-import ItemPanel from "./components/ItemPanel.vue";
-import ChoicePanel from "./components/ChoicePanel.vue";
-import ResultPanel from "./components/ResultPanel.vue";
-import SceneFade from "./components/SceneFade.vue";
-import PausePanel from "./components/PausePanel.vue";
-import FlavorToast from "./components/FlavorToast.vue";
-import EndPanel from "./components/EndPanel.vue";
-import TransitionOverlay from "./components/TransitionOverlay.vue";
+import IntroPanel from "@/components/ui/IntroPanel.vue";
+import TitleLoadPanel from "@/components/ui/TitleLoadPanel.vue";
+import TitleSettingsPanel from "@/components/ui/TitleSettingsPanel.vue";
+import TaskCard from "@/components/ui/TaskCard.vue";
+import InteractionPrompt from "@/components/ui/InteractionPrompt.vue";
+import DialoguePanel from "@/components/ui/DialoguePanel.vue";
+import ItemPanel from "@/components/ui/ItemPanel.vue";
+import ChoicePanel from "@/components/ui/ChoicePanel.vue";
+import ResultPanel from "@/components/ui/ResultPanel.vue";
+import SceneFade from "@/components/ui/SceneFade.vue";
+import PausePanel from "@/components/ui/PausePanel.vue";
+import FlavorToast from "@/components/ui/FlavorToast.vue";
+import EndPanel from "@/components/ui/EndPanel.vue";
+import TransitionOverlay from "@/components/ui/TransitionOverlay.vue";
 
 const introPanelRef = ref<InstanceType<typeof IntroPanel> | null>(null);
 
