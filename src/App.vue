@@ -2,23 +2,15 @@
  * @Author: 吴世扬 18368095041@163.com
  * @Date: 2026-08-11 11:46:35
  * @LastEditors: 吴世扬 18368095041@163.com
- * @LastEditTime: 2026-08-12 11:51:16
+ * @LastEditTime: 2026-08-12 16:20:23
  * @FilePath: /honghu_game/src/App.vue
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
 -->
 <script setup lang="ts">
-import { GameDirector } from "@/director/GameDirector";
-import { setupStartScene } from "@/director/flow/StartScene";
-import { TitleScene } from "@/scenes/Title/TitleScene";
-import { Scene01 } from "@/scenes/Scene01/Scene01";
-import { PrologueScene02 } from "@/scenes/Scene02/PrologueScene02";
-import { Ch01Sc01Scene } from "@/scenes/Scene03/Ch01Sc01Scene";
-import Phaser from "phaser";
-
-import { onMounted, ref, nextTick } from "vue";
+import { onMounted, ref } from "vue";
 import { useHudStore } from "@/stores/modules/hud";
-const hud = useHudStore();
-import IntroPanel from "@/components/ui/IntroPanel.vue";
+import { useDirectorStore } from "@/stores/modules/director";
+import Scene1Overlay from "@/components/biz/Scene1Overlay.vue";
 import TitleLoadPanel from "@/components/ui/TitleLoadPanel.vue";
 import TitleSettingsPanel from "@/components/ui/TitleSettingsPanel.vue";
 import TaskCard from "@/components/ui/TaskCard.vue";
@@ -33,34 +25,16 @@ import FlavorToast from "@/components/ui/FlavorToast.vue";
 import EndPanel from "@/components/ui/EndPanel.vue";
 import TransitionOverlay from "@/components/ui/TransitionOverlay.vue";
 
-const introPanelRef = ref<InstanceType<typeof IntroPanel> | null>(null);
+const hud = useHudStore();
+const directorStore = useDirectorStore();
+const gameEl = ref<HTMLElement | null>(null);
 
 onMounted(() => {
-	// 初始化 Phaser
-	const game = new Phaser.Game({
-		type: Phaser.AUTO,
-		parent: "game",
-		backgroundColor: "#171715",
-		width: 1280,
-		height: 720,
-		dom: { createContainer: true },
-		physics: {
-			default: "arcade",
-			arcade: { gravity: { x: 0, y: 0 }, debug: false },
-		},
-		scale: {
-			mode: Phaser.Scale.FIT,
-			autoCenter: Phaser.Scale.CENTER_BOTH,
-			width: 1280,
-			height: 720,
-		},
-		loader: { baseURL: import.meta.env.BASE_URL },
-		scene: [TitleScene, Scene01, PrologueScene02, Ch01Sc01Scene],
-	});
+	directorStore.init(gameEl.value!);
 
-	const director = new GameDirector({ game });
-	director.init();
-	(window as any).game = game;
+	const game = directorStore.game!;
+
+	// P 键切换区域编辑器
 	window.addEventListener("keydown", (event) => {
 		if (event.code !== "KeyP") return;
 		const editorPanel = document.querySelector(".dev-zone-editor");
@@ -71,27 +45,25 @@ onMounted(() => {
 		scene?.zoneEditor.toggle();
 	});
 
-	// 开场视频流程：标题界面选择「创建」后再接线（IntroPanel 此时才渲染出模板引用）
-	game.events.on("director:new-game", () => {
-		hud.introVisible = true;
-		nextTick(() => {
-			const panel = introPanelRef.value!;
-			setupStartScene({
-				videoEl: panel.videoEl,
-				buttonEl: panel.buttonEl,
-				bgm: director.bgm,
-				transitionAudio: director.transitionAudio,
-			});
-		});
-	});
 });
+
+// 开场视频开始播放：解锁 Web Audio
+function onStart() {
+	directorStore.instance?.transitionAudio.prime();
+}
+
+// 开场视频结束（或被跳过）：起 BGM 并放开场景探索
+function onDone() {
+	directorStore.instance?.bgm.play().catch(() => {});
+	(window as any).scene01Game?.beginExplore();
+}
 </script>
 
 <template>
-	<div id="game"></div>
+	<div id="game" ref="gameEl"></div>
 	<TitleLoadPanel />
 	<TitleSettingsPanel />
-	<IntroPanel ref="introPanelRef" />
+	<Scene1Overlay v-if="hud.overlay === 'Scene1Overlay'" @start="onStart" @done="onDone" />
 	<TaskCard />
 	<InteractionPrompt />
 	<DialoguePanel />

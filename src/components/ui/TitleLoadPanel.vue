@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useHudStore } from "@/stores/modules/hud";
-const hud = useHudStore();
+import { useDirectorStore } from "@/stores/modules/director";
 import { SaveManager } from "@/common/save";
 import type { RunSave } from "@/types/common";
+
+const hud = useHudStore();
 
 const slots = computed<RunSave[]>(() => SaveManager.listSlots());
 
@@ -13,7 +15,7 @@ function fmtTime(ts: number): string {
 
 function pick(save: RunSave) {
 	hud.title.loadOpen = false;
-	(window as any).gameDirector?.startFromSave(save);
+	useDirectorStore().instance?.startFromSave(save);
 }
 
 function close() {

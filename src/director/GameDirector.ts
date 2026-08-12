@@ -4,12 +4,10 @@ import type { RunSave, SaveData, SceneId } from "@/types/common";
 import { TransitionAudioController } from "./TransitionAudio";
 import { SceneTransitionController } from "./SceneTransition";
 import { CHOICES, PROFILE_DELTAS, SCENE_EXIT } from "@/scenes/Scene01/content";
-import { state, resetRunState } from "@/common/state";
+import { state } from "@/common/state";
 import { assetPath } from "@/common/paths";
 import {
 	showEndPanel,
-	showFlavor,
-	hud,
 	hideIntro,
 	hideTask,
 	hideItem,
@@ -29,7 +27,6 @@ import { ambience } from "@/common/ambience";
 import { setupScene01ToScene02 } from "./flow/Scene01ToScene02";
 import { setupScene02ToSettlement } from "./flow/Scene02ToSettlement";
 import { setupSettlementToCh01Sc01 } from "./flow/SettlementToCh01Sc01";
-import { setupDebugRoute } from "./flow/DebugRoute";
 
 export interface DirectorOptions {
 	game: Phaser.Game;
@@ -39,7 +36,6 @@ export class GameDirector {
 	game: Phaser.Game;
 	transitionAudio: TransitionAudioController;
 	bgm: HTMLAudioElement;
-	titleBgm: HTMLAudioElement;
 	controller: SceneTransitionController | null = null;
 
 	constructor({ game }: DirectorOptions) {
@@ -47,22 +43,15 @@ export class GameDirector {
 		this.transitionAudio = new TransitionAudioController();
 		this.bgm = new Audio(assetPath("/assets/audio/prologue_bgm.wav"));
 		this.bgm.loop = true;
-		this.titleBgm = new Audio(assetPath("/assets/audio/title_bgm.mp3"));
-		this.titleBgm.loop = true;
 	}
 
 	init(): void {
-		setupDebugRoute(this);
 		setupScene01ToScene02(this);
 		setupScene02ToSettlement(this);
 		setupSettlementToCh01Sc01(this);
 
-		this.game.events.on("title:action", (id: string) =>
-			this.handleTitleAction(id),
-		);
 		onSettingsChange((s) => this.applySettings(s));
 		this.applySettings(getSettings());
-		this.ensureTitleBgm();
 		window.addEventListener("honghu:dev-next-chapter", ((event: CustomEvent<{ sceneKey?: string }>) => {
 			this.handleDevNextChapter(event.detail?.sceneKey);
 		}) as EventListener);
@@ -131,63 +120,14 @@ export class GameDirector {
 
 	applySettings(s: ReturnType<typeof getSettings>): void {
 		this.bgm.volume = s.bgmVolume;
-		this.titleBgm.volume = s.bgmVolume;
 		this.game.sound.volume = s.sfxVolume;
 		ambience.setVolume(s.sfxVolume);
-	}
-
-	/* ===== 标题界面 ===== */
-
-	// 自动播放限制：先尝试直播，被浏览器拒绝则在首次用户交互时起播
-	ensureTitleBgm(): void {
-		this.titleBgm.play().catch(() => {
-			const unlock = () => {
-				this.titleBgm.play().catch(() => {});
-				window.removeEventListener("pointerdown", unlock);
-				window.removeEventListener("keydown", unlock);
-			};
-			window.addEventListener("pointerdown", unlock);
-			window.addEventListener("keydown", unlock);
-		});
-	}
-
-	stopTitleBgm(): void {
-		try {
-			this.titleBgm.pause();
-			this.titleBgm.currentTime = 0;
-		} catch {
-			/* ignore */
-		}
-	}
-
-	leaveTitle(): void {
-		this.stopTitleBgm();
-		this.game.scene.stop("TitleScene");
-	}
-
-	handleTitleAction(id: string): void {
-		if (id === "new") this.beginNewGame();
-		else if (id === "load") hud.title.loadOpen = true;
-		else if (id === "settings") hud.title.settingsOpen = true;
-		else if (id === "quit") {
-			window.close();
-			showFlavor("若浏览器不允许直接关闭，请手动关闭此标签页。");
-		}
-	}
-
-	// 创建：重置整局状态 → 离开标题 → 开场视频流程 → Scene01 + 自动存档
-	beginNewGame(): void {
-		resetRunState();
-		this.leaveTitle();
-		this.game.scene.start("Scene01");
-		SaveManager.autosave("PROLOGUE_SC01");
-		this.game.events.emit("director:new-game");
 	}
 
 	// 加载：恢复状态 → 直达目标场景（不重玩序章）
 	startFromSave(save: RunSave): void {
 		SaveManager.applyToState(save);
-		this.leaveTitle();
+		this.game.scene.stop("TitleScene");
 		if (
 			save.sceneId === "PROLOGUE_SC01" ||
 			save.sceneId === "PROLOGUE_SC02"

@@ -54,21 +54,22 @@ honghu_game/
 │   ├── main.ts                      # 游戏入口：Vue app 初始化 + Phaser 初始化 + GameDirector
 │   ├── App.vue                      # Vue 根组件，组装所有 HUD 子组件
 │   ├── components/
-│   │   └── ui/                      # Vue 3 HUD 组件（scoped CSS）
-│   │       ├── IntroPanel.vue       # 开场视频面板
-│   │       ├── TaskCard.vue         # 任务卡片
-│   │       ├── InteractionPrompt.vue # 交互提示（"查看碑文 · E"）
-│   │       ├── DialoguePanel.vue    # 对话面板（带打字机动画）
-│   │       ├── ItemPanel.vue        # 物品/道具面板
-│   │       ├── ChoicePanel.vue      # 四选一面板
-│   │       ├── ResultPanel.vue      # 选择结果展示
-│   │       ├── SceneFade.vue        # 淡入淡出层
-│   │       ├── PausePanel.vue       # 暂停面板
-│   │       ├── FlavorToast.vue      # 风味气泡
-│   │       ├── EndPanel.vue         # 序章结算面板
-│   │       ├── TitleLoadPanel.vue   # 标题读档面板（槽位列表）
-│   │       ├── TitleSettingsPanel.vue # 标题设置面板（音量/文字速度）
-│   │       └── TransitionOverlay.vue # 转场覆盖层（读取 Pinia hud.transition 渲染黑幕/字幕/揭示图）
+│   │   ├── ui/                      # Vue 3 HUD 组件（scoped CSS）
+│   │   │   ├── TaskCard.vue         # 任务卡片
+│   │   │   ├── InteractionPrompt.vue # 交互提示（"查看碑文 · E"）
+│   │   │   ├── DialoguePanel.vue    # 对话面板（带打字机动画）
+│   │   │   ├── ItemPanel.vue        # 物品/道具面板
+│   │   │   ├── ChoicePanel.vue      # 四选一面板
+│   │   │   ├── ResultPanel.vue      # 选择结果展示
+│   │   │   ├── SceneFade.vue        # 淡入淡出层
+│   │   │   ├── PausePanel.vue       # 暂停面板
+│   │   │   ├── FlavorToast.vue      # 风味气泡
+│   │   │   ├── EndPanel.vue         # 序章结算面板
+│   │   │   ├── TitleLoadPanel.vue   # 标题读档面板（槽位列表）
+│   │   │   ├── TitleSettingsPanel.vue # 标题设置面板（音量/文字速度）
+│   │   │   └── TransitionOverlay.vue # 转场覆盖层（读取 Pinia hud.transition 渲染黑幕/字幕/揭示图）
+│   │   └── biz/                     # 流程业务组件（封装 Phaser 事件与 HUD 交互）
+│   │       └── StartScene.vue       # 开场视频流程（自带视频/按钮模板，@start/@done 事件）
 │   ├── common/
 │   │   ├── actions.ts               # 键位映射（WASD/方向键/E/Space/ESC）
 │   │   ├── ambience.ts              # 环境音引擎（风扇/虫鸣/磁带底噪，Web Audio）
@@ -78,7 +79,8 @@ honghu_game/
 │   │   └── ui.ts                    # HUD 控制转发层（对 Scene 兼容旧接口，转发至 Pinia hud store）
 │   ├── stores/
 │   │   └── modules/
-│   │       └── hud.ts               # HUD reactive 数据层（Pinia store，Vue + Phaser 共用）
+│   │       ├── hud.ts               # HUD reactive 数据层（Pinia store，Vue + Phaser 共用）
+│   │       └── director.ts          # GameDirector/Phaser.Game 全局单例（Pinia store，App.vue onMounted 初始化）
 │   ├── css/
 │   │   └── base.css                 # 全局布局/重置样式
 │   ├── director/
@@ -86,10 +88,9 @@ honghu_game/
 │   │   ├── SceneTransition.ts       # 黑幕字幕转场控制器（直接操作 TransitionOverlay DOM）
 │   │   ├── TransitionAudio.ts       # 转场合成音效控制器
 │   │   └── flow/
-│   │       ├── StartScene.ts        # 开场视频流程
 │   │       ├── Scene01ToScene02.ts   # 转场A：场景1→场景2
 │   │       ├── Scene02ToSettlement.ts # 转场B：场景2→1927
-│   │       └── DebugRoute.ts        # 调试入口（/?scene=02）
+│   │       └── SettlementToCh01Sc01.ts # 结算→第一章
 │   ├── scenes/
 │   │   ├── Title/
 │   │   │   └── TitleScene.ts        # 初始界面（设计图+四热区+标题 BGM）
@@ -120,7 +121,7 @@ Vite 配置了 `@` 别名指向 `src/`，所有模块导入使用 `@/` 路径：
 ```ts
 import { state } from '@/common/state';
 import { assetPath } from '@/common/paths';
-import { setupStartScene } from '@/director/flow/StartScene';
+import StartScene from '@/components/biz/StartScene.vue';
 ```
 
 同一模块内的相对引用仍使用 `./`（如场景目录内的 `./content`）。
@@ -197,16 +198,14 @@ Vue 通过 `v-if` 按可见性渲染面板，转场系统由 `useTransition` com
 
 ### 流程编排
 
-`src/main.ts` 通过 Phaser 事件系统驱动流程，实际路由逻辑由 `GameDirector` 模块管理：
+`src/main.ts` 初始化 Phaser + `GameDirector`，开场视频由 Vue 业务组件 `components/biz/StartScene.vue` 自带模板承载（通过 `@start`/`@done` 事件与 App 交互）；后续路由由 `GameDirector` 模块管理：
 
 ```
-intro 视频 → Scene01 (探索/叙事/四选一/离场)
+StartScene.vue (intro 视频) → Scene01 (探索/叙事/四选一/离场)
   → 事件 prologue:scene01-complete → 转场A (flow/Scene01ToScene02.ts) → Scene02
   → Scene02 (整理/录音/笔记/入睡)
   → 事件 prologue:sleep-complete → 转场B (flow/Scene02ToSettlement.ts) → 结算面板 + localStorage 存档
 ```
-
-调试入口：`/?scene=02` 跳过开场和场景1，直达场景2。
 
 ### 对话系统
 
@@ -234,11 +233,10 @@ intro 视频 → Scene01 (探索/叙事/四选一/离场)
 `public/assets/audio/title_bgm.mp3`（浏览器自动播放限制下于首次交互起播），
 进入正式游玩即停。
 
-- **创建**：`resetRunState()` → 离场 → Scene01 + 自动存档 → `director:new-game` 事件触发 App 接线开场视频流程
+- **创建**：`resetRunState()` → 离场 → Scene01 + 自动存档 → `director:new-game` 事件触发 App 显示 `StartScene` 开场视频流程
 - **加载**：`TitleLoadPanel.vue` 列槽（固定检查点在前）→ `director.startFromSave(save)` 直达目标场景，不重玩序章
 - **设置**：`TitleSettingsPanel.vue`（音乐/音效音量、文字速度三档），持久化 `redcode.settings`，订阅实时生效
 - **退出**：`window.close()` + 兜底提示
-- 调试路由 `/?scene=02` 经 `director.leaveTitle()` 绕过标题
 
 ### 存档系统（SaveManager，2026-08-12 引入）
 

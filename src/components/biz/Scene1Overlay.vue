@@ -1,27 +1,53 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useHudStore } from "@/stores/modules/hud";
+import { ambience } from "@/common/ambience";
+
 const hud = useHudStore();
 
-const videoEl = ref<HTMLVideoElement | null>(null);
-const buttonEl = ref<HTMLButtonElement | null>(null);
+const emit = defineEmits<{
+	start: [];
+	done: [];
+}>();
 
-defineExpose({ videoEl, buttonEl });
+const videoEl = ref<HTMLVideoElement | null>(null);
+const started = ref(false);
+
+function onInteract() {
+	if (!started.value) startIntro();
+	else endIntro();
+}
+
+function startIntro() {
+	started.value = true;
+	ambience.unlock();
+	videoEl.value?.play().catch(() => {});
+	emit("start");
+}
+
+function endIntro() {
+	hud.hideOverlay();
+	emit("done");
+}
 </script>
 
 <template>
-	<div v-if="hud.introVisible" class="intro-panel">
+	<div class="intro-panel">
 		<video
 			ref="videoEl"
 			src="/assets/video/intro.mp4"
 			playsinline
 			preload="auto"
+			@click="onInteract"
+			@ended="endIntro"
 		/>
 		<div class="intro-caption">
 			<div>红色源代码·洪湖篇</div>
 			<small>序章｜名字留在纸上</small>
 		</div>
-		<button ref="buttonEl">开始进入序章</button>
+		<button @click="onInteract">
+			{{ started ? "跳过开场视频" : "开始进入序章" }}
+		</button>
 	</div>
 </template>
 

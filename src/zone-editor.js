@@ -5,7 +5,7 @@ const COLORS = { collision: 0xff4fbf, interaction: 0xffdf32, selected: 0xffffff,
 const HANDLE_RADIUS = 0.38;
 const ROTATION_HANDLE_OFFSET = 0.85;
 
-const clone = (value) => structuredClone(value);
+const clone = (value) => JSON.parse(JSON.stringify(value));
 const snap = (value, step) => Math.round(value / step) * step;
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 

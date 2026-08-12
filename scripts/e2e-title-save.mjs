@@ -23,7 +23,7 @@ ok('1 标题界面渲染');
 
 // 标题 BGM 元素存在且循环
 const bgmMeta = await page.evaluate(() => {
-  const a = window.gameDirector?.titleBgm;
+  const a = window.titleScene?.titleBgm;
   return a ? { loop: a.loop, src: a.src } : null;
 });
 if (!bgmMeta || !bgmMeta.loop || !bgmMeta.src.includes('title_bgm')) fail('标题 BGM 未挂载');
@@ -48,7 +48,7 @@ await sleep(300);
 ok('4 读档空态');
 
 // 点击交互后标题 BGM 应已起播（自动播放限制解除）
-const bgmPlaying = await page.evaluate(() => !window.gameDirector.titleBgm.paused);
+const bgmPlaying = await page.evaluate(() => !window.titleScene.titleBgm.paused);
 if (!bgmPlaying) fail('标题 BGM 未起播');
 ok('5 标题 BGM 起播');
 
@@ -66,7 +66,7 @@ await page.click('.intro-panel button');
 await sleep(800);
 
 // 标题 BGM 应停止
-const titleStopped = await page.evaluate(() => window.gameDirector.titleBgm.paused);
+const titleStopped = await page.evaluate(() => window.titleScene.titleBgm.paused);
 if (!titleStopped) fail('进入游戏后标题 BGM 未停止');
 ok('7 进入游玩后标题 BGM 停止');
 
