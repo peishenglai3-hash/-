@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { hud } from "@/common/store";
+import { useHudStore } from "@/stores/modules/hud";
+const hud = useHudStore();
 
 function onClose() {
 	hud.taskCard = null;

@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from "vue";
-import { hud, hideEndPanel } from "@/common/store";
+import { useHudStore } from "@/stores/modules/hud";
+const hud = useHudStore();
 
-const onClose = () => hideEndPanel();
+const onClose = () => hud.hideEndPanel();
 
 function onKeyDown(e: KeyboardEvent) {
-	if (hud.endPanel) hideEndPanel();
+	if (hud.endPanel) hud.hideEndPanel();
 }
 
 onMounted(() => {

@@ -1,12 +1,22 @@
-import type { GameDirector } from "../GameDirector";
+<script setup lang="ts">
+import { computed, nextTick, onMounted } from "vue";
+import { useHudStore } from "@/stores/modules/hud";
+import { useDirectorStore } from "@/stores/modules/director";
+import TransitionOverlay from "@/components/ui/TransitionOverlay.vue";
+import { createTransitionState } from "@/common/transition";
+import { assetPath } from "@/common/paths";
 import type { TransitionConfig } from "@/types/director";
 
-import { assetPath } from "@/common/paths";
+const hud = useHudStore();
+const directorStore = useDirectorStore();
+
+const local = createTransitionState();
+
 const TRANSITION_REVEAL_IMAGE = assetPath(
 	"/assets/transition/ch01-chenjinnan-home-reveal.png",
 );
 
-export const TRANSITION_B: TransitionConfig = {
+const TRANSITION_B: TransitionConfig = {
 	revealEntryId: "SC02_THOUGHT_04",
 	revealImage: TRANSITION_REVEAL_IMAGE,
 	entries: [
@@ -161,71 +171,110 @@ export const TRANSITION_B: TransitionConfig = {
 		},
 	],
 	cues: [
-		{
-			cue_id: "fan_low",
-			at_entry: "SC02_CUE_MODERN_SOUND",
-			kind: "ambient",
-		},
-		{
-			cue_id: "recorder_noise",
-			at_entry: "SC02_CUE_MODERN_SOUND",
-			kind: "ambient",
-		},
-		{
-			cue_id: "pen_slide",
-			at_entry: "SC02_CUE_MODERN_SOUND",
-			kind: "one_shot",
-		},
-		{
-			cue_id: "footsteps_silent",
-			at_entry: "SC02_NARRATION_01",
-			kind: "silent",
-		},
-		{
-			cue_id: "insects_near",
-			at_entry: "SC02_CUE_NIGHT_SOUNDS",
-			kind: "ambient",
-		},
-		{
-			cue_id: "plastic_to_ceramic",
-			at_entry: "SC02_CUE_NIGHT_SOUNDS",
-			kind: "one_shot",
-		},
-		{
-			cue_id: "chopsticks_bowl",
-			at_entry: "SC02_CUE_CHOPSTICKS",
-			kind: "one_shot",
-		},
-		{
-			cue_id: "door_creak",
-			at_entry: "SC02_CUE_DOOR_VOICES",
-			kind: "one_shot",
-		},
-		{
-			cue_id: "dog_silent",
-			at_entry: "SC02_CUE_DOOR_VOICES",
-			kind: "silent",
-		},
-		{
-			cue_id: "low_voice_silent",
-			at_entry: "SC02_CUE_DOOR_VOICES",
-			kind: "silent",
-		},
-		{
-			cue_id: "family_silent",
-			at_entry: "SC02_DIALOGUE_FAMILY_01",
-			kind: "silent",
-		},
-		{
-			cue_id: "family_silent",
-			at_entry: "SC02_DIALOGUE_FAMILY_02",
-			kind: "silent",
-		},
+		{ cue_id: "fan_low", at_entry: "SC02_CUE_MODERN_SOUND", kind: "ambient" },
+		{ cue_id: "recorder_noise", at_entry: "SC02_CUE_MODERN_SOUND", kind: "ambient" },
+		{ cue_id: "pen_slide", at_entry: "SC02_CUE_MODERN_SOUND", kind: "one_shot" },
+		{ cue_id: "footsteps_silent", at_entry: "SC02_NARRATION_01", kind: "silent" },
+		{ cue_id: "insects_near", at_entry: "SC02_CUE_NIGHT_SOUNDS", kind: "ambient" },
+		{ cue_id: "plastic_to_ceramic", at_entry: "SC02_CUE_NIGHT_SOUNDS", kind: "one_shot" },
+		{ cue_id: "chopsticks_bowl", at_entry: "SC02_CUE_CHOPSTICKS", kind: "one_shot" },
+		{ cue_id: "door_creak", at_entry: "SC02_CUE_DOOR_VOICES", kind: "one_shot" },
+		{ cue_id: "dog_silent", at_entry: "SC02_CUE_DOOR_VOICES", kind: "silent" },
+		{ cue_id: "low_voice_silent", at_entry: "SC02_CUE_DOOR_VOICES", kind: "silent" },
+		{ cue_id: "family_silent", at_entry: "SC02_DIALOGUE_FAMILY_01", kind: "silent" },
+		{ cue_id: "family_silent", at_entry: "SC02_DIALOGUE_FAMILY_02", kind: "silent" },
 	],
 };
 
-export function setupScene02ToSettlement(director: GameDirector): void {
-	director.game.events.on("prologue:sleep-complete", () => {
-		director.runTransition(TRANSITION_B, () => director.finishPrologue());
-	});
-}
+const transitionProps = computed(() => local);
+
+onMounted(() => {
+	if (!directorStore.game) return;
+	const g = directorStore.game!;
+
+	/* ---- 内联转场播放 ---- */
+	const timers: number[] = [];
+	let index = 0;
+
+	function clearTimers() {
+		for (const t of timers) clearTimeout(t);
+		timers.length = 0;
+	}
+
+	function playCues(entryId: string) {
+		for (const cue of TRANSITION_B.cues) {
+			if (cue.at_entry === entryId) directorStore.transitionAudio.playCue(cue.cue_id);
+		}
+	}
+
+	function render(entry: (typeof TRANSITION_B.entries)[number]) {
+		local.subtitleStyle = entry.style || "cue";
+		local.kindText =
+			entry.kind === "cue"
+				? "环境声"
+				: entry.style === "date"
+					? ""
+					: entry.style === "thought"
+						? "心理描写"
+						: entry.style === "dialogue"
+							? entry.speaker_name || "家人"
+							: "旁白";
+		local.text = entry.text;
+		local.subtitleVisible = true;
+		local.dateVisible = false;
+		if (entry.style === "date") {
+			local.subtitleVisible = false;
+			local.dateText = entry.text;
+			local.dateVisible = true;
+		}
+	}
+
+	async function showReveal() {
+		local.revealSrc = TRANSITION_B.revealImage!;
+		local.revealShown = true;
+		await nextTick();
+		local.revealFadeIn = true;
+	}
+
+	function next() {
+		const entry = TRANSITION_B.entries[index++];
+		if (!entry) {
+			directorStore.transitionAudio.stop();
+			directorStore.finishPrologue();
+			hud.hideOverlay();
+			return;
+		}
+
+		playCues(entry.entry_id);
+
+		if (entry.entry_id === TRANSITION_B.revealEntryId) {
+			showReveal();
+			timers.push(
+				window.setTimeout(() => {
+					render(entry);
+					timers.push(window.setTimeout(next, entry.duration_ms));
+				}, 820),
+			);
+			return;
+		}
+
+		render(entry);
+		timers.push(window.setTimeout(next, entry.duration_ms));
+	}
+
+	/* ---- start ---- */
+	local.active = true;
+	local.revealShown = false;
+	local.revealFadeIn = false;
+	local.kindText = "";
+	local.text = "";
+	local.subtitleVisible = true;
+	local.dateVisible = false;
+	directorStore.transitionAudio.start();
+	next();
+});
+</script>
+
+<template>
+	<TransitionOverlay v-bind="transitionProps" />
+</template>

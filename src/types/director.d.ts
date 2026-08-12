@@ -27,3 +27,16 @@ export interface TransitionConfig {
 	entries: TransitionEntry[];
 	cues: TransitionCue[];
 }
+
+export interface TransitionState {
+	active: boolean;
+	subtitleVisible: boolean;
+	subtitleStyle: string;
+	kindText: string;
+	text: string;
+	dateVisible: boolean;
+	dateText: string;
+	revealShown: boolean;
+	revealFadeIn: boolean;
+	revealSrc: string;
+}

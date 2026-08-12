@@ -1,7 +1,12 @@
 import Phaser from "phaser";
+import { useHudStore } from "@/stores/modules/hud";
+import { useDirectorStore } from "@/stores/modules/director";
+import { resetRunState } from "@/common/state";
+import { assetPath } from "@/common/paths";
+import { showFlavor } from "@/common/ui";
+import { onSettingsChange, getSettings, SaveManager } from "@/common/save";
 
 // 游戏初始界面：设计图全屏 + 四个烧录木牌按钮的透明热区（悬停微光）
-// 动作通过 game.events.emit("title:action", id) 派发给 GameDirector，场景本身不持有业务逻辑
 const HOTSPOTS = [
 	{ id: "new", x: 301, y: 641, w: 230, h: 72 },
 	{ id: "load", x: 516, y: 641, w: 230, h: 72 },
@@ -10,8 +15,12 @@ const HOTSPOTS = [
 ] as const;
 
 export class TitleScene extends Phaser.Scene {
+	titleBgm: HTMLAudioElement;
+
 	constructor() {
 		super("TitleScene");
+		this.titleBgm = new Audio(assetPath("/assets/audio/title_bgm.mp3"));
+		this.titleBgm.loop = true;
 	}
 
 	preload() {
@@ -37,10 +46,76 @@ export class TitleScene extends Phaser.Scene {
 				this.tweens.add({ targets: zone, fillAlpha: 0, duration: 120 });
 			});
 			zone.on("pointerdown", () => {
-				this.game.events.emit("title:action", spot.id);
+				this.handleAction(spot.id);
 			});
 		}
 
-		(window as any).titleScene = this;
+		// 场景关闭时停止标题 BGM
+		this.events.on("shutdown", () => this.stopTitleBgm());
+
+		// 标题 BGM 自动播放（浏览器限制下于首次交互起播）
+		this.ensureTitleBgm();
+
+		// 设置变更时同步 BGM 音量
+		onSettingsChange((s) => {
+			this.titleBgm.volume = s.bgmVolume;
+		});
+		// 初始音量
+		this.titleBgm.volume = getSettings().bgmVolume;
+	}
+
+	/* ===== 按钮动作 ===== */
+
+	private handleAction(id: string): void {
+		switch (id) {
+			case "new": {
+				const { game } = useDirectorStore();
+				if (!game) return;
+				resetRunState();
+				this.scene.stop("TitleScene");
+				game.scene.start("Scene01");
+				SaveManager.autosave("PROLOGUE_SC01");
+				useHudStore().showOverlay("Scene1Overlay");
+				break;
+			}
+			case "load": {
+				const hud = useHudStore();
+				hud.title.loadOpen = true;
+				break;
+			}
+			case "settings": {
+				const hud = useHudStore();
+				hud.title.settingsOpen = true;
+				break;
+			}
+			case "quit": {
+				window.close();
+				showFlavor("若浏览器不允许直接关闭，请手动关闭此标签页。");
+				break;
+			}
+		}
+	}
+
+	/* ===== 标题 BGM ===== */
+
+	private ensureTitleBgm(): void {
+		this.titleBgm.play().catch(() => {
+			const unlock = () => {
+				this.titleBgm.play().catch(() => {});
+				window.removeEventListener("pointerdown", unlock);
+				window.removeEventListener("keydown", unlock);
+			};
+			window.addEventListener("pointerdown", unlock);
+			window.addEventListener("keydown", unlock);
+		});
+	}
+
+	private stopTitleBgm(): void {
+		try {
+			this.titleBgm.pause();
+			this.titleBgm.currentTime = 0;
+		} catch {
+			/* ignore */
+		}
 	}
 }

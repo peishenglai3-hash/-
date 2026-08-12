@@ -21,6 +21,7 @@ import {
 	fadeToBlack,
 	togglePause,
 } from "@/common/ui";
+import { useHudStore } from "@/stores/modules/hud";
 import {
 	REQUIRED_NARRATIVE,
 	CHOICES,
@@ -712,6 +713,6 @@ export class Scene01 extends Phaser.Scene {
 		hideItem();
 		hideDialogue();
 		fadeToBlack();
-		this.game.events.emit("prologue:scene01-complete");
+		useHudStore().showOverlay("Scene2Overlay");
 	}
 }

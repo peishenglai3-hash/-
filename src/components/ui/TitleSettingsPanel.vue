@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { reactive } from "vue";
-import { hud } from "@/common/store";
+import { useHudStore } from "@/stores/modules/hud";
+const hud = useHudStore();
 import { getSettings, updateSettings } from "@/common/save";
 
 const form = reactive(getSettings());

@@ -22,6 +22,7 @@ import {
 	togglePause,
 	clearFade,
 } from "@/common/ui";
+import { useHudStore } from "@/stores/modules/hud";
 import {
 	INTRO_NARRATIVE,
 	OBS_BASIN_NARRATIVE,
@@ -656,7 +657,7 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 		hideDialogue();
 		fadeToBlack();
 		this.saveProgress();
-		this.game.events.emit("ch01:sc01-complete");
+		useHudStore().showOverlay("Scene3Overlay");
 	}
 
 	saveProgress() {
