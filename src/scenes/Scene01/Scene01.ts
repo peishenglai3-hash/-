@@ -41,7 +41,8 @@ import {
 // @ts-ignore Legacy developer editor is shared by the TS scenes.
 import { CollisionEditor } from "../../zone-editor.js";
 // @ts-ignore Legacy actor collider helpers are shared by the editor.
-import { ensureActorColliderConfig, createActorColliderEntry } from "../../actor-collider.js";
+
+import { actorColliderBottomAt, ensureActorColliderConfig, createActorColliderEntry, ensureActorVisualConfig, createActorVisualEntry } from "../../actor-collider.js";
 
 const PX = 32;
 const PLAYER_FRAME = MODERN_PLAYER_SOURCE_FRAME;
@@ -70,6 +71,11 @@ export class Scene01 extends Phaser.Scene {
 	zoneEditor: any;
 	actorColliderProfiles: any;
 	actorColliderEntries: any[] = [];
+
+	actorVisualProfiles: any;
+	actorVisualEntries: any[] = [];
+	background!: Phaser.GameObjects.Image;
+	foregroundOcclusion: any;
 	manifest!: ManifestData;
 	player!: Phaser.Physics.Arcade.Sprite;
 	playerVisual!: Phaser.GameObjects.Sprite;
@@ -198,6 +204,7 @@ export class Scene01 extends Phaser.Scene {
 			.setOrigin(0.5, 1)
 			.setDepth(801);
 		setModernPlayerDirection(this.playerVisual, "down", PLAYER_DISPLAY_HEIGHT);
+		this.applyActorVisualHeight("PLAYER", this.actorVisualProfiles.PLAYER.display_height);
 	}
 
 	syncPlayerVisual(direction: string, moving: boolean) {
@@ -208,7 +215,7 @@ export class Scene01 extends Phaser.Scene {
 		const walkDirection = direction as "down" | "left" | "right" | "up";
 		const firstFrame = modernWalkFrameKey(walkDirection, 0);
 		if (!this.playerVisual.texture.key.startsWith(`modern-player-${walkDirection}-`))
-			setModernPlayerDirection(this.playerVisual, walkDirection, PLAYER_DISPLAY_HEIGHT);
+			setModernPlayerDirection(this.playerVisual, walkDirection, this.actorVisualProfiles.PLAYER.display_height);
 		if (moving) {
 			const animation = `player-walk-${direction}-anim`;
 			if (
@@ -302,6 +309,16 @@ export class Scene01 extends Phaser.Scene {
 			createActorColliderEntry({ id: "ACTOR_STUDENT_A", label: "学生甲", getActor: () => this.studentA, getProfile: () => this.actorColliderProfiles.NPC_CH00_STUDENT_A }),
 			createActorColliderEntry({ id: "ACTOR_STUDENT_B", label: "学生乙", getActor: () => this.studentB, getProfile: () => this.actorColliderProfiles.NPC_CH00_STUDENT_B }),
 		];
+		this.actorVisualProfiles = {
+			PLAYER: ensureActorVisualConfig(manifest, "PLAYER", PLAYER_DISPLAY_HEIGHT),
+			NPC_CH00_STUDENT_A: ensureActorVisualConfig(manifest, "NPC_CH00_STUDENT_A", NPC_DISPLAY.height),
+			NPC_CH00_STUDENT_B: ensureActorVisualConfig(manifest, "NPC_CH00_STUDENT_B", 188),
+		};
+		this.actorVisualEntries = [
+			createActorVisualEntry({ id: "PLAYER", label: "玩家", getActor: () => this.playerVisual, getProfile: () => this.actorVisualProfiles.PLAYER, tileSize: PX }),
+			createActorVisualEntry({ id: "NPC_CH00_STUDENT_A", label: "学生甲", getActor: () => this.studentA, getProfile: () => this.actorVisualProfiles.NPC_CH00_STUDENT_A, tileSize: PX }),
+			createActorVisualEntry({ id: "NPC_CH00_STUDENT_B", label: "学生乙", getActor: () => this.studentB, getProfile: () => this.actorVisualProfiles.NPC_CH00_STUDENT_B, tileSize: PX }),
+		];
 	}
 
 	applyPlayerColliderBody() {
@@ -327,11 +344,14 @@ export class Scene01 extends Phaser.Scene {
 			getDefaultForegroundDepth: () => 2000,
 			getWorldSize: () => [48, 27],
 			getActorColliders: () => this.actorColliderEntries,
+			getActorVisuals: () => this.actorVisualEntries,
+			onActorVisualChange: (id: string, height: number) => this.applyActorVisualHeight(id, height),
 			getMagneticSource: () => this.textures.get("bg01").getSourceImage(),
 			replaceDocuments: (next: any) => {
 				this.manifest = next[file];
 				documents[file] = this.manifest as any;
 				this.setupActorColliders();
+				this.applyActorVisualHeights();
 			},
 			onChange: (kind: string) => {
 				if (!kind || kind === "collision") {
@@ -340,6 +360,25 @@ export class Scene01 extends Phaser.Scene {
 				}
 			},
 		});
+	}
+
+	applyActorVisualHeights() {
+		for (const [id, profile] of Object.entries(this.actorVisualProfiles ?? {})) this.applyActorVisualHeight(id, Number((profile as any).display_height));
+	}
+
+	applyActorVisualHeight(id: string, height: number) {
+		if (!Number.isFinite(height) || height <= 0) return;
+		if (id === "PLAYER" && this.playerVisual) setModernPlayerDirection(this.playerVisual, this.playerDirection as any, height);
+		else if (id === "NPC_CH00_STUDENT_A" && this.studentA) this.studentA.setDisplaySize(Math.round(height * STUDENT_A_FRAME.width / STUDENT_A_FRAME.height), height);
+		else if (id === "NPC_CH00_STUDENT_B" && this.studentB) {
+			const node = (this.studentB as Phaser.GameObjects.DOMElement).node as HTMLElement;
+			node.style.width = `${Math.round(height * 84 / 188)}px`;
+			node.style.height = `${height}px`;
+			if (this.studentBExit) {
+				const source = this.textures.get(this.studentBExit.texture.key).getSourceImage() as HTMLImageElement;
+				this.studentBExit.setDisplaySize(Math.round(height * source.width / source.height), height);
+			}
+		}
 	}
 
 	createNpc(
@@ -371,10 +410,7 @@ export class Scene01 extends Phaser.Scene {
 		if (id === "NPC_CH00_STUDENT_A") {
 			const npc = this.add
 				.sprite(x * PX, y * PX, "student-a-reading", 0)
-				.setDisplaySize(
-					STUDENT_A_DISPLAY.width,
-					STUDENT_A_DISPLAY.height,
-				)
+				.setDisplaySize(Math.round(this.actorVisualProfiles.NPC_CH00_STUDENT_A.display_height * STUDENT_A_FRAME.width / STUDENT_A_FRAME.height), this.actorVisualProfiles.NPC_CH00_STUDENT_A.display_height)
 				.setOrigin(0.5, 1)
 				.setDepth(500 + y * PX);
 			npc.setData("spawnId", id);
@@ -386,7 +422,7 @@ export class Scene01 extends Phaser.Scene {
 		}
 		const npc = this.add
 			.sprite(x * PX, y * PX, `${prefix}-${textureFacing}-keyed`)
-			.setDisplaySize(NPC_DISPLAY.width, NPC_DISPLAY.height)
+			.setDisplaySize(Math.round(this.actorVisualProfiles.NPC_CH00_STUDENT_B.display_height * 84 / 188), this.actorVisualProfiles.NPC_CH00_STUDENT_B.display_height)
 			.setOrigin(0.5, 1)
 			.setDepth(500 + y * PX);
 		npc.setData("spawnId", id);
@@ -429,7 +465,7 @@ export class Scene01 extends Phaser.Scene {
 		const source = this.textures
 			.get(texture)
 			.getSourceImage() as HTMLImageElement;
-		const displayHeight = NPC_DISPLAY.height;
+		const displayHeight = this.actorVisualProfiles.NPC_CH00_STUDENT_B.display_height;
 		const displayWidth = Math.round(
 			displayHeight * (source.width / source.height),
 		);

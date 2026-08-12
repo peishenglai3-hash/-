@@ -18,6 +18,40 @@ export function ensureActorColliderConfig(document, id, defaults) {
   return profile;
 }
 
+export function ensureActorVisualConfig(document, id, defaultHeight) {
+  document.actor_visuals ??= {};
+  const current = document.actor_visuals[id] ?? {};
+  const height = Number(current.display_height);
+  current.display_height = Number.isFinite(height) && height > 0 ? height : defaultHeight;
+  document.actor_visuals[id] = current;
+  return current;
+}
+
+export function createActorVisualEntry({ id, label, getActor, getProfile, tileSize = DEFAULT_TILE_SIZE }) {
+  return {
+    id,
+    label,
+    shape: 'visual',
+    actorVisual: true,
+    get displayHeight() {
+      return getProfile()?.display_height ?? '';
+    },
+    set displayHeight(value) {
+      const profile = getProfile();
+      if (profile) profile.display_height = Number(value);
+    },
+    get displayWidth() {
+      const actor = getActor();
+      return actor?.displayWidth ?? '';
+    },
+    containsPoint(point) {
+      const bounds = getActor()?.getBounds?.();
+      if (!bounds) return false;
+      return bounds.contains(point.x * tileSize, point.y * tileSize);
+    }
+  };
+}
+
 export function actorColliderRectAt(x, y, profile, tileSize = DEFAULT_TILE_SIZE) {
   const offset = finitePair(profile?.offset, [0, 0]);
   const size = finitePair(profile?.size, [1, 1]);

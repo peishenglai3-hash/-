@@ -66,6 +66,7 @@ export class CollisionEditor {
   }
 
   get sourceItems() {
+    if (this.kind === 'visual') return this.config.getActorVisuals?.() ?? [];
     if (this.kind === 'collision') return this.config.getCollisions();
     if (this.kind === 'interaction') return this.config.getInteractions();
     return this.config.getForegrounds?.() ?? [];
@@ -77,6 +78,7 @@ export class CollisionEditor {
   }
 
   get items() {
+    if (this.kind === 'visual') return this.sourceItems;
     if (this.kind === 'foreground') return this.sourceItems.filter((item) => item.points?.length >= 3);
     const source = this.sourceItems.filter((item) => item.rect);
     return this.kind === 'collision' ? [...source, ...this.actorItems] : source;
@@ -84,6 +86,10 @@ export class CollisionEditor {
 
   rotationOf(item, kind = this.kind) {
     return kind === 'collision' && !item?.actorCollider ? normalizeDegrees(item?.rotation) : 0;
+  }
+
+  actorVisualHeight(item) {
+    return Number(item?.displayHeight) || 0;
   }
 
   foregroundSortY(item) {
@@ -101,6 +107,7 @@ export class CollisionEditor {
         <button data-kind="collision" class="active">碰撞箱</button>
         <button data-kind="interaction">交互区</button>
         <button data-kind="foreground">前景套索</button>
+        <button data-kind="visual">角色贴图</button>
       </div>
       <label>区域<select data-field="item"></select></label>
       <label>名称 / ID<input data-field="id" type="text" spellcheck="false"></label>
@@ -109,7 +116,8 @@ export class CollisionEditor {
       </div>
       <label data-section="rotation">旋转角度（°）<input data-field="rotation" type="number" step="1"></label>
       <label data-section="depth">最低点 Y（格，自动）<input data-field="depth" type="number" step="0.125" disabled></label>
-      <label>吸附<select data-field="snap"><option value="1">1 格</option><option value="0.5">0.5 格</option><option value="0.25" selected>0.25 格</option><option value="0.125">0.125 格</option></select></label>
+      <label data-section="visual-size">贴图高度（像素）<input data-field="visual-height" type="number" min="1" step="1"></label>
+      <label data-section="snap">吸附<select data-field="snap"><option value="1">1 格</option><option value="0.5">0.5 格</option><option value="0.25" selected>0.25 格</option><option value="0.125">0.125 格</option></select></label>
       <p data-field="help">拖动矩形移动；拖动四边或四角缩放；拖动顶部圆点旋转。</p>
       <div class="dev-zone-actions">
         <button data-action="add">新增</button><button data-action="duplicate">复制</button><button data-action="mirror">水平镜像</button><button data-action="delete">删除</button>
@@ -123,6 +131,7 @@ export class CollisionEditor {
     this.status = root.querySelector('[data-field="status"]');
     this.idInput = root.querySelector('[data-field="id"]');
     this.depthInput = root.querySelector('[data-field="depth"]');
+    this.visualHeightInput = root.querySelector('[data-field="visual-height"]');
     this.rotationInput = root.querySelector('[data-field="rotation"]');
     this.help = root.querySelector('[data-field="help"]');
     this.addButton = root.querySelector('[data-action="add"]');
@@ -145,6 +154,7 @@ export class CollisionEditor {
     this.itemSelect.onchange = () => this.select(this.items[Number(this.itemSelect.value)] ?? null);
     this.idInput.onchange = () => this.rename();
     this.rotationInput.oninput = () => this.applyRotation();
+    this.visualHeightInput.oninput = () => this.applyVisualHeight();
     root.querySelector('[data-field="snap"]').onchange = (event) => { this.snapStep = Number(event.target.value); };
     for (const key of ['x', 'y', 'w', 'h']) root.querySelector(`[data-field="${key}"]`).onchange = () => this.applyInputs();
     this.addButton.onclick = () => this.add();
@@ -210,6 +220,10 @@ export class CollisionEditor {
       if (!this.enabled) return;
       if (this.kind === 'foreground') return this.lasso.pointerDown(pointer);
       const point = this.worldPoint(pointer);
+      if (this.kind === 'visual') {
+        const hit = [...this.items].reverse().find((item) => item.containsPoint?.(point));
+        return this.select(hit ?? null);
+      }
       const selectedHandle = this.selected?.rect ? this.handleAt(this.selected, point) : '';
       const hit = selectedHandle ? this.selected : [...this.items].reverse().find((item) => item.rect && pointInRotatedRect(item.rect, this.rotationOf(item), point, 0.12));
       if (!hit) return this.select(null);
@@ -370,12 +384,17 @@ export class CollisionEditor {
 
   updatePanelMode() {
     const foreground = this.kind === 'foreground';
+    const visual = this.kind === 'visual';
     const collision = this.kind === 'collision';
     const actorCollider = Boolean(this.selected?.actorCollider);
-    this.panel.querySelector('[data-section="rect"]').classList.toggle('hidden', foreground);
+    this.panel.querySelector('[data-section="rect"]').classList.toggle('hidden', foreground || visual);
     this.panel.querySelector('[data-section="rotation"]').classList.toggle('hidden', !collision || actorCollider);
     this.panel.querySelector('[data-section="depth"]').classList.toggle('hidden', !foreground);
-    if (foreground) {
+    this.panel.querySelector('[data-section="visual-size"]').classList.toggle('hidden', !visual);
+    this.panel.querySelector('[data-section="snap"]').classList.toggle('hidden', visual);
+    if (visual) {
+      this.help.textContent = '选择当前章节的角色，调整贴图高度；宽度按原始比例自动计算。仅影响当前章节，点击保存 JSON 写入。';
+    } else if (foreground) {
       this.help.textContent = '左键：添加锚点并磁吸图像边缘\n右键：撤销上一步 · 双击：自动闭合完成 · Esc：取消\n遮挡顺序自动比较套索最低点与人物脚底碰撞箱底边；最低点更靠下的一方显示在前。';
     } else if (actorCollider) {
       this.help.textContent = '角色碰撞箱：拖动内部修改脚点偏移，拖动边/角修改尺寸。\n碰撞箱会实时跟随人物；角色项不可删除、复制、镜像或旋转。';
@@ -385,6 +404,7 @@ export class CollisionEditor {
       this.help.textContent = '拖动内部：移动 · 拖动边/角：缩放。';
     }
     this.addButton.textContent = foreground ? (this.lasso?.armed || this.lasso?.drawing ? '正在套索…' : '开始套索') : '新增';
+    this.addButton.disabled = visual;
     this.addButton.classList.toggle('armed', Boolean(this.lasso?.armed || this.lasso?.drawing));
   }
 
@@ -410,19 +430,21 @@ export class CollisionEditor {
     const actorCollider = Boolean(this.selected?.actorCollider);
     const rect = this.selected?.rect ?? ['', '', '', ''];
     this.idInput.value = this.selected?.id ?? '';
-    this.idInput.disabled = !this.selected || actorCollider;
+    this.idInput.disabled = !this.selected || actorCollider || this.kind === 'visual';
     this.depthInput.value = this.selected && this.kind === 'foreground' ? this.foregroundSortY(this.selected) : '';
     this.depthInput.disabled = true;
+    this.visualHeightInput.value = this.kind === 'visual' ? this.actorVisualHeight(this.selected) : '';
+    this.visualHeightInput.disabled = this.kind !== 'visual' || !this.selected;
     this.rotationInput.value = this.selected && this.kind === 'collision' && !actorCollider ? this.rotationOf(this.selected) : '';
     this.rotationInput.disabled = !this.selected || this.kind !== 'collision' || actorCollider;
     ['x', 'y', 'w', 'h'].forEach((key, index) => {
       const input = this.panel.querySelector(`[data-field="${key}"]`);
       input.value = rect[index];
-      input.disabled = !this.selected || this.kind === 'foreground';
+      input.disabled = !this.selected || this.kind === 'foreground' || this.kind === 'visual';
     });
-    this.duplicateButton.disabled = !this.selected || actorCollider;
-    this.mirrorButton.disabled = !this.selected || actorCollider;
-    this.deleteButton.disabled = !this.selected || actorCollider;
+    this.duplicateButton.disabled = !this.selected || actorCollider || this.kind === 'visual';
+    this.mirrorButton.disabled = !this.selected || actorCollider || this.kind === 'visual';
+    this.deleteButton.disabled = !this.selected || actorCollider || this.kind === 'visual';
   }
 
   rename() {
@@ -449,6 +471,15 @@ export class CollisionEditor {
     this.changed();
   }
 
+  applyVisualHeight() {
+    if (this.kind !== 'visual' || !this.selected?.actorVisual) return;
+    const value = Number(this.visualHeightInput.value);
+    if (!Number.isFinite(value) || value <= 0) return this.refreshInputs();
+    this.selected.displayHeight = value;
+    this.config.onActorVisualChange?.(this.selected.id, value);
+    this.changed('角色贴图大小已修改，点击保存 JSON 写入');
+  }
+
   applyRotation() {
     if (!this.selected?.rect || this.kind !== 'collision') return;
     const value = Number(this.rotationInput.value);
@@ -471,6 +502,7 @@ export class CollisionEditor {
 
   add() {
     if (this.kind === 'foreground') return this.lasso.arm();
+    if (this.kind === 'visual') return;
     const prefix = this.kind === 'collision' ? 'collision' : 'interaction';
     const [worldWidth, worldHeight] = this.config.getWorldSize();
     const width = this.kind === 'collision' ? 4 : 3;
