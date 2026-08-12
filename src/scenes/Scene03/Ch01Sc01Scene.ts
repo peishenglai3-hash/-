@@ -44,8 +44,12 @@ import { RETURN_NARRATIVE } from "./ch01Sc02.content";
 import { KNOCK_CHAIN } from "./ch01Return.content";
 // @ts-ignore Shared developer tools support both grid and pixel-coordinate scenes.
 import { CollisionEditor } from "../../zone-editor.js";
+// @ts-ignore Shared foreground renderer is implemented in JavaScript.
+import { ForegroundOcclusionRenderer, foregroundBottomPx } from "../../foreground-occlusion.js";
 // @ts-ignore Legacy actor collider helpers are shared by the editor.
-import { ensureActorColliderConfig, createActorColliderEntry } from "../../actor-collider.js";
+
+
+import { actorColliderBottomAt, ensureActorColliderConfig, createActorColliderEntry, ensureActorVisualConfig, createActorVisualEntry } from "../../actor-collider.js";
 
 const WORLD_W = 1672;
 const WORLD_H = 941;
@@ -57,6 +61,8 @@ const PLAYER_FRAME = {
 };
 const PLAYER_DISPLAY_HEIGHT = 280;
 const CAMERA_ZOOM = 0.765;
+const ACTOR_DEPTH_BASE = 500;
+const actorDepth = (bottomY: number) => ACTOR_DEPTH_BASE + bottomY;
 
 interface ManifestData {
 	spawns: { id: string; position: [number, number]; facing: string }[];
@@ -91,6 +97,12 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	zoneEditor: any;
 	playerColliderProfile: any;
 	actorColliderEntries: any[] = [];
+
+
+	actorVisualProfile: any;
+	actorVisualEntries: any[] = [];
+	background!: Phaser.GameObjects.Image;
+	foregroundOcclusion: any;
 	manifest!: ManifestData;
 	player!: Phaser.Physics.Arcade.Sprite;
 	playerVisual!: Phaser.GameObjects.Sprite;
@@ -162,7 +174,13 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 		this.manifest = this.cache.json.get("ch01_sc01_manifest");
 		this.setupActorCollider();
 		this.physics.world.setBounds(0, 0, WORLD_W, WORLD_H);
-		this.add.image(WORLD_W / 2, WORLD_H / 2, "ch01_sc01_bg").setDepth(-20);
+		this.background = this.add.image(WORLD_W / 2, WORLD_H / 2, "ch01_sc01_bg").setDepth(-20);
+		this.foregroundOcclusion = new ForegroundOcclusionRenderer(this, {
+			background: this.background,
+			getObjects: () => (this.manifest as any).foreground_occlusion?.objects ?? [],
+			resolveDepth: (object: any) => actorDepth(foregroundBottomPx(object, 1) ?? 0) + 0.001,
+			tileSize: 1,
+		});
 		this.buildCollision();
 
 		const spawn = (id: string) =>
@@ -175,7 +193,12 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 				"chen-walk-down",
 			)
 			.setOrigin(0.5, 1)
-			.setDepth(800);
+			.setDepth(actorDepth(actorColliderBottomAt(
+				playerSpawn.position[0],
+				playerSpawn.position[1],
+				this.playerColliderProfile,
+				1,
+			)));
 		this.applyPlayerColliderBody();
 		this.player.setCollideWorldBounds(true);
 		this.player.setVisible(false);
@@ -296,20 +319,25 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 			.sprite(this.player.x, this.player.y, "chen-walk-down", 0)
 			.setOrigin(0.5, 1)
 			.setDisplaySize(displayWidth, PLAYER_DISPLAY_HEIGHT)
-			.setDepth(801);
+
+
+			.setDepth(this.depthForPlayer());
+		this.applyPlayerVisualHeight(this.actorVisualProfile.display_height);
 	}
 
 	syncPlayerVisual(direction: string, moving: boolean) {
 		if (!this.playerVisual) return;
 		const dir = direction as keyof typeof PLAYER_FRAME;
 		const frame = PLAYER_FRAME[dir];
-		const displayWidth = Math.round(
-			(frame.width / frame.height) * PLAYER_DISPLAY_HEIGHT,
-		);
+		const displayHeight = this.actorVisualProfile.display_height;
+		const displayWidth = Math.round((frame.width / frame.height) * displayHeight);
 		this.playerVisual
-			.setPosition(this.player.x, this.player.y)
-			.setDisplaySize(displayWidth, PLAYER_DISPLAY_HEIGHT)
+
+
+			.setDisplaySize(displayWidth, displayHeight)
+			.setDepth(this.depthForPlayer())
 			.setFlipX(false);
+		this.applyActorVisualPosition();
 		if (moving) {
 			const animation = `chen-walk-${direction}-anim`;
 			if (
@@ -340,6 +368,28 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 			getProfile: () => this.playerColliderProfile,
 			tileSize: 1,
 		})];
+		this.actorVisualProfile = ensureActorVisualConfig(this.manifest as any, "PLAYER", PLAYER_DISPLAY_HEIGHT);
+		this.actorVisualEntries = [createActorVisualEntry({
+			id: "PLAYER",
+			label: "陈继南",
+			getActor: () => this.playerVisual,
+			getProfile: () => this.actorVisualProfile,
+			getAnchor: () => ({ x: this.player.x, y: this.player.y }),
+			onPositionChange: () => this.applyActorVisualPosition(),
+			tileSize: 1,
+		})];
+	}
+
+	applyPlayerVisualHeight(height: number) {
+		if (!this.playerVisual || !Number.isFinite(height) || height <= 0) return;
+		const frame = PLAYER_FRAME[this.playerDirection as keyof typeof PLAYER_FRAME];
+		this.playerVisual.setDisplaySize(Math.round((frame.width / frame.height) * height), height);
+		this.applyActorVisualPosition();
+	}
+
+	applyActorVisualPosition() {
+		const offset = this.actorVisualProfile?.offset ?? [0, 0];
+		this.playerVisual?.setPosition(this.player.x + offset[0], this.player.y + offset[1]);
 	}
 
 	applyPlayerColliderBody() {
@@ -347,6 +397,10 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 		if (!profile || !this.player) return;
 		this.player.setSize(profile.size[0], profile.size[1])
 			.setOffset(PLAYER_FRAME.down.width / 2 + profile.offset[0], PLAYER_FRAME.down.height + profile.offset[1]);
+	}
+
+	depthForPlayer(): number {
+		return actorDepth(actorColliderBottomAt(this.player.x, this.player.y, this.playerColliderProfile, 1));
 	}
 
 	setupZoneEditor() {
@@ -367,17 +421,21 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 			getDefaultForegroundDepth: () => 2000,
 			getWorldSize: () => [WORLD_W, WORLD_H],
 			getActorColliders: () => this.actorColliderEntries,
+			getActorVisuals: () => this.actorVisualEntries,
+			onActorVisualChange: (_id: string, height: number) => this.applyPlayerVisualHeight(height),
 			getMagneticSource: () => this.textures.get("ch01_sc01_bg").getSourceImage(),
 			replaceDocuments: (next: any) => {
 				this.manifest = next[file];
 				documents[file] = this.manifest as any;
 				this.setupActorCollider();
+				this.applyPlayerVisualHeight(this.actorVisualProfile.display_height);
 			},
 			onChange: (kind: string) => {
 				if (!kind || kind === "collision") {
 					this.buildCollision();
 					this.applyPlayerColliderBody();
 				}
+				if (!kind || kind === "foreground") this.foregroundOcclusion.rebuild();
 			},
 		});
 	}
@@ -428,6 +486,11 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	update() {
 		if (this.physics.world.debugGraphic)
 			this.physics.world.debugGraphic.setVisible(false);
+		if (this.player) {
+			const depth = this.depthForPlayer();
+			this.player.setDepth(depth);
+			this.playerVisual?.setDepth(depth);
+		}
 		const canWalk = state.mode === "explore";
 		// 交互提示始终更新——即使玩家被任务卡锁定也要显示
 		if (canWalk) this.updatePrompt();
