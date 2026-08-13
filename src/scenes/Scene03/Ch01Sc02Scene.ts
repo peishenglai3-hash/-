@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { createKeyMap, isActionDown, onAction } from "@/common/actions";
-import { state } from "@/common/state";
+import { useGameStateStore } from "@/stores/modules/gameState";
 import {
 	showTask,
 	hideTask,
@@ -77,6 +77,10 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 	collisionRects!: { id: string; x: number; y: number; width: number; height: number }[];
 	observationMarks: Phaser.GameObjects.Text[] = [];
 
+	get state() {
+		return useGameStateStore().state;
+	}
+
 	constructor() {
 		super("Ch01Sc02Scene");
 	}
@@ -141,7 +145,7 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 		this.keyMap = createKeyMap(this);
 		onAction(this, "INTERACT", () => this.handleConfirm());
 		onAction(this, "ADVANCE", () => {
-			if (state.inNarrative) advanceNarrative();
+			if (this.state.inNarrative) advanceNarrative();
 		});
 		onAction(this, "PAUSE", () => togglePause());
 		(window as any).ch01Sc02Game = this;
@@ -149,11 +153,11 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 		this.sound.add("ch01_sc02_bgm", { loop: true, volume: 0.35 }).play();
 
 		// 开场：到场叙述 + 渔民对话连播（玩家锁定在书桌旁）
-		state.mode = "narrative";
-		state.playerLocked = true;
+		this.state.mode = "narrative";
+		this.state.playerLocked = true;
 		showTask({ title: "闪回·状纸", detail: "门边的渔民有话要说。听他把话说完。" });
 		playNarrative([...ARRIVE_NARRATIVE, ...FISHERMAN_CHAIN], () => {
-			state.flags.add(FLAGS2.BEAT1);
+			this.state.flags.add(FLAGS2.BEAT1);
 			this.updateObservationMarks();
 			this.beginExplore();
 		});
@@ -273,7 +277,7 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 	updateObservationMarks() {
 		for (const mark of this.observationMarks) mark.destroy();
 		this.observationMarks = [];
-		if (state.flags.has(FLAGS2.HANDOFF) || !state.flags.has(FLAGS2.BEAT1)) return;
+		if (this.state.flags.has(FLAGS2.HANDOFF) || !this.state.flags.has(FLAGS2.BEAT1)) return;
 		const mark = this.add
 			.text(1260, 300, "!", {
 				fontFamily: "monospace",
@@ -289,8 +293,8 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 	}
 
 	beginExplore() {
-		state.mode = "explore";
-		state.playerLocked = false;
+		this.state.mode = "explore";
+		this.state.playerLocked = false;
 		showTask({ title: "闪回·状纸", detail: "状纸写好了。走到门边，把它交给渔民。" });
 	}
 
@@ -298,10 +302,10 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 
 	update() {
 		if (this.physics.world?.debugGraphic) this.physics.world.debugGraphic.setVisible(false);
-		const canWalk = state.mode === "explore";
+		const canWalk = this.state.mode === "explore";
 		// 交互提示始终更新——即使玩家被任务卡锁定也要显示
 		this.updatePrompt();
-		if (!this.player || state.playerLocked || state.paused || !canWalk) {
+		if (!this.player || this.state.playerLocked || this.state.paused || !canWalk) {
 			if (this.player?.body) {
 				this.player.setVelocity(0, 0);
 				this.syncPlayerVisual(this.playerDirection, false);
@@ -344,7 +348,7 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 
 	updatePrompt() {
 		const nearby = this.nearby();
-		const showable = nearby && state.flags.has(FLAGS2.BEAT1) && !state.flags.has(FLAGS2.HANDOFF);
+		const showable = nearby && this.state.flags.has(FLAGS2.BEAT1) && !this.state.flags.has(FLAGS2.HANDOFF);
 		showPrompt(showable ? `${nearby.prompt || nearby.id}  ·  E` : "");
 	}
 
@@ -359,34 +363,34 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 
 	handleConfirm() {
 		// closeTask 会恢复任务前的玩家锁定状态（hideTask 不恢复）
-		if (state.taskOpen) return closeTask();
+		if (this.state.taskOpen) return closeTask();
 		this.interact();
 	}
 
 	interact() {
-		if (state.playerLocked || state.mode !== "explore") return;
+		if (this.state.playerLocked || this.state.mode !== "explore") return;
 		const target = this.nearby();
 		if (!target || target.id !== "fisherman_door") return;
-		if (!state.flags.has(FLAGS2.BEAT1)) return showFlavor("渔民还有话要说。");
-		if (!state.flags.has(FLAGS2.HANDOFF)) this.handoff();
+		if (!this.state.flags.has(FLAGS2.BEAT1)) return showFlavor("渔民还有话要说。");
+		if (!this.state.flags.has(FLAGS2.HANDOFF)) this.handoff();
 	}
 
 	/* ===== 剧情链 ===== */
 
 	handoff() {
-		state.mode = "narrative";
-		state.playerLocked = true;
+		this.state.mode = "narrative";
+		this.state.playerLocked = true;
 		hideTask();
 		hidePrompt();
 		this.setFisherman("fisherman_petition");
 		playNarrative(HANDOFF_CHAIN, () => {
-			state.flags.add(FLAGS2.HANDOFF);
+			this.state.flags.add(FLAGS2.HANDOFF);
 			this.updateObservationMarks();
 			// 墨水转场 3 秒 = 几天后
 			this.inkTransition(() => {
 				this.setFisherman("fisherman_fish");
 				playNarrative(FISH_CHAIN, () => {
-					state.flags.add(FLAGS2.BEAT3);
+					this.state.flags.add(FLAGS2.BEAT3);
 					this.startChoice2();
 				});
 			});
@@ -399,7 +403,7 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 	}
 
 	startChoice2() {
-		state.mode = "choice";
+		this.state.mode = "choice";
 		showChoices(
 			CHOICES2.map((choice) => ({ id: choice.id, label: choice.label, detail: choice.detail })),
 			(id: string) => this.choose(id),
@@ -411,10 +415,10 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 		const choice = CHOICES2.find((item) => item.id === id);
 		if (!choice) return;
 		for (const [axis, delta] of Object.entries(PROFILE_DELTAS2[choice.id] ?? {}))
-			state.profile[axis] += delta;
-		state.flags.add(choice.flag);
+			this.state.profile[axis] += delta;
+		this.state.flags.add(choice.flag);
 		hideChoices();
-		state.mode = "narrative";
+		this.state.mode = "narrative";
 		const thoughts: NarrativeEntry[] = choice.thoughts.map((text, index) => ({
 			entry_id: `FB01_Q2_${choice.id}_${index}`,
 			kind: "thought",
@@ -428,11 +432,11 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 	}
 
 	completeFlashback() {
-		state.mode = "end";
-		state.playerLocked = true;
+		this.state.mode = "end";
+		this.state.playerLocked = true;
 		hideTask();
 		hidePrompt();
-		state.flags.add(FLAGS2.COMPLETE);
+		this.state.flags.add(FLAGS2.COMPLETE);
 		fadeToBlack();
 		window.setTimeout(() => {
 			const standalone = (window as any).gameDirector?.standaloneFb;

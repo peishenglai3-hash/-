@@ -57,29 +57,3 @@ export interface NarrativeEntry {
 	sfx?: string;
 }
 
-export interface GameState {
-	mode: string;
-	flags: Set<string>;
-	profile: Record<string, number>;
-	choice: { id: string; flag: string; echo_summary: string } | null;
-	risk: { identity: number; execution: number; coordination: number };
-	propStates: Record<string, string>;
-	playerLocked: boolean;
-	audioReviewed: boolean;
-	questionWritten: boolean;
-	sleepStarted: boolean;
-	taskOpen: boolean;
-	taskPreviousLock: boolean;
-	paused: boolean;
-	inNarrative: boolean;
-	narrativeQueue: NarrativeEntry[];
-	narrativeIndex: number;
-	typing: boolean;
-	typingTimer: number | null;
-	onNarrativeComplete: (() => void) | null;
-	monumentSeen: boolean;
-	fieldworkSeen: boolean;
-	npcDialogue: Set<string>;
-	leavePhase: string | null;
-	leaveNpcArrived: boolean | null;
-}

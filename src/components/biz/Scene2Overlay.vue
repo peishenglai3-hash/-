@@ -1,18 +1,29 @@
 <script setup lang="ts">
-import { computed, onMounted } from "vue";
+import { computed, onMounted, onUnmounted, reactive } from "vue";
 import { useHudStore } from "@/stores/modules/hud";
 import { useDirectorStore } from "@/stores/modules/director";
 import TransitionOverlay from "@/components/ui/TransitionOverlay.vue";
-import { createTransitionState } from "@/common/transition";
 import { clearFade } from "@/common/ui";
-import { state } from "@/common/state";
+import { useGameStateStore } from "@/stores/modules/gameState";
 import { ambience } from "@/common/ambience";
 import type { TransitionConfig } from "@/types/director";
 
 const hud = useHudStore();
 const directorStore = useDirectorStore();
+const gameState = useGameStateStore();
 
-const local = createTransitionState();
+const local = reactive({
+	active: false,
+	subtitleVisible: true,
+	subtitleStyle: "cue",
+	kindText: "",
+	text: "",
+	dateVisible: false,
+	dateText: "",
+	revealShown: false,
+	revealFadeIn: false,
+	revealSrc: "",
+});
 
 const TRANSITION_A: TransitionConfig = {
 	revealEntryId: null,
@@ -64,18 +75,21 @@ const TRANSITION_A: TransitionConfig = {
 
 const transitionProps = computed(() => local);
 
+const timers: number[] = [];
+
+function clearTimers() {
+	for (const t of timers) clearTimeout(t);
+	timers.length = 0;
+}
+
+onUnmounted(() => clearTimers());
+
 onMounted(() => {
 	if (!directorStore.game) return;
 	const g = directorStore.game!;
 
 	/* ---- 内联转场播放 ---- */
-	const timers: number[] = [];
 	let index = 0;
-
-	function clearTimers() {
-		for (const t of timers) clearTimeout(t);
-		timers.length = 0;
-	}
 
 	function playCues(entryId: string) {
 		for (const cue of TRANSITION_A.cues) {
@@ -108,13 +122,13 @@ onMounted(() => {
 			/* ---- onComplete ---- */
 			clearFade();
 			g.scene.stop("Scene01");
-			state.mode = "intro";
-			state.playerLocked = true;
-			state.taskOpen = false;
-			state.paused = false;
-			state.narrativeQueue = [];
-			state.narrativeIndex = 0;
-			state.inNarrative = false;
+			gameState.state.mode = "intro";
+			gameState.state.playerLocked = true;
+			gameState.state.taskOpen = false;
+			gameState.state.paused = false;
+			gameState.state.narrativeQueue = [];
+			gameState.state.narrativeIndex = 0;
+			gameState.state.inNarrative = false;
 			ambience.unlock();
 			ambience.startRoom();
 			directorStore.enterScene("PrologueScene02", "PROLOGUE_SC02");
@@ -130,10 +144,6 @@ onMounted(() => {
 
 	/* ---- start ---- */
 	local.active = true;
-	local.kindText = "";
-	local.text = "";
-	local.subtitleVisible = true;
-	local.dateVisible = false;
 	directorStore.transitionAudio.start();
 	next();
 });

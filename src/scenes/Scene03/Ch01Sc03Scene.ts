@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { createKeyMap, isActionDown, onAction } from "@/common/actions";
-import { state } from "@/common/state";
+import { useGameStateStore } from "@/stores/modules/gameState";
 import {
 	showTask,
 	hideTask,
@@ -59,6 +59,10 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 	keyMap!: ReturnType<typeof createKeyMap>;
 	camera!: Phaser.Cameras.Scene2D.Camera;
 	collisionRects!: { id: string; x: number; y: number; width: number; height: number }[];
+
+	get state() {
+		return useGameStateStore().state;
+	}
 
 	constructor() {
 		super("Ch01Sc03Scene");
@@ -122,7 +126,7 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 		this.keyMap = createKeyMap(this);
 		onAction(this, "INTERACT", () => this.handleConfirm());
 		onAction(this, "ADVANCE", () => {
-			if (state.inNarrative) advanceNarrative();
+			if (this.state.inNarrative) advanceNarrative();
 		});
 		onAction(this, "PAUSE", () => togglePause());
 		(window as any).ch01Sc03Game = this;
@@ -130,8 +134,8 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 		this.sound.add("ch01_sc03_bgm", { loop: true, volume: 0.35 }).play();
 
 		// 开场：任务卡 → 自由探索（走近联络人按 E 触发剧情）
-		state.mode = "explore";
-		state.playerLocked = false;
+		this.state.mode = "explore";
+		this.state.playerLocked = false;
 		showTask({ title: "院墙阴影下：联络通知", detail: "走近右边的联络人，听他把话说完。" });
 	}
 
@@ -235,10 +239,10 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 
 	update() {
 		if (this.physics.world.debugGraphic) this.physics.world.debugGraphic.setVisible(false);
-		const canWalk = state.mode === "explore";
+		const canWalk = this.state.mode === "explore";
 		// 交互提示始终更新——即使玩家被任务卡锁定也要显示，否则玩家不知道可以按 E
 		this.updatePrompt();
-		if (!this.player || state.playerLocked || state.paused || !canWalk) {
+		if (!this.player || this.state.playerLocked || this.state.paused || !canWalk) {
 			if (this.player?.body) {
 				this.player.setVelocity(0, 0);
 				this.syncPlayerVisual(this.playerDirection, false);
@@ -296,12 +300,12 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 	}
 
 	handleConfirm() {
-		if (state.taskOpen) return closeTask();
+		if (this.state.taskOpen) return closeTask();
 		this.interact();
 	}
 
 	interact() {
-		if (state.playerLocked || state.mode !== "explore") return;
+		if (this.state.playerLocked || this.state.mode !== "explore") return;
 		const target = this.nearby();
 		if (!target || target.id !== "wall_shadow") return;
 		this.beginYardNarrative();
@@ -310,19 +314,19 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 	/* ===== 剧情链 ===== */
 
 	beginYardNarrative() {
-		state.mode = "narrative";
-		state.playerLocked = true;
+		this.state.mode = "narrative";
+		this.state.playerLocked = true;
 		hideTask();
 		hidePrompt();
 		playNarrative(YARD_CHAIN, () => this.completeScene());
 	}
 
 	completeScene() {
-		state.mode = "end";
-		state.playerLocked = true;
+		this.state.mode = "end";
+		this.state.playerLocked = true;
 		hideTask();
 		hidePrompt();
-		state.flags.add("CH01_YARD_DONE");
+		this.state.flags.add("CH01_YARD_DONE");
 		fadeToBlack();
 		window.setTimeout(() => {
 			this.game.events.emit("ch01:sc03-complete");

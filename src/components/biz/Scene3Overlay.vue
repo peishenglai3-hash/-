@@ -1,16 +1,26 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, reactive } from "vue";
 import { useHudStore } from "@/stores/modules/hud";
 import { useDirectorStore } from "@/stores/modules/director";
 import TransitionOverlay from "@/components/ui/TransitionOverlay.vue";
-import { createTransitionState } from "@/common/transition";
 import { assetPath } from "@/common/paths";
 import type { TransitionConfig } from "@/types/director";
 
 const hud = useHudStore();
 const directorStore = useDirectorStore();
 
-const local = createTransitionState();
+const local = reactive({
+	active: false,
+	subtitleVisible: true,
+	subtitleStyle: "cue",
+	kindText: "",
+	text: "",
+	dateVisible: false,
+	dateText: "",
+	revealShown: false,
+	revealFadeIn: false,
+	revealSrc: "",
+});
 
 const TRANSITION_REVEAL_IMAGE = assetPath(
 	"/assets/transition/ch01-chenjinnan-home-reveal.png",
@@ -188,18 +198,21 @@ const TRANSITION_B: TransitionConfig = {
 
 const transitionProps = computed(() => local);
 
+const timers: number[] = [];
+
+function clearTimers() {
+	for (const t of timers) clearTimeout(t);
+	timers.length = 0;
+}
+
+onUnmounted(() => clearTimers());
+
 onMounted(() => {
 	if (!directorStore.game) return;
 	const g = directorStore.game!;
 
 	/* ---- 内联转场播放 ---- */
-	const timers: number[] = [];
 	let index = 0;
-
-	function clearTimers() {
-		for (const t of timers) clearTimeout(t);
-		timers.length = 0;
-	}
 
 	function playCues(entryId: string) {
 		for (const cue of TRANSITION_B.cues) {
@@ -264,12 +277,6 @@ onMounted(() => {
 
 	/* ---- start ---- */
 	local.active = true;
-	local.revealShown = false;
-	local.revealFadeIn = false;
-	local.kindText = "";
-	local.text = "";
-	local.subtitleVisible = true;
-	local.dateVisible = false;
 	directorStore.transitionAudio.start();
 	next();
 });
