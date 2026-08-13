@@ -1,0 +1,62 @@
+{
+  "passed": true,
+  "iterations": 1,
+  "checks": {
+    "sameDimensions": true,
+    "backgroundRemoved": true,
+    "noDetachedPixels": true,
+    "noClippedSubject": true,
+    "stableAnchor": true,
+    "minimalPadding": true,
+    "loopPositionStable": true
+  },
+  "warnings": [],
+  "metrics": {
+    "qualityScore": 101.92,
+    "maximumGreenForegroundRatio": 0.0,
+    "componentCounts": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "runtimeOpaqueAreas": [
+      93705,
+      94261,
+      95277,
+      95760,
+      95361,
+      94451,
+      95028,
+      94636
+    ],
+    "bottomStandardDeviation": 2.522,
+    "footCenterStandardDeviation": 27.787,
+    "loopCentroidDelta": 1.606,
+    "crop": [
+      628,
+      290,
+      1690,
+      3682
+    ],
+    "alignments": [
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {}
+    ]
+  },
+  "changes": [
+    "Rebuilt alpha from the original green-screen RGB instead of reusing the damaged binary alpha.",
+    "Used a shared union crop for all eight frames and preserved source-frame positioning.",
+    "Removed green spill only on partially transparent edge pixels."
+  ]
+}

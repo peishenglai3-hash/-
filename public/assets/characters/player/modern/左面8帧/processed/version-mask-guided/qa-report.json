@@ -1,0 +1,94 @@
+{
+  "passed": true,
+  "iterations": 1,
+  "checks": {
+    "sameDimensions": true,
+    "backgroundRemoved": true,
+    "noDetachedPixels": true,
+    "noClippedSubject": true,
+    "stableAnchor": true,
+    "minimalPadding": true,
+    "loopPositionStable": true
+  },
+  "warnings": [],
+  "metrics": {
+    "qualityScore": 101.912,
+    "maximumGreenForegroundRatio": 0.0,
+    "componentCounts": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "runtimeOpaqueAreas": [
+      103902,
+      95988,
+      93047,
+      102864,
+      104923,
+      103775,
+      97641,
+      103758
+    ],
+    "bottomStandardDeviation": 2.727,
+    "footCenterStandardDeviation": 44.457,
+    "loopCentroidDelta": 1.758,
+    "crop": [
+      362,
+      274,
+      1958,
+      3444
+    ],
+    "alignments": [
+      {
+        "guideOffsetX": 404,
+        "guideOffsetY": 308,
+        "guideMatchScore": 0.9093
+      },
+      {
+        "guideOffsetX": 408,
+        "guideOffsetY": 304,
+        "guideMatchScore": 0.9203
+      },
+      {
+        "guideOffsetX": 408,
+        "guideOffsetY": 304,
+        "guideMatchScore": 0.9237
+      },
+      {
+        "guideOffsetX": 404,
+        "guideOffsetY": 324,
+        "guideMatchScore": 0.9132
+      },
+      {
+        "guideOffsetX": 412,
+        "guideOffsetY": 324,
+        "guideMatchScore": 0.9112
+      },
+      {
+        "guideOffsetX": 408,
+        "guideOffsetY": 304,
+        "guideMatchScore": 0.9112
+      },
+      {
+        "guideOffsetX": 408,
+        "guideOffsetY": 304,
+        "guideMatchScore": 0.9248
+      },
+      {
+        "guideOffsetX": 408,
+        "guideOffsetY": 304,
+        "guideMatchScore": 0.9153
+      }
+    ]
+  },
+  "changes": [
+    "Rebuilt alpha from the original green-screen RGB instead of reusing the damaged binary alpha.",
+    "Used a shared union crop for all eight frames and preserved source-frame positioning.",
+    "Removed green spill only on partially transparent edge pixels."
+  ]
+}

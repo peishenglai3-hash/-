@@ -1,0 +1,55 @@
+{
+	"spawns": [
+		{ "id": "PLAYER_CHENJINNAN", "position": [1180, 760], "facing": "up" },
+		{ "id": "NPC_FISHERMAN", "position": [1252, 468], "facing": "left" }
+	],
+	"collision": [
+		{ "id": "wardrobe", "rect": [134, 75, 242, 360] },
+		{ "id": "wash_basket", "rect": [29, 284, 75, 134] },
+		{ "id": "nightstand", "rect": [385, 226, 184, 151] },
+		{ "id": "bed", "rect": [50, 410, 276, 368] },
+		{ "id": "stool_bed_top", "rect": [167, 368, 58, 67] },
+		{ "id": "stool_bed_bottom", "rect": [259, 619, 75, 92] },
+		{ "id": "center_table", "rect": [652, 389, 359, 217] },
+		{ "id": "table_chair", "rect": [736, 568, 92, 126] },
+		{ "id": "right_desk", "rect": [1254, 460, 301, 209] },
+		{ "id": "right_chair", "rect": [1321, 585, 150, 176] },
+		{ "id": "stool_right", "rect": [1154, 585, 67, 92] },
+		{ "id": "water_jar", "rect": [1563, 451, 100, 126] },
+		{ "id": "door_exterior", "rect": [1145, 0, 217, 140] }
+	],
+	"interactions": [
+		{
+			"id": "fisherman_door",
+			"type": "event",
+			"rect": [1140, 300, 240, 180],
+			"prompt": "把状纸交给渔民",
+			"prompt_anchor": [1260, 290]
+		}
+	],
+	"foreground_occlusion": {
+		"reserved": true,
+		"objects": [
+			{
+				"id": "fg_center_table",
+				"depth": 2000,
+				"points": [[652, 389], [1011, 389], [1011, 606], [652, 606]]
+			},
+			{
+				"id": "fg_bed",
+				"depth": 2000,
+				"points": [[50, 410], [326, 410], [326, 778], [50, 778]]
+			},
+			{
+				"id": "fg_right_desk",
+				"depth": 2000,
+				"points": [[1254, 460], [1555, 460], [1555, 669], [1254, 669]]
+			},
+			{
+				"id": "fg_wardrobe",
+				"depth": 2000,
+				"points": [[134, 75], [376, 75], [376, 435], [134, 435]]
+			}
+		]
+	}
+}

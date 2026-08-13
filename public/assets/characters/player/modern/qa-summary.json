@@ -1,0 +1,26 @@
+{
+  "variants": {
+    "version-mask-guided": {
+      "allDirectionsPassed": true,
+      "meanQualityScore": 101.854,
+      "directionScores": {
+        "down": 101.92,
+        "left": 101.912,
+        "right": 101.726,
+        "up": 101.857
+      }
+    },
+    "version-rekeyed": {
+      "allDirectionsPassed": true,
+      "meanQualityScore": 101.859,
+      "directionScores": {
+        "down": 101.92,
+        "left": 101.912,
+        "right": 101.726,
+        "up": 101.88
+      }
+    }
+  },
+  "selected": "version-rekeyed",
+  "selectionReason": "Selected by all-direction QA pass status and mean quality score; a full re-key wins exact ties because it does not inherit spatial assumptions from the damaged mask."
+}

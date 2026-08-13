@@ -1,6 +1,6 @@
 import { ref, reactive } from "vue";
 import { defineStore } from "pinia";
-import { state } from "@/common/state";
+import { useGameStateStore } from "@/stores/modules/gameState";
 import { getTextSpeedMult } from "@/common/save";
 
 // ===== 类型定义 =====
@@ -64,6 +64,8 @@ export type SceneOverlay = "Scene1Overlay" | "Scene2Overlay" | "Scene3Overlay" |
 // ===== Pinia Store（Setup Store 风格） =====
 
 export const useHudStore = defineStore("hud", () => {
+  const gameState = useGameStateStore();
+
   // --- overlay scene (intro video / future full-screen flows) ---
   const overlay = ref<SceneOverlay>(null);
 
@@ -72,6 +74,7 @@ export const useHudStore = defineStore("hud", () => {
 
   // --- task card ---
   const taskCard = ref<TaskCard | null>(null);
+  const taskCenter = ref(false);
 
   // --- interaction prompt ---
   const prompt = ref("");
@@ -167,8 +170,8 @@ export const useHudStore = defineStore("hud", () => {
     if (_narrativeTimer) window.clearInterval(_narrativeTimer);
     _narrativeTimer = null;
     playerLocked.value = false;
-    state.inNarrative = false;
-    state.playerLocked = false;
+    gameState.state.inNarrative = false;
+    gameState.state.playerLocked = false;
     const done = _narrativeOnComplete;
     _narrativeOnComplete = null;
     _narrativeQueue = [];
@@ -193,8 +196,8 @@ export const useHudStore = defineStore("hud", () => {
     _narrativeOnComplete = onComplete ?? null;
     dialogue.visible = true;
     playerLocked.value = true;
-    state.inNarrative = true;
-    state.playerLocked = true;
+    gameState.state.inNarrative = true;
+    gameState.state.playerLocked = true;
     _renderCurrentEntry();
   }
 
@@ -219,7 +222,7 @@ export const useHudStore = defineStore("hud", () => {
     _narrativeTimer = null;
     _narrativeQueue = [];
     _narrativeOnComplete = null;
-    state.inNarrative = false;
+    gameState.state.inNarrative = false;
   }
 
   // --- 物品面板 ---
@@ -269,23 +272,30 @@ export const useHudStore = defineStore("hud", () => {
     resultPanel.value = null;
   }
 
-  // --- 任务卡片 ---
+  // --- 任务卡片（两段式：居中强制确认 → 右上角待办） ---
   function showTask(task: TaskCard) {
-    state.taskPreviousLock = state.playerLocked;
-    state.taskOpen = true;
-    state.playerLocked = true;
+    gameState.state.taskPreviousLock = gameState.state.playerLocked;
+    gameState.state.taskOpen = true;
+    gameState.state.playerLocked = true;
+    taskCenter.value = true;
     taskCard.value = task;
   }
 
   function closeTask() {
-    if (!state.taskOpen) return;
-    state.taskOpen = false;
+    if (!gameState.state.taskOpen) return;
+    // 第一段：居中 → 缩到右上角
+    if (taskCenter.value) {
+      taskCenter.value = false;
+      return;
+    }
+    // 第二段：右上角 → 彻底关闭
+    gameState.state.taskOpen = false;
     taskCard.value = null;
-    state.playerLocked = state.taskPreviousLock;
+    gameState.state.playerLocked = gameState.state.taskPreviousLock;
   }
 
   function hideTask() {
-    state.taskOpen = false;
+    gameState.state.taskOpen = false;
     taskCard.value = null;
   }
 
@@ -350,6 +360,7 @@ export const useHudStore = defineStore("hud", () => {
     overlay,
     title,
     taskCard,
+    taskCenter,
     prompt,
     dialogue,
     itemPanel,
@@ -388,6 +399,6 @@ export const useHudStore = defineStore("hud", () => {
     hideOverlay,
     hideIntro,
     showEndPanel,
-    hideEndPanel,
+    hideEndPanel
   };
 });

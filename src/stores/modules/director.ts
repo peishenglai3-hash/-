@@ -8,7 +8,9 @@ import { TitleScene } from "@/scenes/Title/TitleScene";
 import { Scene01 } from "@/scenes/Scene01/Scene01";
 import { PrologueScene02 } from "@/scenes/Scene02/PrologueScene02";
 import { Ch01Sc01Scene } from "@/scenes/Scene03/Ch01Sc01Scene";
-import { state } from "@/common/state";
+import { Ch01Sc02Scene } from "@/scenes/Scene03/Ch01Sc02Scene";
+import { Ch01Sc03Scene } from "@/scenes/Scene03/Ch01Sc03Scene";
+import { useGameStateStore } from "@/stores/modules/gameState";
 import { assetPath } from "@/common/paths";
 import {
 	showEndPanel,
@@ -48,11 +50,12 @@ function createGame(parent: HTMLElement): Phaser.Game {
 			height: 720,
 		},
 		loader: { baseURL: import.meta.env.BASE_URL },
-		scene: [TitleScene, Scene01, PrologueScene02, Ch01Sc01Scene],
+		scene: [TitleScene, Scene01, PrologueScene02, Ch01Sc01Scene, Ch01Sc02Scene, Ch01Sc03Scene],
 	});
 }
 
 export const useDirectorStore = defineStore("director", () => {
+	const gameState = useGameStateStore();
 	const game = ref<Phaser.Game | null>(null);
 	const transitionAudio = new TransitionAudioController();
 	const bgm = new Audio(assetPath("/assets/audio/prologue_bgm.wav"));
@@ -64,19 +67,23 @@ export const useDirectorStore = defineStore("director", () => {
 		const g = createGame(parent);
 		game.value = g;
 		(window as any).game = g;
+		(window as any).gameDirector = { game: g, enterScene };
+
+		// 闪回流程路由（SC01 ↔ SC02 / SC01 ↔ SC03）
+		setupFlashbackFlow(g);
 
 		// 结算 → 第一章
 		window.addEventListener("prologue:scene-exit", ((event: CustomEvent<SaveData>) => {
 			const save = event.detail;
 			if (save?.profile) {
 				for (const [axis, value] of Object.entries(save.profile))
-					state.profile[axis] = value;
+					gameState.state.profile[axis] = value;
 			}
 			if (save?.tags) {
-				for (const tag of save.tags) state.flags.add(tag);
+				for (const tag of save.tags) gameState.state.flags.add(tag);
 			}
 			if (save?.fixed) {
-				for (const tag of save.fixed) state.flags.add(tag);
+				for (const tag of save.fixed) gameState.state.flags.add(tag);
 			}
 			hideIntro();
 			g.scene.stop("Scene01");
@@ -96,16 +103,40 @@ export const useDirectorStore = defineStore("director", () => {
 			rollbackToCheckpoint();
 	}
 
+	/* ===== 闪回流程路由 ===== */
+
+	// 闪回一·状纸：SC01 墨迹触发 → SC02；SC02 完成 → 返回 SC01（均走 enterScene 自动存档）
+	// 返回陈家链：SC01 暗号选择后 → 外景院墙；联络通知完成 → 回 SC01 告别
+	function setupFlashbackFlow(g: Phaser.Game): void {
+		g.events.on("ch01:sc02-enter", () => {
+			enterScene("Ch01Sc02Scene", "CH01_SC02");
+			// 延迟停止 SC01，避免在 ink tween 回调中销毁场景
+			window.setTimeout(() => g.scene.stop("Ch01Sc01Scene"), 0);
+		});
+		g.events.on("ch01:sc02-complete", () => {
+			g.scene.stop("Ch01Sc02Scene");
+			enterScene("Ch01Sc01Scene", "CH01_SC01");
+		});
+		g.events.on("ch01:sc03-enter", () => {
+			enterScene("Ch01Sc03Scene", "CH01_SC03");
+			window.setTimeout(() => g.scene.stop("Ch01Sc01Scene"), 0);
+		});
+		g.events.on("ch01:sc03-complete", () => {
+			g.scene.stop("Ch01Sc03Scene");
+			enterScene("Ch01Sc01Scene", "CH01_SC01");
+		});
+	}
+
 	/* ===== 开发工具 ===== */
 
 	function randomizePrologueChoice(): void {
 		const choice = CHOICES[Math.floor(Math.random() * CHOICES.length)];
-		state.choice = choice;
-		for (const axis of Object.keys(state.profile)) state.profile[axis] = 0;
+		gameState.state.choice = choice;
+		for (const axis of Object.keys(gameState.state.profile)) gameState.state.profile[axis] = 0;
 		for (const [axis, delta] of Object.entries(PROFILE_DELTAS[choice.id] ?? {}))
-			state.profile[axis] = delta;
-		for (const candidate of CHOICES) state.flags.delete(candidate.flag);
-		state.flags.add(choice.flag);
+			gameState.state.profile[axis] = delta;
+		for (const candidate of CHOICES) gameState.state.flags.delete(candidate.flag);
+		gameState.state.flags.add(choice.flag);
 	}
 
 	function clearStoryUi(): void {
@@ -122,19 +153,19 @@ export const useDirectorStore = defineStore("director", () => {
 	function handleDevNextChapter(sceneKey?: string): void {
 		const activeKey = sceneKey ?? (game.value!.scene.getScenes(true).find((scene: any) => scene.zoneEditor) as any)?.scene.key;
 		randomizePrologueChoice();
-		state.flags.add("FLAG_PRO_Q01_COMPLETED");
+		gameState.state.flags.add("FLAG_PRO_Q01_COMPLETED");
 		clearStoryUi();
 
 		if (activeKey === "Scene01") {
 			for (const flag of ["FLAG_PRO02_AUDIO_REVIEWED", "FLAG_PRO02_QUESTION_WRITTEN", "PROLOGUE_COMPLETED", "TIME_TRAVEL_CHECKPOINT"])
-				state.flags.delete(flag);
-			state.mode = "intro";
-			state.playerLocked = true;
-			state.taskOpen = false;
-			state.paused = false;
-			state.narrativeQueue = [];
-			state.narrativeIndex = 0;
-			state.inNarrative = false;
+				gameState.state.flags.delete(flag);
+			gameState.state.mode = "intro";
+			gameState.state.playerLocked = true;
+			gameState.state.taskOpen = false;
+			gameState.state.paused = false;
+			gameState.state.narrativeQueue = [];
+			gameState.state.narrativeIndex = 0;
+			gameState.state.inNarrative = false;
 			game.value!.scene.stop("Scene01");
 			ambience.unlock();
 			ambience.startRoom();
@@ -143,11 +174,11 @@ export const useDirectorStore = defineStore("director", () => {
 		}
 
 		for (const flag of ["FLAG_PRO02_AUDIO_REVIEWED", "FLAG_PRO02_QUESTION_WRITTEN", "PROLOGUE_COMPLETED", "TIME_TRAVEL_CHECKPOINT"])
-			state.flags.add(flag);
-		state.audioReviewed = true;
-		state.questionWritten = true;
-		state.playerLocked = true;
-		state.mode = "transition";
+			gameState.state.flags.add(flag);
+		gameState.state.audioReviewed = true;
+		gameState.state.questionWritten = true;
+		gameState.state.playerLocked = true;
+		gameState.state.mode = "transition";
 		finishPrologue();
 	}
 
@@ -195,11 +226,11 @@ export const useDirectorStore = defineStore("director", () => {
 		const save: SaveData = {
 			checkpoint: SCENE_EXIT.nextSceneCanonical,
 			checkpointLabel: "1927年，陈继南家中醒来",
-			profile: state.profile,
-			choice: state.choice?.id ?? null,
-			choiceTag: state.choice?.flag ?? null,
-			echo: state.choice?.echo_summary ?? null,
-			tags: [...state.flags],
+			profile: gameState.state.profile,
+			choice: gameState.state.choice?.id ?? null,
+			choiceTag: gameState.state.choice?.flag ?? null,
+			echo: gameState.state.choice?.echo_summary ?? null,
+			tags: [...gameState.state.flags],
 			fixed: ["PROLOGUE_COMPLETED", "TIME_TRAVEL_CHECKPOINT"],
 			risk: { identity: 0, execution: 0, coordination: 0 },
 			exit: SCENE_EXIT,
@@ -207,7 +238,7 @@ export const useDirectorStore = defineStore("director", () => {
 		try {
 			window.localStorage.setItem(
 				"redcode.prologue.flags",
-				JSON.stringify([...state.flags]),
+				JSON.stringify([...gameState.state.flags]),
 			);
 			window.localStorage.setItem(
 				"redcode.prologue.save",

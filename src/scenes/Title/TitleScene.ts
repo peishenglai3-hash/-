@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { useHudStore } from "@/stores/modules/hud";
 import { useDirectorStore } from "@/stores/modules/director";
-import { resetRunState } from "@/common/state";
+import { useGameStateStore } from "@/stores/modules/gameState";
 import { assetPath } from "@/common/paths";
 import { showFlavor } from "@/common/ui";
 import { onSettingsChange, getSettings, SaveManager } from "@/common/save";
@@ -71,7 +71,7 @@ export class TitleScene extends Phaser.Scene {
 			case "new": {
 				const { game } = useDirectorStore();
 				if (!game) return;
-				resetRunState();
+				useGameStateStore().resetRunState();
 				this.scene.stop("TitleScene");
 				game.scene.start("Scene01");
 				SaveManager.autosave("PROLOGUE_SC01");

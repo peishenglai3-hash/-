@@ -12,7 +12,7 @@ const FOLDERS: Record<ModernWalkDirection, string> = {
 };
 
 export const MODERN_WALK_DIRECTIONS = ["down", "left", "right", "up"] as const;
-export const MODERN_PLAYER_SOURCE_FRAME = { width: 217, height: 720 };
+export const MODERN_PLAYER_SOURCE_FRAME = { width: 225, height: 720 };
 
 export const modernWalkFrameKey = (direction: ModernWalkDirection, index: number) =>
 	`modern-player-${direction}-${index}`;
@@ -22,7 +22,7 @@ export function preloadModernPlayerWalk(scene: Phaser.Scene): void {
 		FRAME_FILES.forEach((file, index) => {
 			scene.load.image(
 				modernWalkFrameKey(direction, index),
-				`assets/characters/player/modern/${FOLDERS[direction]}/processed/runtime/${file}`,
+				`assets/characters/player/modern/${FOLDERS[direction]}/processed/version-rekeyed/runtime/${file}`,
 			);
 		});
 	}

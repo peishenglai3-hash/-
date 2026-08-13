@@ -8,10 +8,10 @@ function onClose() {
 </script>
 
 <template>
-	<div v-if="hud.taskCard" class="task-card">
+	<div v-if="hud.taskCard" class="task-card" :class="{ center: hud.taskCenter }">
 		<strong>{{ hud.taskCard.title }}</strong>
 		<span>{{ hud.taskCard.detail }}</span>
-		<span class="task-dismiss"><kbd>E</kbd><em>关闭任务</em></span>
+		<span class="task-dismiss"><kbd>E</kbd><em>{{ hud.taskCenter ? '确认任务' : '关闭任务' }}</em></span>
 	</div>
 </template>
 
@@ -80,6 +80,47 @@ kbd {
 
 .task-dismiss em {
 	font-style: normal;
+}
+
+/* 两段式：居中强制确认 → transition 缩至右上角 */
+.task-card {
+	transition: top 0.4s ease, right 0.4s ease, transform 0.4s ease,
+		width 0.4s ease, padding 0.4s ease, border-color 0.4s ease,
+		box-shadow 0.4s ease;
+}
+
+.task-card.center {
+	top: 44%;
+	right: 50%;
+	transform: translate(50%, -50%);
+	width: 380px;
+	padding: 18px 22px;
+	border: 2px solid #daa520;
+	border-radius: 12px;
+	box-shadow: 0 0 28px #daa52066, 0 8px 32px #000c;
+	z-index: 30;
+	animation: task-pulse 2s ease-in-out infinite;
+}
+
+.task-card.center strong {
+	font-size: 17px;
+	text-align: center;
+}
+
+.task-card.center > span {
+	font-size: 13px;
+	text-align: center;
+	padding-right: 0;
+}
+
+@keyframes task-pulse {
+	0%,
+	100% {
+		box-shadow: 0 0 28px #daa52066, 0 8px 32px #000c;
+	}
+	50% {
+		box-shadow: 0 0 42px #daa52099, 0 8px 40px #000c;
+	}
 }
 
 @media (max-width: 850px) {
