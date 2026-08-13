@@ -6,7 +6,7 @@
  * @FilePath: /github_honghu_game/src/stores/modules/gameState.ts
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
-import { ref } from "vue";
+import { markRaw, shallowRef } from "vue";
 import { defineStore } from "pinia";
 import type { NarrativeEntry } from "@/types/common";
 
@@ -48,7 +48,12 @@ export class GameState {
 // ===== Pinia Store（Setup Store 风格，等价于 useGameState 组合式函数） =====
 
 export const useGameStateStore = defineStore("gameState", () => {
-	const state = ref(new GameState());
+	// 游戏状态是纯命令式共享数据，不需要 Vue 响应式：
+	// ref() 会把整个 GameState 深度响应式化（profile/flags/choice 全变 Proxy），
+	// 导致 finishPrologue() 里 structuredClone(save) 抛 DataCloneError，
+	// 序章结算事件无法派发、第一章无法启动。
+	// markRaw + shallowRef 保持与旧版模块单例一致的普通对象语义。
+	const state = shallowRef(markRaw(new GameState()));
 
 	function resetTransientState() {
 		state.value.mode = "intro";
@@ -73,7 +78,7 @@ export const useGameStateStore = defineStore("gameState", () => {
 	}
 
 	function resetRunState() {
-		state.value = new GameState();
+		state.value = markRaw(new GameState());
 	}
 
 	if (typeof window !== "undefined") {

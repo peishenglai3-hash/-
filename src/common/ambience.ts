@@ -140,6 +140,22 @@ class Ambience {
 		}, 420);
 	}
 
+	stopRoom() {
+		this.roomOn = false;
+		if (this.fan) {
+			try { this.fan.source.stop(); } catch { /* already stopped */ }
+			this.fan = null;
+		}
+		if (this.hum) {
+			try { this.hum.stop(); } catch { /* already stopped */ }
+			this.hum = null;
+		}
+		if (this.cricketTimer !== null) {
+			window.clearInterval(this.cricketTimer);
+			this.cricketTimer = null;
+		}
+	}
+
 	stopTape() {
 		if (!this.tapeOn) return;
 		this.tapeOn = false;

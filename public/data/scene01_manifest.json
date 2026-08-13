@@ -1567,5 +1567,28 @@
         "depth": 2000
       }
     ]
+  },
+  "actor_visuals": {
+    "PLAYER": {
+      "display_height": 189.56475891506756,
+      "offset": [
+        -0.058122900009713874,
+        0.02879857502024663
+      ]
+    },
+    "NPC_CH00_STUDENT_A": {
+      "display_height": 178.3816819654428,
+      "offset": [
+        0.1436068903550236,
+        0
+      ]
+    },
+    "NPC_CH00_STUDENT_B": {
+      "display_height": 188,
+      "offset": [
+        0,
+        0
+      ]
+    }
   }
 }

@@ -17,6 +17,7 @@ import {
 	hideChoices,
 	showResult,
 	hideResult,
+	showEndPanel,
 	hideDialogue,
 	fadeToBlack,
 	togglePause,
@@ -33,6 +34,7 @@ import {
 	INK_NARRATIVE,
 	TASKS_CH01_SC01,
 	PROP_PATHS,
+	PROP_ICON_FILES,
 } from "./ch01Sc01.content";
 import type { Choice } from "./ch01Sc01.content";
 import { FLAGS } from "./ch01Sc01.flags";
@@ -41,7 +43,7 @@ import { assetPath } from "@/common/paths";
 import { useGameSaveStore } from "@/stores";
 import { playInkTransition } from "@/common/inkTransition";
 import { RETURN_NARRATIVE } from "./ch01Sc02.content";
-import { KNOCK_CHAIN } from "./ch01Return.content";
+import { KNOCK_CHAIN, DOOR_CODE_CHAIN, Q3_CHOICES, Q4_CHOICES, FAREWELL_INTRO, ENDING_NARRATIVE, END_SUBTITLE } from "./ch01Return.content";
 // @ts-ignore Shared developer tools support both grid and pixel-coordinate scenes.
 import { CollisionEditor } from "../../zone-editor.js";
 // @ts-ignore Shared foreground renderer is implemented in JavaScript.
@@ -70,6 +72,7 @@ interface ManifestData {
 		id: string;
 		rect: [number, number, number, number];
 		kind?: string;
+		rotation?: number;
 	}[];
 	interactions: {
 		id: string;
@@ -153,6 +156,11 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 			"assets/ch01/sc01/video/intro_ch01_sc01.mp4",
 		);
 		this.load.audio("ch01_sc01_bgm", "assets/ch01/sc01/audio/bgm_ch01.mp3");
+		// 第一章章末离开视频（告别后整幅播放）
+		this.load.video(
+			"ch01_finale",
+			"assets/ch01/sc01/video/finale_leave.mp4",
+		);
 
 		const dirs: ("down" | "up" | "left" | "right")[] = [
 			"down",
@@ -245,7 +253,15 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 		this.videoOverlay = this.add
 			.video(WORLD_W / 2, WORLD_H / 2, "ch01_sc01_intro")
 			.setDepth(2000);
-		this.videoOverlay.setDisplaySize(WORLD_W, WORLD_H);
+		// 必须等视频纹理就绪后再 setDisplaySize：纹理未就绪时 Phaser 以默认帧 32×32
+		// 为基准计算 scale，首帧（1280×720）到达后视频被放大数倍、只剩中间画面。
+		// 且 textureready 触发时 width 仍是构造默认 256，须先 setSizeToFrame 校正基准
+		this.videoOverlay.once("textureready", () => {
+			const v = this.videoOverlay;
+			if (!v) return;
+			v.setSizeToFrame();
+			v.setDisplaySize(WORLD_W, WORLD_H);
+		});
 		this.videoOverlay.play();
 		this.videoOverlay.on("complete", () => {
 			this.state.flags.add(FLAGS.VIDEO_SEEN);
@@ -291,11 +307,11 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 			});
 			return;
 		}
-		// 从 SC03 院墙返回 → 场景已标记完成，直接探索模式
+		// 从 SC03 院墙返回 → 月饼告别（正式选择四）→ 章末离开视频
 		if (this.state.flags.has(FLAGS.YARD_DONE)) {
-			this.state.mode = "explore";
-			this.state.playerLocked = false;
-			showTask({ title: "第一章·待续", detail: "陈继南的故事暂告一段落。" });
+			this.state.mode = "narrative";
+			this.state.playerLocked = true;
+			playNarrative(FAREWELL_INTRO, () => this.startQ4());
 			return;
 		}
 		this.state.mode = "explore";
@@ -356,8 +372,29 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	}
 
 	buildCollision() {
-		// TODO: 碰撞墙暂时禁用，全地图自由移动。后续专人修复。
-		this.collisionRects = [];
+		// 正式碰撞：读取 manifest 中已配置的碰撞矩形（墙、家具、门窗）。
+		// 含 rotation 的矩形先求旋转后 AABB，作为保守近似。
+		this.collisionRects = (this.manifest.collision ?? []).map((entry) => {
+			const [x, y, w, h] = entry.rect;
+			const rot = entry.rotation ?? 0;
+			if (rot === 0) {
+				return { id: entry.id, x, y, width: w, height: h };
+			}
+			const rad = (rot * Math.PI) / 180;
+			const cos = Math.abs(Math.cos(rad));
+			const sin = Math.abs(Math.sin(rad));
+			const rw = w * cos + h * sin;
+			const rh = w * sin + h * cos;
+			const cx = x + w / 2;
+			const cy = y + h / 2;
+			return {
+				id: entry.id,
+				x: cx - rw / 2,
+				y: cy - rh / 2,
+				width: rw,
+				height: rh,
+			};
+		});
 	}
 
 	setupActorCollider() {
@@ -587,11 +624,22 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 		}
 		if (
 			this.state.flags.has(FLAGS.INK_DONE) &&
+			!this.state.flags.has(FLAGS.CODE_DONE)
+		) {
+			targets.push({
+				id: "DOOR_CODE",
+				prompt: "推开木门",
+				rect: [927.3, 49.9, 363.4, 396.2],
+				type: "event",
+			});
+		}
+		if (
+			this.state.flags.has(FLAGS.CODE_DONE) &&
 			!this.state.flags.has(FLAGS.SCENE_COMPLETE)
 		) {
 			targets.push({
 				id: "EXIT_COURTYARD",
-				prompt: "推开木门",
+				prompt: "走到院墙下",
 				rect: [1280, 128, 160, 384],
 				type: "event",
 			});
@@ -622,13 +670,14 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 			this.state.choice
 		)
 			return this.startInkEvent();
+		if (target.id === "DOOR_CODE") return this.startDoorCode();
 		if (target.id === "EXIT_COURTYARD") return this.completeScene();
-		// Generic inspect items
+		// Generic inspect items：prop_icon 短名须经 PROP_ICON_FILES 映射到真实图标文件
 		if (target.prop_icon) {
+			const icon = PROP_ICON_FILES[target.prop_icon];
+			if (!icon) return;
 			showItem({
-				icon: assetPath(
-					`/assets/ch01/sc01/props/${target.prop_icon}_Icon_v01.png`,
-				),
+				icon,
 				title: target.prompt || "查看",
 				text: target.id,
 			});
@@ -755,6 +804,166 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 		this.time.delayedCall(900, () =>
 			this.game.events.emit("ch01:sc03-enter"),
 		);
+	}
+
+	/* ===== 门外人暗号（正式选择三） ===== */
+
+	startDoorCode() {
+		this.state.mode = "narrative";
+		this.state.playerLocked = true;
+		this.state.flags.add(FLAGS.CODE_DONE);
+		playNarrative(DOOR_CODE_CHAIN, () => this.startQ3());
+	}
+
+	startQ3() {
+		this.state.mode = "choice";
+		showChoices(
+			Q3_CHOICES.map((choice) => ({
+				id: choice.id,
+				label: choice.label,
+				detail: choice.detail,
+			})),
+			(id: string) => this.chooseQ3(id),
+			"门外的人是谁？怎么回应？",
+		);
+	}
+
+	chooseQ3(id: string) {
+		const choice = Q3_CHOICES.find((item) => item.id === id);
+		if (!choice) return;
+		for (const [axis, delta] of Object.entries(choice.profile))
+			this.state.profile[axis] += delta;
+		for (const [axis, delta] of Object.entries(choice.risk)) {
+			const key = axis as keyof typeof this.state.risk;
+			this.state.risk[key] += delta;
+		}
+		this.state.flags.add(choice.flag);
+		for (const tag of choice.tags) this.state.flags.add(tag);
+		hideChoices();
+		this.state.mode = "narrative";
+		this.state.playerLocked = true;
+		playNarrative(choice.feedback, () => this.afterQ3());
+	}
+
+	afterQ3() {
+		this.state.flags.add(FLAGS.Q3_DONE);
+		showTask(TASKS_CH01_SC01.yard);
+		this.state.mode = "explore";
+		this.state.playerLocked = false;
+		this.saveProgress();
+	}
+
+	startQ4() {
+		this.state.mode = "choice";
+		showChoices(
+			Q4_CHOICES.map((choice) => ({
+				id: choice.id,
+				label: choice.label,
+				detail: choice.detail,
+			})),
+			(id: string) => this.chooseQ4(id),
+			"怎样和家人告别？",
+		);
+	}
+
+	chooseQ4(id: string) {
+		const choice = Q4_CHOICES.find((item) => item.id === id);
+		if (!choice) return;
+		for (const [axis, delta] of Object.entries(choice.profile))
+			this.state.profile[axis] += delta;
+		for (const [axis, delta] of Object.entries(choice.risk)) {
+			const key = axis as keyof typeof this.state.risk;
+			this.state.risk[key] += delta;
+		}
+		this.state.flags.add(choice.flag);
+		for (const tag of choice.tags) this.state.flags.add(tag);
+		hideChoices();
+		this.state.mode = "narrative";
+		this.state.playerLocked = true;
+		playNarrative(choice.feedback, () => this.afterQ4());
+	}
+
+	afterQ4() {
+		this.state.flags.add(FLAGS.FAREWELL_DONE);
+		this.state.mode = "transition";
+		this.state.playerLocked = true;
+		hideTask();
+		hidePrompt();
+		fadeToBlack();
+		// 黑幕后播放章末离开视频（整幅 1280×720 等比例缩放，避免拉伸变形）
+		this.time.delayedCall(900, () => {
+			clearFade();
+			this.playFinaleVideo();
+		});
+	}
+
+	playFinaleVideo() {
+		const video = this.add
+			.video(WORLD_W / 2, WORLD_H / 2, "ch01_finale")
+			.setDepth(3000);
+		this.videoOverlay = video;
+		// 整幅展示：等纹理就绪后按视频原始分辨率等比例缩放，不拉伸变形
+		// （textureready 触发时 width 仍是构造默认 256，须先 setSizeToFrame 校正基准，
+		//   否则 scale 按 256 计算、视频被放大数倍只剩中间画面）
+		video.once("textureready", () => {
+			video.setSizeToFrame();
+			const vw = video.video?.videoWidth || video.frame?.realWidth || 1280;
+			const vh = video.video?.videoHeight || video.frame?.realHeight || 720;
+			const scale = Math.min(WORLD_W / vw, WORLD_H / vh);
+			video.setDisplaySize(vw * scale, vh * scale);
+		});
+		video.play();
+		video.on("complete", () => {
+			this.skipFinaleVideo();
+		});
+		// 允许按 E / 空格跳过（一次性，避免重复注册堆叠）
+		const onSkip = () => this.skipFinaleVideo();
+		this.input.keyboard?.on("keydown-E", onSkip);
+		this.input.keyboard?.on("keydown-SPACE", onSkip);
+		this.videoSkipCleanup = () => {
+			this.input.keyboard?.off("keydown-E", onSkip);
+			this.input.keyboard?.off("keydown-SPACE", onSkip);
+		};
+	}
+
+	videoSkipCleanup?: () => void;
+
+	skipFinaleVideo() {
+		if (!this.videoOverlay) return;
+		this.videoOverlay.destroy();
+		this.videoOverlay = undefined;
+		this.videoSkipCleanup?.();
+		this.finishChapter();
+	}
+
+	finishChapter() {
+		this.state.flags.add(FLAGS.CHAPTER_COMPLETE);
+		this.state.mode = "narrative";
+		this.state.playerLocked = true;
+		playNarrative(ENDING_NARRATIVE, () => {
+			hideTask();
+			hidePrompt();
+			fadeToBlack();
+			// 章末：固定存档点 + 结算面板 + 段落字幕
+			useGameSaveStore().writeFixedCheckpoint();
+			showEndPanel({
+				checkpointLabel: "第一章完成",
+				checkpoint: "CH01_END",
+				profile: this.state.profile,
+				choiceTag: this.state.choice?.flag ?? null,
+				fixed: [...this.state.flags],
+				risk: this.state.risk,
+			}, {
+				title: "第一章·陈继南家中醒来｜完成",
+				hint: "第二章 尚在制作中，敬请期待",
+				buttonLabel: "返回标题画面",
+				next: "title",
+			});
+			this.time.delayedCall(300, () => {
+				(window as any).showTitleCard?.(END_SUBTITLE);
+			});
+			this.saveProgress();
+		});
 	}
 
 	saveProgress() {

@@ -43,6 +43,10 @@ export interface ChoicePanel {
 }
 
 export interface EndPanel {
+  title: string;
+  hint: string;
+  buttonLabel: string;
+  next: "title" | null;
   checkpoint: string;
   profile: string;
   tags: string;
@@ -337,15 +341,27 @@ export const useHudStore = defineStore("hud", () => {
   }
 
   // --- 结算 ---
-  function showEndPanel(save: {
-    checkpointLabel: string;
-    checkpoint: string;
-    profile: Record<string, number>;
-    choiceTag: string | null;
-    fixed: string[];
-    risk: { identity: number; execution: number; coordination: number };
-  }) {
+  function showEndPanel(
+    save: {
+      checkpointLabel: string;
+      checkpoint: string;
+      profile: Record<string, number>;
+      choiceTag: string | null;
+      fixed: string[];
+      risk: { identity: number; execution: number; coordination: number };
+    },
+    endMeta?: {
+      title?: string;
+      hint?: string;
+      buttonLabel?: string;
+      next?: "title" | null;
+    },
+  ) {
     endPanel.value = {
+      title: endMeta?.title ?? "序章·名字留在纸上｜完成",
+      hint: endMeta?.hint ?? "第一章·陈继南家中醒来",
+      buttonLabel: endMeta?.buttonLabel ?? "进入第一章",
+      next: endMeta?.next ?? null,
       checkpoint: `固定回退点：${save.checkpointLabel}（${save.checkpoint}）`,
       profile: `画像累计 D${save.profile.D} C${save.profile.C} I${save.profile.I} G${save.profile.G} P${save.profile.P} A${save.profile.A}`,
       tags: `选择标签 ${save.choiceTag ?? "—"} ｜ 固定标签 ${save.fixed.join(" · ")}`,

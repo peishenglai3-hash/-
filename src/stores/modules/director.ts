@@ -204,6 +204,22 @@ export const useDirectorStore = defineStore("director", () => {
 		game.value!.scene.start(key);
 	}
 
+	/** 章末结算后返回标题画面（第二章尚未开发，先回标题，后续接入第二章时改路由） */
+	function goToTitle(): void {
+		const g = game.value;
+		if (!g) return;
+		clearStoryUi();
+		ambience.stopRoom();
+		stopPrologueBgm();
+		(window as any).hideTitleCard?.();
+		g.scene.stop("Ch01Sc01Scene");
+		g.scene.stop("Ch01Sc02Scene");
+		g.scene.stop("Ch01Sc03Scene");
+		g.scene.stop("PrologueScene02");
+		g.scene.stop("Scene01");
+		g.scene.start("TitleScene");
+	}
+
 	function rollbackToCheckpoint(): boolean {
 		const save = gameSave.loadFixed();
 		if (!save) return false;
@@ -268,6 +284,7 @@ export const useDirectorStore = defineStore("director", () => {
 		init,
 		startFromSave,
 		enterScene,
+		goToTitle,
 		finishPrologue,
 	};
 });

@@ -115,24 +115,13 @@
       "kind": "furniture"
     },
     {
-      "id": "main_table",
-      "shape": "rect",
-      "rect": [
-        672,
-        501,
-        294,
-        223
-      ],
-      "kind": "furniture"
-    },
-    {
       "id": "chair_mother",
       "shape": "rect",
       "rect": [
-        615,
-        501.5,
-        57,
-        74.5
+        620,
+        495,
+        70,
+        85
       ],
       "kind": "furniture"
     },
@@ -140,10 +129,10 @@
       "id": "chair_father_back",
       "shape": "rect",
       "rect": [
-        971,
-        536,
-        64,
-        28
+        960,
+        487,
+        81,
+        70
       ],
       "kind": "furniture"
     },
@@ -151,10 +140,10 @@
       "id": "desk_scholar",
       "shape": "rect",
       "rect": [
-        1285.25,
-        614.5,
-        265.5,
-        113.5
+        1271,
+        539,
+        280,
+        115
       ],
       "kind": "furniture"
     },
@@ -162,10 +151,10 @@
       "id": "chair_desk",
       "shape": "rect",
       "rect": [
-        1338.25,
-        701.75,
-        123.5,
-        146.5
+        1260,
+        685,
+        150,
+        185
       ],
       "kind": "furniture"
     },
@@ -173,10 +162,10 @@
       "id": "collision_msp5zk4q",
       "shape": "rect",
       "rect": [
-        534,
-        287.75,
-        604,
-        104.125
+        612,
+        385,
+        425,
+        130
       ],
       "rotation": 0
     },
@@ -195,9 +184,9 @@
       "id": "collision_msp68qdt",
       "shape": "rect",
       "rect": [
-        1010,
+        1000,
         64.5,
-        128,
+        138,
         236.5
       ],
       "rotation": 0
@@ -223,6 +212,54 @@
         180.25
       ],
       "rotation": -25
+    },
+    {
+      "id": "collision_msp61msu",
+      "shape": "rect",
+      "rect": [
+        1161,
+        701,
+        79,
+        114
+      ],
+      "rotation": 0,
+      "kind": "furniture"
+    },
+    {
+      "id": "collision_msp6i9yk",
+      "shape": "rect",
+      "rect": [
+        741,
+        674,
+        102,
+        155
+      ],
+      "rotation": 0,
+      "kind": "furniture"
+    },
+    {
+      "id": "collision_msp6gwhv",
+      "shape": "rect",
+      "rect": [
+        1562,
+        547,
+        99,
+        125
+      ],
+      "rotation": 0,
+      "kind": "furniture"
+    },
+    {
+      "id": "collision_msp6h4y2",
+      "shape": "rect",
+      "rect": [
+        1536,
+        832,
+        108,
+        91
+      ],
+      "rotation": 0,
+      "kind": "furniture"
     }
   ],
   "interactions": [
@@ -230,10 +267,10 @@
       "id": "lamp",
       "type": "inspect",
       "rect": [
-        733.875,
-        390.125,
-        314.125,
-        255.75
+        735.46875,
+        424.0625,
+        123.0625,
+        145.875
       ],
       "prompt": "查看油灯",
       "prompt_anchor": [
@@ -242,7 +279,7 @@
       ],
       "text_id": "ITM_LAMP_EXAMINE",
       "repeatable": true,
-      "prop_icon": "PROP013"
+      "prop_icon": "PROP016"
     },
     {
       "id": "bowl_left",
@@ -260,15 +297,15 @@
       ],
       "text_id": "ITM_BOWL_LEFT",
       "repeatable": true,
-      "prop_icon": "PROP028"
+      "prop_icon": "PROP029"
     },
     {
       "id": "bowl_right",
       "type": "inspect",
       "rect": [
-        1056,
-        502,
-        64,
+        825,
+        469,
+        141,
         192
       ],
       "prompt": "查看粗瓷碗",
@@ -284,10 +321,10 @@
       "id": "book",
       "type": "inspect",
       "rect": [
-        1363.5,
-        490,
-        168.5,
-        99.5
+        1285.25,
+        513,
+        176.5,
+        129.625
       ],
       "prompt": "查看线装书",
       "prompt_anchor": [
@@ -302,10 +339,10 @@
       "id": "inkstone_paper",
       "type": "inspect",
       "rect": [
-        1169,
-        632,
-        151,
-        196
+        1159.25,
+        549.5,
+        435.5,
+        269
       ],
       "prompt": "查看纸与笔",
       "prompt_anchor": [
@@ -355,10 +392,10 @@
       "id": "outer_gown",
       "type": "observe",
       "rect": [
-        1412,
-        392,
+        1290.5,
+        45.125,
         185,
-        92.5
+        417.75
       ],
       "prompt": "观察门边衣物",
       "prompt_anchor": [
@@ -390,9 +427,9 @@
       "id": "half_door",
       "type": "inspect",
       "rect": [
-        1114.125,
-        45.5,
-        286.875,
+        927.28125,
+        49.875,
+        363.4375,
         396.25
       ],
       "prompt": "查看半掩木门",
@@ -1889,5 +1926,26 @@
       "initially_blocked": true,
       "unblock_objective": "EXIT_DOOR"
     }
-  ]
+  ],
+  "actor_colliders": {
+    "PLAYER": {
+      "offset": [
+        -28,
+        -36
+      ],
+      "size": [
+        56,
+        36
+      ]
+    }
+  },
+  "actor_visuals": {
+    "PLAYER": {
+      "display_height": 366.10084190507894,
+      "offset": [
+        347.2898456803837,
+        356.5644962142951
+      ]
+    }
+  }
 }
