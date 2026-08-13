@@ -10,7 +10,6 @@ import { PrologueScene02 } from "@/scenes/Scene02/PrologueScene02";
 import { Ch01Sc01Scene } from "@/scenes/Scene03/Ch01Sc01Scene";
 import { Ch01Sc02Scene } from "@/scenes/Scene03/Ch01Sc02Scene";
 import { Ch01Sc03Scene } from "@/scenes/Scene03/Ch01Sc03Scene";
-import { setupFlashbackFlow } from "@/components/biz/FlashbackFlow";
 import { state } from "@/common/state";
 import { assetPath } from "@/common/paths";
 import {
@@ -70,7 +69,7 @@ export const useDirectorStore = defineStore("director", () => {
 		(window as any).gameDirector = { game: g, enterScene };
 
 		// 闪回流程路由（SC01 ↔ SC02 / SC01 ↔ SC03）
-		setupFlashbackFlow({ game: g, enterScene });
+		setupFlashbackFlow(g);
 
 		// 结算 → 第一章
 		window.addEventListener("prologue:scene-exit", ((event: CustomEvent<SaveData>) => {
@@ -101,6 +100,30 @@ export const useDirectorStore = defineStore("director", () => {
 		// 测试/调试钩子：失败回退链路
 		(window as any).rollbackToCheckpoint = () =>
 			rollbackToCheckpoint();
+	}
+
+	/* ===== 闪回流程路由 ===== */
+
+	// 闪回一·状纸：SC01 墨迹触发 → SC02；SC02 完成 → 返回 SC01（均走 enterScene 自动存档）
+	// 返回陈家链：SC01 暗号选择后 → 外景院墙；联络通知完成 → 回 SC01 告别
+	function setupFlashbackFlow(g: Phaser.Game): void {
+		g.events.on("ch01:sc02-enter", () => {
+			enterScene("Ch01Sc02Scene", "CH01_SC02");
+			// 延迟停止 SC01，避免在 ink tween 回调中销毁场景
+			window.setTimeout(() => g.scene.stop("Ch01Sc01Scene"), 0);
+		});
+		g.events.on("ch01:sc02-complete", () => {
+			g.scene.stop("Ch01Sc02Scene");
+			enterScene("Ch01Sc01Scene", "CH01_SC01");
+		});
+		g.events.on("ch01:sc03-enter", () => {
+			enterScene("Ch01Sc03Scene", "CH01_SC03");
+			window.setTimeout(() => g.scene.stop("Ch01Sc01Scene"), 0);
+		});
+		g.events.on("ch01:sc03-complete", () => {
+			g.scene.stop("Ch01Sc03Scene");
+			enterScene("Ch01Sc01Scene", "CH01_SC01");
+		});
 	}
 
 	/* ===== 开发工具 ===== */

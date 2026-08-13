@@ -74,10 +74,9 @@ honghu_game/
 │   ├── zone-editor.js               # 交互/碰撞区域编辑器（CollisionEditor，P 键切换）
 │   ├── components/
 │   │   ├── biz/                     # 流程业务组件（封装 Phaser 事件与 HUD/转场交互）
-│   │   │   ├── FlashbackFlow.ts     # 第一章闪回路由（SC01↔SC02 / SC01↔SC03）
 │   │   │   ├── Scene1Overlay.vue    # 序章开场视频 overlay（@start/@done）
-│   │   │   ├── Scene2Overlay.vue    # 转场B overlay（内联 TRANSITION_B → 结算）
-│   │   │   └── Scene3Overlay.vue    # 转场A overlay（内联 TRANSITION_A → 驻地）
+│   │   │   ├── Scene2Overlay.vue    # 转场A overlay（内联 TRANSITION_A → 驻地）
+│   │   │   └── Scene3Overlay.vue    # 转场B overlay（内联 TRANSITION_B → 结算）
 │   │   └── ui/                      # Vue 3 HUD 组件（scoped CSS）
 │   │       ├── TaskCard.vue         # 任务卡片（两段式：居中确认→右上角待办）
 │   │       ├── InteractionPrompt.vue # 交互提示（"查看碑文 · E"）
@@ -101,7 +100,6 @@ honghu_game/
 │   │   ├── paths.ts                 # 资源路径工具（assetPath，自动拼接 BASE_URL）
 │   │   ├── save.ts                  # 本地存档系统（SaveManager：auto/fixed 槽+设置+回退）
 │   │   ├── state.ts                 # 游戏状态（flags/profile/choice/risk/propStates/mode 等 + reset 函数）
-│   │   ├── transition.ts            # 转场状态工厂（createTransitionState，Vue reactive）
 │   │   ├── transitionAudio.ts       # 转场合成音效控制器（TransitionAudioController）
 │   │   └── ui.ts                    # HUD 控制转发层（Proxy 代理到 Pinia hud store）
 │   ├── stores/
@@ -132,7 +130,7 @@ honghu_game/
 │   └── types/
 │       ├── common.d.ts               # 核心类型（SaveData / RunSave / SceneId / GameSettings / NarrativeEntry / GameState）
 │       ├── css.d.ts                 # CSS module + .vue 类型声明
-│       ├── director.d.ts            # 转场类型（TransitionConfig / TransitionEntry / TransitionCue / TransitionState）
+│       ├── director.d.ts            # 转场类型（TransitionConfig / TransitionEntry / TransitionCue）
 │       └── vite-env.d.ts            # Vite 客户端类型引用
 └── scripts/
     ├── validate-content.mjs         # 内容锁校验脚本
@@ -206,7 +204,7 @@ export function assetPath(path: string): string {
 - `playerLocked: boolean` — 控制玩家移动和交互锁定
 - 其余为场景本地瞬态字段（`audioReviewed`/`questionWritten`/`sleepStarted`/`taskOpen`/`inNarrative`/`monumentSeen`/`npcDialogue`/`leavePhase` 等）
 
-辅助函数：`resetRunState()`（新开一局，全量清零）、`resetTransientState()`（读档/新游戏共用，只复位瞬态字段）。
+辅助函数：`resetRunState()`（新开一局，全量清零）、`resetTransientState()`（读档/新游戏/转场进入场景前共用，只复位瞬态字段）。
 
 **HUD 状态** — [src/stores/modules/hud.ts](src/stores/modules/hud.ts)，Pinia Setup Store，Vue 组件 + Phaser Scene 共用：
 
@@ -235,7 +233,7 @@ src/stores/modules/hud.ts (Pinia)
 └────────┘  └───────────┘
 ```
 
-Vue 通过 `v-if` 按可见性渲染面板。转场系统由 biz overlay 组件（`Scene2Overlay.vue`/`Scene3Overlay.vue`）用 `common/transition.ts` 的 `createTransitionState()` 创建本地响应式状态，再渲染 `ui/TransitionOverlay.vue` 黑幕/字幕/揭示图；合成音效由 `common/transitionAudio.ts` 的 `TransitionAudioController.playCue()` 驱动。
+Vue 通过 `v-if` 按可见性渲染面板。转场系统由 biz overlay 组件（`Scene2Overlay.vue`/`Scene3Overlay.vue`）用 Vue `reactive({...})` 创建本地响应式状态，再渲染 `ui/TransitionOverlay.vue` 黑幕/字幕/揭示图；合成音效由 `common/transitionAudio.ts` 的 `TransitionAudioController.playCue()` 驱动。
 
 ### 场景1 → 场景2 状态传递
 
@@ -253,10 +251,10 @@ Vue 通过 `v-if` 按可见性渲染面板。转场系统由 biz overlay 组件�
 ```
 TitleScene (标题四热区)
   → [new] resetRunState → Scene01 (序章·纪念碑) → showOverlay("Scene1Overlay") 开场视频
-  → 转场A (biz/Scene3Overlay.vue 内联 TRANSITION_A) → PrologueScene02 (驻地)
-  → 转场B (biz/Scene2Overlay.vue 内联 TRANSITION_B) → 结算面板 + localStorage 存档
+  → 转场A (biz/Scene2Overlay.vue 内联 TRANSITION_A) → PrologueScene02 (驻地)
+  → 转场B (biz/Scene3Overlay.vue 内联 TRANSITION_B) → 结算面板 + localStorage 存档
   → prologue:scene-exit 事件 → Ch01Sc01Scene (陈继南家中醒来)
-  → 闪回路由 (biz/FlashbackFlow.ts)：Ch01Sc01 ↔ Ch01Sc02 (状纸) / Ch01Sc01 ↔ Ch01Sc03 (院墙)
+  → 闪回路由 (director.ts 内 `setupFlashbackFlow`)：Ch01Sc01 ↔ Ch01Sc02 (状纸) / Ch01Sc01 ↔ Ch01Sc03 (院墙)
 ```
 
 闪回路由事件：`ch01:sc02-enter`/`ch01:sc02-complete`（SC01 墨迹触发→SC02，完成返回 SC01）、`ch01:sc03-enter`/`ch01:sc03-complete`（SC01 暗号选择后→SC03 联络，完成返回 SC01 告别）。
@@ -309,7 +307,7 @@ TitleScene (标题四热区)
 ### 核心接口
 
 - `GameState` / `SaveData` / `RunSave` / `SceneId` / `GameSettings` / `NarrativeEntry` — 定义在 [src/types/common.d.ts](src/types/common.d.ts)
-- `TransitionConfig` / `TransitionEntry` / `TransitionCue` / `TransitionState` — 定义在 [src/types/director.d.ts](src/types/director.d.ts)
+- `TransitionConfig` / `TransitionEntry` / `TransitionCue` — 定义在 [src/types/director.d.ts](src/types/director.d.ts)
 - `Choice` — 定义在 [src/scenes/Scene01/content.ts](src/scenes/Scene01/content.ts)
 - `LogicData` / `InteractionData` / `InteractionZone` — 定义在 [src/scenes/Scene02/PrologueScene02.ts](src/scenes/Scene02/PrologueScene02.ts)
 - `SceneOverlay` / `NarrativeEntry`（HUD 侧）— 定义在 [src/stores/modules/hud.ts](src/stores/modules/hud.ts)
@@ -370,7 +368,7 @@ pnpm run build        # 生产构建
 
 1. 创建 `src/scenes/SceneXX/SceneXX.ts`，继承 `Phaser.Scene`
 2. 在 [src/stores/modules/director.ts](src/stores/modules/director.ts) 的 `createGame()` 的 `scene: []` 数组中注册
-3. 如需要闪回/跨场景路由，在 [src/components/biz/FlashbackFlow.ts](src/components/biz/FlashbackFlow.ts) 注册事件监听
+3. 如需要闪回/跨场景路由，在 [src/stores/modules/director.ts](src/stores/modules/director.ts) 的 `setupFlashbackFlow` 中注册事件监听
 4. 如有状态传递，通过 `state.flags` + JSON 数据文件（`public/data/*.json`）
 
 ### 添加新公共模块
