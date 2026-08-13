@@ -38,7 +38,7 @@ import type { Choice } from "./ch01Sc01.content";
 import { FLAGS } from "./ch01Sc01.flags";
 import { FLAGS2 } from "./ch01Sc02.flags";
 import { assetPath } from "@/common/paths";
-import { SaveManager } from "@/common/save";
+import { useGameSaveStore } from "@/stores";
 import { playInkTransition } from "@/common/inkTransition";
 import { RETURN_NARRATIVE } from "./ch01Sc02.content";
 import { KNOCK_CHAIN } from "./ch01Return.content";
@@ -274,7 +274,7 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 
 	beginExplore() {
 		// 固定存档点：玩家进入陈继南家中、场景整体呈现时后台自动建立（幂等）
-		SaveManager.writeFixedCheckpoint();
+		useGameSaveStore().writeFixedCheckpoint();
 		// 从 SC02 闪回返回 → 播放归位叙述 + 敲门暗号
 		if (
 			this.state.flags.has(FLAGS2.COMPLETE) &&
@@ -758,6 +758,6 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	}
 
 	saveProgress() {
-		SaveManager.autosave("CH01_SC01");
+		useGameSaveStore().autosave("CH01_SC01");
 	}
 }

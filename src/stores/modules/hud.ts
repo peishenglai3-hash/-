@@ -1,7 +1,7 @@
 import { ref, reactive } from "vue";
 import { defineStore } from "pinia";
 import { useGameStateStore } from "@/stores/modules/gameState";
-import { getTextSpeedMult } from "@/common/save";
+import { useGameSaveStore } from "@/stores";
 
 // ===== 类型定义 =====
 
@@ -65,6 +65,7 @@ export type SceneOverlay = "Scene1Overlay" | "Scene2Overlay" | "Scene3Overlay" |
 
 export const useHudStore = defineStore("hud", () => {
   const gameState = useGameStateStore();
+  const gameSave = useGameSaveStore();
 
   // --- overlay scene (intro video / future full-screen flows) ---
   const overlay = ref<SceneOverlay>(null);
@@ -139,7 +140,7 @@ export const useHudStore = defineStore("hud", () => {
       _finishNarrative();
       return;
     }
-    const cps = Math.max(4, Math.round((entry.cps || 14) * getTextSpeedMult()));
+    const cps = Math.max(4, Math.round((entry.cps || 14) * gameSave.getTextSpeedMult()));
     dialogue.visible = true;
     dialogue.style = entry.style || "narration";
     dialogue.speaker = entry.speaker_name || "";
