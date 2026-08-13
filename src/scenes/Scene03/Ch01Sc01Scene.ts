@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { createKeyMap, isActionDown, onAction } from "@/common/actions";
-import { state } from "@/common/state";
+import { useGameStateStore } from "@/stores/modules/gameState";
 import {
 	showTask,
 	closeTask,
@@ -44,8 +44,12 @@ import { RETURN_NARRATIVE } from "./ch01Sc02.content";
 import { KNOCK_CHAIN } from "./ch01Return.content";
 // @ts-ignore Shared developer tools support both grid and pixel-coordinate scenes.
 import { CollisionEditor } from "../../zone-editor.js";
+// @ts-ignore Shared foreground renderer is implemented in JavaScript.
+import { ForegroundOcclusionRenderer, foregroundBottomPx } from "../../foreground-occlusion.js";
 // @ts-ignore Legacy actor collider helpers are shared by the editor.
-import { ensureActorColliderConfig, createActorColliderEntry } from "../../actor-collider.js";
+
+
+import { actorColliderBottomAt, ensureActorColliderConfig, createActorColliderEntry, ensureActorVisualConfig, createActorVisualEntry } from "../../actor-collider.js";
 
 const WORLD_W = 1672;
 const WORLD_H = 941;
@@ -57,6 +61,8 @@ const PLAYER_FRAME = {
 };
 const PLAYER_DISPLAY_HEIGHT = 280;
 const CAMERA_ZOOM = 0.765;
+const ACTOR_DEPTH_BASE = 500;
+const actorDepth = (bottomY: number) => ACTOR_DEPTH_BASE + bottomY;
 
 interface ManifestData {
 	spawns: { id: string; position: [number, number]; facing: string }[];
@@ -91,6 +97,12 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	zoneEditor: any;
 	playerColliderProfile: any;
 	actorColliderEntries: any[] = [];
+
+
+	actorVisualProfile: any;
+	actorVisualEntries: any[] = [];
+	background!: Phaser.GameObjects.Image;
+	foregroundOcclusion: any;
 	manifest!: ManifestData;
 	player!: Phaser.Physics.Arcade.Sprite;
 	playerVisual!: Phaser.GameObjects.Sprite;
@@ -107,6 +119,10 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	observationMarks: Phaser.GameObjects.Text[] = [];
 	videoOverlay?: Phaser.GameObjects.Video;
 	bgm?: Phaser.Sound.BaseSound;
+
+	get state() {
+		return useGameStateStore().state;
+	}
 
 	constructor() {
 		super("Ch01Sc01Scene");
@@ -162,7 +178,13 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 		this.manifest = this.cache.json.get("ch01_sc01_manifest");
 		this.setupActorCollider();
 		this.physics.world.setBounds(0, 0, WORLD_W, WORLD_H);
-		this.add.image(WORLD_W / 2, WORLD_H / 2, "ch01_sc01_bg").setDepth(-20);
+		this.background = this.add.image(WORLD_W / 2, WORLD_H / 2, "ch01_sc01_bg").setDepth(-20);
+		this.foregroundOcclusion = new ForegroundOcclusionRenderer(this, {
+			background: this.background,
+			getObjects: () => (this.manifest as any).foreground_occlusion?.objects ?? [],
+			resolveDepth: (object: any) => actorDepth(foregroundBottomPx(object, 1) ?? 0) + 0.001,
+			tileSize: 1,
+		});
 		this.buildCollision();
 
 		const spawn = (id: string) =>
@@ -175,7 +197,12 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 				"chen-walk-down",
 			)
 			.setOrigin(0.5, 1)
-			.setDepth(800);
+			.setDepth(actorDepth(actorColliderBottomAt(
+				playerSpawn.position[0],
+				playerSpawn.position[1],
+				this.playerColliderProfile,
+				1,
+			)));
 		this.applyPlayerColliderBody();
 		this.player.setCollideWorldBounds(true);
 		this.player.setVisible(false);
@@ -191,8 +218,8 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 		this.keyMap = createKeyMap(this);
 		onAction(this, "INTERACT", () => this.handleConfirm());
 		onAction(this, "ADVANCE", () => {
-			if (state.mode === "result") this.beginInkEvent();
-			else if (state.inNarrative) advanceNarrative();
+			if (this.state.mode === "result") this.beginInkEvent();
+			else if (this.state.inNarrative) advanceNarrative();
 			else if (itemPanelOpen()) closeItem();
 		});
 		onAction(this, "PAUSE", () => togglePause());
@@ -204,7 +231,7 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 		});
 		this.bgm.play();
 
-		if (!state.flags.has(FLAGS.VIDEO_SEEN)) {
+		if (!this.state.flags.has(FLAGS.VIDEO_SEEN)) {
 			this.playIntroVideo();
 		} else {
 			this.beginExplore();
@@ -213,15 +240,15 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	}
 
 	playIntroVideo() {
-		state.mode = "intro";
-		state.playerLocked = true;
+		this.state.mode = "intro";
+		this.state.playerLocked = true;
 		this.videoOverlay = this.add
 			.video(WORLD_W / 2, WORLD_H / 2, "ch01_sc01_intro")
 			.setDepth(2000);
 		this.videoOverlay.setDisplaySize(WORLD_W, WORLD_H);
 		this.videoOverlay.play();
 		this.videoOverlay.on("complete", () => {
-			state.flags.add(FLAGS.VIDEO_SEEN);
+			this.state.flags.add(FLAGS.VIDEO_SEEN);
 			this.videoOverlay?.destroy();
 			this.videoOverlay = undefined;
 			this.startIntroNarrative();
@@ -233,7 +260,7 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 					this.videoOverlay.stop();
 					this.videoOverlay.destroy();
 					this.videoOverlay = undefined;
-					state.flags.add(FLAGS.VIDEO_SEEN);
+					this.state.flags.add(FLAGS.VIDEO_SEEN);
 					this.startIntroNarrative();
 				}
 			});
@@ -241,7 +268,7 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	}
 
 	startIntroNarrative() {
-		state.mode = "narrative";
+		this.state.mode = "narrative";
 		playNarrative(INTRO_NARRATIVE, () => this.beginExplore());
 	}
 
@@ -250,29 +277,29 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 		SaveManager.writeFixedCheckpoint();
 		// 从 SC02 闪回返回 → 播放归位叙述 + 敲门暗号
 		if (
-			state.flags.has(FLAGS2.COMPLETE) &&
-			!state.flags.has(FLAGS.INK_DONE)
+			this.state.flags.has(FLAGS2.COMPLETE) &&
+			!this.state.flags.has(FLAGS.INK_DONE)
 		) {
-			state.flags.add(FLAGS.INK_DONE);
-			state.mode = "narrative";
-			state.playerLocked = true;
+			this.state.flags.add(FLAGS.INK_DONE);
+			this.state.mode = "narrative";
+			this.state.playerLocked = true;
 			playNarrative([...RETURN_NARRATIVE, ...KNOCK_CHAIN], () => {
-				state.mode = "explore";
-				state.playerLocked = false;
+				this.state.mode = "explore";
+				this.state.playerLocked = false;
 				showTask(TASKS_CH01_SC01.leave);
 				this.saveProgress();
 			});
 			return;
 		}
 		// 从 SC03 院墙返回 → 场景已标记完成，直接探索模式
-		if (state.flags.has(FLAGS.YARD_DONE)) {
-			state.mode = "explore";
-			state.playerLocked = false;
+		if (this.state.flags.has(FLAGS.YARD_DONE)) {
+			this.state.mode = "explore";
+			this.state.playerLocked = false;
 			showTask({ title: "第一章·待续", detail: "陈继南的故事暂告一段落。" });
 			return;
 		}
-		state.mode = "explore";
-		state.playerLocked = false;
+		this.state.mode = "explore";
+		this.state.playerLocked = false;
 		showTask(TASKS_CH01_SC01.explore);
 	}
 
@@ -296,20 +323,25 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 			.sprite(this.player.x, this.player.y, "chen-walk-down", 0)
 			.setOrigin(0.5, 1)
 			.setDisplaySize(displayWidth, PLAYER_DISPLAY_HEIGHT)
-			.setDepth(801);
+
+
+			.setDepth(this.depthForPlayer());
+		this.applyPlayerVisualHeight(this.actorVisualProfile.display_height);
 	}
 
 	syncPlayerVisual(direction: string, moving: boolean) {
 		if (!this.playerVisual) return;
 		const dir = direction as keyof typeof PLAYER_FRAME;
 		const frame = PLAYER_FRAME[dir];
-		const displayWidth = Math.round(
-			(frame.width / frame.height) * PLAYER_DISPLAY_HEIGHT,
-		);
+		const displayHeight = this.actorVisualProfile.display_height;
+		const displayWidth = Math.round((frame.width / frame.height) * displayHeight);
 		this.playerVisual
-			.setPosition(this.player.x, this.player.y)
-			.setDisplaySize(displayWidth, PLAYER_DISPLAY_HEIGHT)
+
+
+			.setDisplaySize(displayWidth, displayHeight)
+			.setDepth(this.depthForPlayer())
 			.setFlipX(false);
+		this.applyActorVisualPosition();
 		if (moving) {
 			const animation = `chen-walk-${direction}-anim`;
 			if (
@@ -340,6 +372,28 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 			getProfile: () => this.playerColliderProfile,
 			tileSize: 1,
 		})];
+		this.actorVisualProfile = ensureActorVisualConfig(this.manifest as any, "PLAYER", PLAYER_DISPLAY_HEIGHT);
+		this.actorVisualEntries = [createActorVisualEntry({
+			id: "PLAYER",
+			label: "陈继南",
+			getActor: () => this.playerVisual,
+			getProfile: () => this.actorVisualProfile,
+			getAnchor: () => ({ x: this.player.x, y: this.player.y }),
+			onPositionChange: () => this.applyActorVisualPosition(),
+			tileSize: 1,
+		})];
+	}
+
+	applyPlayerVisualHeight(height: number) {
+		if (!this.playerVisual || !Number.isFinite(height) || height <= 0) return;
+		const frame = PLAYER_FRAME[this.playerDirection as keyof typeof PLAYER_FRAME];
+		this.playerVisual.setDisplaySize(Math.round((frame.width / frame.height) * height), height);
+		this.applyActorVisualPosition();
+	}
+
+	applyActorVisualPosition() {
+		const offset = this.actorVisualProfile?.offset ?? [0, 0];
+		this.playerVisual?.setPosition(this.player.x + offset[0], this.player.y + offset[1]);
 	}
 
 	applyPlayerColliderBody() {
@@ -347,6 +401,10 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 		if (!profile || !this.player) return;
 		this.player.setSize(profile.size[0], profile.size[1])
 			.setOffset(PLAYER_FRAME.down.width / 2 + profile.offset[0], PLAYER_FRAME.down.height + profile.offset[1]);
+	}
+
+	depthForPlayer(): number {
+		return actorDepth(actorColliderBottomAt(this.player.x, this.player.y, this.playerColliderProfile, 1));
 	}
 
 	setupZoneEditor() {
@@ -367,17 +425,21 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 			getDefaultForegroundDepth: () => 2000,
 			getWorldSize: () => [WORLD_W, WORLD_H],
 			getActorColliders: () => this.actorColliderEntries,
+			getActorVisuals: () => this.actorVisualEntries,
+			onActorVisualChange: (_id: string, height: number) => this.applyPlayerVisualHeight(height),
 			getMagneticSource: () => this.textures.get("ch01_sc01_bg").getSourceImage(),
 			replaceDocuments: (next: any) => {
 				this.manifest = next[file];
 				documents[file] = this.manifest as any;
 				this.setupActorCollider();
+				this.applyPlayerVisualHeight(this.actorVisualProfile.display_height);
 			},
 			onChange: (kind: string) => {
 				if (!kind || kind === "collision") {
 					this.buildCollision();
 					this.applyPlayerColliderBody();
 				}
+				if (!kind || kind === "foreground") this.foregroundOcclusion.rebuild();
 			},
 		});
 	}
@@ -396,7 +458,7 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 				OBS_DOOR: FLAGS.OBS_DOOR,
 			};
 			const flag = flagMap[obs.id];
-			if (flag && state.flags.has(flag)) continue;
+			if (flag && this.state.flags.has(flag)) continue;
 			const [x, y] = obs.anchor;
 			const mark = this.add
 				.text(x, y, "!", {
@@ -420,7 +482,7 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	}
 
 	handleConfirm() {
-		if (state.taskOpen) return closeTask();
+		if (this.state.taskOpen) return closeTask();
 		if (itemPanelOpen()) return closeItem();
 		this.interact();
 	}
@@ -428,10 +490,15 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	update() {
 		if (this.physics.world.debugGraphic)
 			this.physics.world.debugGraphic.setVisible(false);
-		const canWalk = state.mode === "explore";
+		if (this.player) {
+			const depth = this.depthForPlayer();
+			this.player.setDepth(depth);
+			this.playerVisual?.setDepth(depth);
+		}
+		const canWalk = this.state.mode === "explore";
 		// 交互提示始终更新——即使玩家被任务卡锁定也要显示
 		if (canWalk) this.updatePrompt();
-		if (!this.player || state.playerLocked || state.paused || !canWalk) {
+		if (!this.player || this.state.playerLocked || this.state.paused || !canWalk) {
 			if (this.player) {
 				this.player.setVelocity(0, 0);
 				this.syncPlayerVisual(this.playerDirection, false);
@@ -506,10 +573,10 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 		}[] = [];
 		// Dynamic event targets take precedence over static inspect targets
 		if (
-			state.flags.has(FLAGS.OBS_BASIN) &&
-			state.flags.has(FLAGS.OBS_DESK) &&
-			state.flags.has(FLAGS.OBS_DOOR) &&
-			!state.flags.has(FLAGS.INK_DONE)
+			this.state.flags.has(FLAGS.OBS_BASIN) &&
+			this.state.flags.has(FLAGS.OBS_DESK) &&
+			this.state.flags.has(FLAGS.OBS_DOOR) &&
+			!this.state.flags.has(FLAGS.INK_DONE)
 		) {
 			targets.push({
 				id: "FAMILY_CHOICE1",
@@ -519,8 +586,8 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 			});
 		}
 		if (
-			state.flags.has(FLAGS.INK_DONE) &&
-			!state.flags.has(FLAGS.SCENE_COMPLETE)
+			this.state.flags.has(FLAGS.INK_DONE) &&
+			!this.state.flags.has(FLAGS.SCENE_COMPLETE)
 		) {
 			targets.push({
 				id: "EXIT_COURTYARD",
@@ -542,7 +609,7 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	}
 
 	interact() {
-		if (state.playerLocked || state.mode !== "explore") return;
+		if (this.state.playerLocked || this.state.mode !== "explore") return;
 		const target = this.nearby();
 		if (!target) return;
 		if (target.id === "copper_basin") return this.observeBasin();
@@ -551,8 +618,8 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 		if (target.id === "FAMILY_CHOICE1") return this.startChoice1();
 		if (
 			target.id === "inkstone_paper" &&
-			state.flags.has(FLAGS.INK_DONE) === false &&
-			state.choice
+			this.state.flags.has(FLAGS.INK_DONE) === false &&
+			this.state.choice
 		)
 			return this.startInkEvent();
 		if (target.id === "EXIT_COURTYARD") return this.completeScene();
@@ -569,19 +636,19 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	}
 
 	observeBasin() {
-		state.mode = "narrative";
+		this.state.mode = "narrative";
 		playNarrative(OBS_BASIN_NARRATIVE, () => {
-			state.flags.add(FLAGS.OBS_BASIN);
+			this.state.flags.add(FLAGS.OBS_BASIN);
 			this.updateObservationMarks();
 			this.checkObservationsComplete();
-			state.mode = "explore";
+			this.state.mode = "explore";
 		});
 	}
 
 	observeDesk() {
-		state.mode = "narrative";
+		this.state.mode = "narrative";
 		playNarrative(OBS_DESK_NARRATIVE, () => {
-			state.flags.add(FLAGS.OBS_DESK);
+			this.state.flags.add(FLAGS.OBS_DESK);
 			this.updateObservationMarks();
 			this.checkObservationsComplete();
 			showItem({
@@ -589,14 +656,14 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 				title: "镇纸压纸",
 				text: "纸上有几行未写完的字，最下面一行墨色比别处新一些：陳繼南。",
 			});
-			state.mode = "explore";
+			this.state.mode = "explore";
 		});
 	}
 
 	observeDoor() {
-		state.mode = "narrative";
+		this.state.mode = "narrative";
 		playNarrative(OBS_DOOR_NARRATIVE, () => {
-			state.flags.add(FLAGS.OBS_DOOR);
+			this.state.flags.add(FLAGS.OBS_DOOR);
 			this.updateObservationMarks();
 			this.checkObservationsComplete();
 			showItem({
@@ -604,15 +671,15 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 				title: "外褂",
 				text: "衣摆沾着干泥，像是白天出过门。",
 			});
-			state.mode = "explore";
+			this.state.mode = "explore";
 		});
 	}
 
 	checkObservationsComplete() {
 		if (
-			state.flags.has(FLAGS.OBS_BASIN) &&
-			state.flags.has(FLAGS.OBS_DESK) &&
-			state.flags.has(FLAGS.OBS_DOOR)
+			this.state.flags.has(FLAGS.OBS_BASIN) &&
+			this.state.flags.has(FLAGS.OBS_DESK) &&
+			this.state.flags.has(FLAGS.OBS_DOOR)
 		) {
 			showTask(TASKS_CH01_SC01.choice);
 			showPrompt("回应家人 · E");
@@ -620,10 +687,10 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	}
 
 	startChoice1() {
-		state.mode = "narrative";
-		state.playerLocked = true;
+		this.state.mode = "narrative";
+		this.state.playerLocked = true;
 		playNarrative(CHOICE1_INTRO, () => {
-			state.mode = "choice";
+			this.state.mode = "choice";
 			showChoices(
 				CHOICES,
 				(id: string) => this.choose(id),
@@ -635,28 +702,28 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	choose(id: string) {
 		const choice = CHOICES.find((item) => item.id === id);
 		if (!choice) return;
-		state.choice = choice;
+		this.state.choice = choice;
 		for (const [axis, delta] of Object.entries(
 			PROFILE_DELTAS[choice.id] ?? {},
 		))
-			state.profile[axis] += delta;
-		state.flags.add(choice.flag);
+			this.state.profile[axis] += delta;
+		this.state.flags.add(choice.flag);
 		hideChoices();
 		showResult(choice);
-		state.mode = "result";
+		this.state.mode = "result";
 		this.saveProgress();
 	}
 
 	beginInkEvent() {
 		hideResult();
-		state.mode = "explore";
-		state.playerLocked = false;
+		this.state.mode = "explore";
+		this.state.playerLocked = false;
 		showTask(TASKS_CH01_SC01.ink);
 	}
 
 	startInkEvent() {
-		state.mode = "narrative";
-		state.playerLocked = true;
+		this.state.mode = "narrative";
+		this.state.playerLocked = true;
 		showItem({
 			icon: PROP_PATHS.INK_PEN,
 			title: "未干的墨",
@@ -665,8 +732,8 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 		playNarrative(INK_NARRATIVE, () => {
 			// 墨色漫开 → 墨水痕迹转场 → 进入闪回一·状纸（SC02）
 			hideItem();
-			state.mode = "transition";
-			state.playerLocked = true;
+			this.state.mode = "transition";
+			this.state.playerLocked = true;
 			playInkTransition(this, {
 				fadeOut: false,
 				onCovered: () => this.game.events.emit("ch01:sc02-enter"),
@@ -675,9 +742,9 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	}
 
 	completeScene() {
-		state.mode = "transition";
-		state.playerLocked = true;
-		state.flags.add(FLAGS.SCENE_COMPLETE);
+		this.state.mode = "transition";
+		this.state.playerLocked = true;
+		this.state.flags.add(FLAGS.SCENE_COMPLETE);
 		hideTask();
 		showPrompt("");
 		hideItem();

@@ -1,13 +1,42 @@
 import { normalizeDegrees, pointInRotatedRect, rotatedRectPoints } from './collision-geometry.js';
 import { ForegroundLassoTool } from './magnetic-lasso.js';
 
-const COLORS = { collision: 0xff4fbf, interaction: 0xffdf32, selected: 0xffffff, rotation: 0x55e7ff };
+const COLORS = { collision: 0xff4fbf, interaction: 0xffdf32, visual: 0x55e7ff, anchor: 0xff3b30, selected: 0xffffff, rotation: 0x55e7ff };
 const HANDLE_RADIUS = 0.38;
 const ROTATION_HANDLE_OFFSET = 0.85;
+const ALIGNMENT_SNAP_PX = 8;
+const DEFAULT_REGION_SIZE_PX = {
+  collision: [128, 64],
+  interaction: [96, 64]
+};
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
 const snap = (value, step) => Math.round(value / step) * step;
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+export function nearestAlignment(value, candidates, threshold, selectedKind) {
+  const matches = candidates
+    .map((candidate, index) => ({
+      ...candidate,
+      index,
+      distance: Math.abs(value - candidate.value),
+      sameKind: candidate.kind === selectedKind
+    }))
+    .filter((candidate) => candidate.distance <= threshold)
+    .sort((first, second) => Number(second.sameKind) - Number(first.sameKind)
+      || first.distance - second.distance
+      || first.index - second.index);
+  return matches[0]?.value ?? value;
+}
+
+export function defaultRegionSize(kind, tileSize, worldSize, snapStep) {
+  const fallback = DEFAULT_REGION_SIZE_PX[kind] ?? DEFAULT_REGION_SIZE_PX.interaction;
+  return fallback.map((pixels, axis) => clamp(
+    snap(pixels / tileSize, snapStep),
+    snapStep,
+    worldSize[axis]
+  ));
+}
 
 function transformLocal(center, local, rotation) {
   const radians = rotation * Math.PI / 180;
@@ -66,6 +95,7 @@ export class CollisionEditor {
   }
 
   get sourceItems() {
+    if (this.kind === 'visual') return this.config.getActorVisuals?.() ?? [];
     if (this.kind === 'collision') return this.config.getCollisions();
     if (this.kind === 'interaction') return this.config.getInteractions();
     return this.config.getForegrounds?.() ?? [];
@@ -77,6 +107,7 @@ export class CollisionEditor {
   }
 
   get items() {
+    if (this.kind === 'visual') return this.sourceItems;
     if (this.kind === 'foreground') return this.sourceItems.filter((item) => item.points?.length >= 3);
     const source = this.sourceItems.filter((item) => item.rect);
     return this.kind === 'collision' ? [...source, ...this.actorItems] : source;
@@ -84,6 +115,10 @@ export class CollisionEditor {
 
   rotationOf(item, kind = this.kind) {
     return kind === 'collision' && !item?.actorCollider ? normalizeDegrees(item?.rotation) : 0;
+  }
+
+  actorVisualHeight(item) {
+    return Number(item?.displayHeight) || 0;
   }
 
   foregroundSortY(item) {
@@ -101,6 +136,7 @@ export class CollisionEditor {
         <button data-kind="collision" class="active">碰撞箱</button>
         <button data-kind="interaction">交互区</button>
         <button data-kind="foreground">前景套索</button>
+        <button data-kind="visual">角色贴图</button>
       </div>
       <label>区域<select data-field="item"></select></label>
       <label>名称 / ID<input data-field="id" type="text" spellcheck="false"></label>
@@ -109,7 +145,8 @@ export class CollisionEditor {
       </div>
       <label data-section="rotation">旋转角度（°）<input data-field="rotation" type="number" step="1"></label>
       <label data-section="depth">最低点 Y（格，自动）<input data-field="depth" type="number" step="0.125" disabled></label>
-      <label>吸附<select data-field="snap"><option value="1">1 格</option><option value="0.5">0.5 格</option><option value="0.25" selected>0.25 格</option><option value="0.125">0.125 格</option></select></label>
+      <label data-section="visual-size">贴图高度（像素）<input data-field="visual-height" type="number" min="1" step="1"></label>
+      <label data-section="snap">吸附<select data-field="snap"><option value="1">1 格</option><option value="0.5">0.5 格</option><option value="0.25" selected>0.25 格</option><option value="0.125">0.125 格</option></select></label>
       <p data-field="help">拖动矩形移动；拖动四边或四角缩放；拖动顶部圆点旋转。</p>
       <div class="dev-zone-actions">
         <button data-action="add">新增</button><button data-action="duplicate">复制</button><button data-action="mirror">水平镜像</button><button data-action="delete">删除</button>
@@ -123,6 +160,7 @@ export class CollisionEditor {
     this.status = root.querySelector('[data-field="status"]');
     this.idInput = root.querySelector('[data-field="id"]');
     this.depthInput = root.querySelector('[data-field="depth"]');
+    this.visualHeightInput = root.querySelector('[data-field="visual-height"]');
     this.rotationInput = root.querySelector('[data-field="rotation"]');
     this.help = root.querySelector('[data-field="help"]');
     this.addButton = root.querySelector('[data-action="add"]');
@@ -145,6 +183,7 @@ export class CollisionEditor {
     this.itemSelect.onchange = () => this.select(this.items[Number(this.itemSelect.value)] ?? null);
     this.idInput.onchange = () => this.rename();
     this.rotationInput.oninput = () => this.applyRotation();
+    this.visualHeightInput.oninput = () => this.applyVisualHeight();
     root.querySelector('[data-field="snap"]').onchange = (event) => { this.snapStep = Number(event.target.value); };
     for (const key of ['x', 'y', 'w', 'h']) root.querySelector(`[data-field="${key}"]`).onchange = () => this.applyInputs();
     this.addButton.onclick = () => this.add();
@@ -210,6 +249,15 @@ export class CollisionEditor {
       if (!this.enabled) return;
       if (this.kind === 'foreground') return this.lasso.pointerDown(pointer);
       const point = this.worldPoint(pointer);
+      if (this.kind === 'visual') {
+        const handleItem = [...this.items].reverse().find((item) => this.visualHandleAt(item, point));
+        const handle = handleItem ? this.visualHandleAt(handleItem, point) : '';
+        const hit = handleItem ?? [...this.items].reverse().find((item) => item.containsPoint?.(point));
+        if (!hit) return this.select(null);
+        this.select(hit);
+        this.drag = { mode: handle ? 'visual-resize' : 'visual-move', handle, start: point, position: { ...hit.position }, bounds: { ...hit.bounds }, height: Number(hit.displayHeight), ratio: hit.bounds.width / hit.bounds.height };
+        return;
+      }
       const selectedHandle = this.selected?.rect ? this.handleAt(this.selected, point) : '';
       const hit = selectedHandle ? this.selected : [...this.items].reverse().find((item) => item.rect && pointInRotatedRect(item.rect, this.rotationOf(item), point, 0.12));
       if (!hit) return this.select(null);
@@ -232,7 +280,10 @@ export class CollisionEditor {
         this.updateCursor(point);
         return;
       }
-      if (this.drag.mode === 'move') this.moveRect(point);
+      if (this.kind === 'visual') {
+        if (this.drag.mode === 'visual-move') this.moveVisual(point);
+        else this.resizeVisual(point);
+      } else if (this.drag.mode === 'move') this.moveRect(point);
       else if (this.drag.mode === 'rotate') this.rotateRect(point);
       else this.resizeRect(point);
       this.changed();
@@ -300,6 +351,35 @@ export class CollisionEditor {
     return closest;
   }
 
+  visualHandleAt(item, point) {
+    const bounds = item?.bounds;
+    if (!bounds) return '';
+    const threshold = Math.max(0.5, 12 / this.tileSize);
+    const handles = { nw: [bounds.x, bounds.y], ne: [bounds.x + bounds.width, bounds.y], sw: [bounds.x, bounds.y + bounds.height], se: [bounds.x + bounds.width, bounds.y + bounds.height] };
+    return Object.entries(handles).find(([, [x, y]]) => Math.hypot(point.x - x, point.y - y) <= threshold)?.[0] ?? '';
+  }
+
+  moveVisual(point) {
+    const dx = point.x - this.drag.start.x;
+    const dy = point.y - this.drag.start.y;
+    this.selected.position = { x: this.drag.position.x + dx, y: this.drag.position.y + dy };
+  }
+
+  resizeVisual(point) {
+    const b = this.drag.bounds;
+    const signX = this.drag.handle.includes('w') ? -1 : 1;
+    const signY = this.drag.handle.includes('n') ? -1 : 1;
+    const oppositeX = this.drag.handle.includes('w') ? b.x + b.width : b.x;
+    const oppositeY = this.drag.handle.includes('n') ? b.y + b.height : b.y;
+    const height = Math.max(1 / this.tileSize, Math.max(Math.abs(point.y - oppositeY), Math.abs(point.x - oppositeX) / Math.max(0.01, this.drag.ratio)));
+    const width = height * this.drag.ratio;
+    const x = signX < 0 ? oppositeX - width : oppositeX;
+    const y = signY < 0 ? oppositeY - height : oppositeY;
+    this.selected.displayHeight = height * this.tileSize;
+    this.selected.position = { x: x + width / 2, y: y + height };
+    this.config.onActorVisualChange?.(this.selected.id, this.selected.displayHeight);
+  }
+
   moveRect(point) {
     const [, , width, height] = this.drag.rect;
     const nextCenter = {
@@ -319,6 +399,29 @@ export class CollisionEditor {
     this.selected.rect = fitRectInWorld(this.selected.rect, this.selected.rotation, this.config.getWorldSize());
   }
 
+  alignmentCandidates(axis) {
+    const edgeIndexes = axis === 'x' ? [0, 2] : [1, 3];
+    const candidates = [];
+    for (const kind of ['collision', 'interaction']) {
+      const items = kind === 'collision' ? this.config.getCollisions() : this.config.getInteractions();
+      for (const item of items) {
+        if (item === this.selected || !item?.rect || this.rotationOf(item, kind) !== 0) continue;
+        const [startIndex, sizeIndex] = edgeIndexes;
+        const start = Number(item.rect[startIndex]);
+        const size = Number(item.rect[sizeIndex]);
+        if (!Number.isFinite(start) || !Number.isFinite(size)) continue;
+        candidates.push({ value: start, kind }, { value: start + size, kind });
+      }
+    }
+    return candidates;
+  }
+
+  snapResizeEdge(value, axis) {
+    const zoom = Number(this.scene.cameras.main.zoom) || 1;
+    const threshold = ALIGNMENT_SNAP_PX / (this.tileSize * zoom);
+    return nearestAlignment(value, this.alignmentCandidates(axis), threshold, this.kind);
+  }
+
   resizeRect(point) {
     const [, , width, height] = this.drag.rect;
     const [worldWidth, worldHeight] = this.config.getWorldSize();
@@ -331,6 +434,12 @@ export class CollisionEditor {
     if (this.drag.handle.includes('e')) right = clamp(snap(local.x, this.snapStep), left + this.snapStep, left + worldWidth);
     if (this.drag.handle.includes('n')) top = clamp(snap(local.y, this.snapStep), bottom - worldHeight, bottom - this.snapStep);
     if (this.drag.handle.includes('s')) bottom = clamp(snap(local.y, this.snapStep), top + this.snapStep, top + worldHeight);
+    if (this.drag.rotation === 0) {
+      if (this.drag.handle.includes('w')) left = clamp(this.snapResizeEdge(this.drag.center.x + left, 'x') - this.drag.center.x, right - worldWidth, right - this.snapStep);
+      if (this.drag.handle.includes('e')) right = clamp(this.snapResizeEdge(this.drag.center.x + right, 'x') - this.drag.center.x, left + this.snapStep, left + worldWidth);
+      if (this.drag.handle.includes('n')) top = clamp(this.snapResizeEdge(this.drag.center.y + top, 'y') - this.drag.center.y, bottom - worldHeight, bottom - this.snapStep);
+      if (this.drag.handle.includes('s')) bottom = clamp(this.snapResizeEdge(this.drag.center.y + bottom, 'y') - this.drag.center.y, top + this.snapStep, top + worldHeight);
+    }
     const nextWidth = right - left;
     const nextHeight = bottom - top;
     const centerOffset = transformLocal({ x: 0, y: 0 }, { x: (left + right) / 2, y: (top + bottom) / 2 }, this.drag.rotation);
@@ -343,6 +452,12 @@ export class CollisionEditor {
   }
 
   updateCursor(point) {
+    if (this.kind === 'visual') {
+      const handle = this.selected ? this.visualHandleAt(this.selected, point) : '';
+      const cursors = { nw: 'nwse-resize', se: 'nwse-resize', ne: 'nesw-resize', sw: 'nesw-resize' };
+      this.setCursor(cursors[handle] ?? (this.selected?.containsPoint?.(point) ? 'move' : 'default'));
+      return;
+    }
     if (!this.selected?.rect) return this.setCursor('default');
     const handle = this.handleAt(this.selected, point);
     const cursors = { n: 'ns-resize', s: 'ns-resize', e: 'ew-resize', w: 'ew-resize', ne: 'nesw-resize', sw: 'nesw-resize', nw: 'nwse-resize', se: 'nwse-resize', rotate: 'grab' };
@@ -370,12 +485,17 @@ export class CollisionEditor {
 
   updatePanelMode() {
     const foreground = this.kind === 'foreground';
+    const visual = this.kind === 'visual';
     const collision = this.kind === 'collision';
     const actorCollider = Boolean(this.selected?.actorCollider);
-    this.panel.querySelector('[data-section="rect"]').classList.toggle('hidden', foreground);
+    this.panel.querySelector('[data-section="rect"]').classList.toggle('hidden', foreground || visual);
     this.panel.querySelector('[data-section="rotation"]').classList.toggle('hidden', !collision || actorCollider);
     this.panel.querySelector('[data-section="depth"]').classList.toggle('hidden', !foreground);
-    if (foreground) {
+    this.panel.querySelector('[data-section="visual-size"]').classList.toggle('hidden', !visual);
+    this.panel.querySelector('[data-section="snap"]').classList.toggle('hidden', visual);
+    if (visual) {
+      this.help.textContent = '拖动人物调整贴图位置；拖动四角圆点等比缩放。玩家红色十字表示真实移动点。仅影响当前章节，点击保存 JSON 写入。';
+    } else if (foreground) {
       this.help.textContent = '左键：添加锚点并磁吸图像边缘\n右键：撤销上一步 · 双击：自动闭合完成 · Esc：取消\n遮挡顺序自动比较套索最低点与人物脚底碰撞箱底边；最低点更靠下的一方显示在前。';
     } else if (actorCollider) {
       this.help.textContent = '角色碰撞箱：拖动内部修改脚点偏移，拖动边/角修改尺寸。\n碰撞箱会实时跟随人物；角色项不可删除、复制、镜像或旋转。';
@@ -385,6 +505,7 @@ export class CollisionEditor {
       this.help.textContent = '拖动内部：移动 · 拖动边/角：缩放。';
     }
     this.addButton.textContent = foreground ? (this.lasso?.armed || this.lasso?.drawing ? '正在套索…' : '开始套索') : '新增';
+    this.addButton.disabled = visual;
     this.addButton.classList.toggle('armed', Boolean(this.lasso?.armed || this.lasso?.drawing));
   }
 
@@ -410,19 +531,21 @@ export class CollisionEditor {
     const actorCollider = Boolean(this.selected?.actorCollider);
     const rect = this.selected?.rect ?? ['', '', '', ''];
     this.idInput.value = this.selected?.id ?? '';
-    this.idInput.disabled = !this.selected || actorCollider;
+    this.idInput.disabled = !this.selected || actorCollider || this.kind === 'visual';
     this.depthInput.value = this.selected && this.kind === 'foreground' ? this.foregroundSortY(this.selected) : '';
     this.depthInput.disabled = true;
+    this.visualHeightInput.value = this.kind === 'visual' ? this.actorVisualHeight(this.selected) : '';
+    this.visualHeightInput.disabled = this.kind !== 'visual' || !this.selected;
     this.rotationInput.value = this.selected && this.kind === 'collision' && !actorCollider ? this.rotationOf(this.selected) : '';
     this.rotationInput.disabled = !this.selected || this.kind !== 'collision' || actorCollider;
     ['x', 'y', 'w', 'h'].forEach((key, index) => {
       const input = this.panel.querySelector(`[data-field="${key}"]`);
       input.value = rect[index];
-      input.disabled = !this.selected || this.kind === 'foreground';
+      input.disabled = !this.selected || this.kind === 'foreground' || this.kind === 'visual';
     });
-    this.duplicateButton.disabled = !this.selected || actorCollider;
-    this.mirrorButton.disabled = !this.selected || actorCollider;
-    this.deleteButton.disabled = !this.selected || actorCollider;
+    this.duplicateButton.disabled = !this.selected || actorCollider || this.kind === 'visual';
+    this.mirrorButton.disabled = !this.selected || actorCollider || this.kind === 'visual';
+    this.deleteButton.disabled = !this.selected || actorCollider || this.kind === 'visual';
   }
 
   rename() {
@@ -449,6 +572,15 @@ export class CollisionEditor {
     this.changed();
   }
 
+  applyVisualHeight() {
+    if (this.kind !== 'visual' || !this.selected?.actorVisual) return;
+    const value = Number(this.visualHeightInput.value);
+    if (!Number.isFinite(value) || value <= 0) return this.refreshInputs();
+    this.selected.displayHeight = value;
+    this.config.onActorVisualChange?.(this.selected.id, value);
+    this.changed('角色贴图大小已修改，点击保存 JSON 写入');
+  }
+
   applyRotation() {
     if (!this.selected?.rect || this.kind !== 'collision') return;
     const value = Number(this.rotationInput.value);
@@ -471,10 +603,10 @@ export class CollisionEditor {
 
   add() {
     if (this.kind === 'foreground') return this.lasso.arm();
+    if (this.kind === 'visual') return;
     const prefix = this.kind === 'collision' ? 'collision' : 'interaction';
     const [worldWidth, worldHeight] = this.config.getWorldSize();
-    const width = this.kind === 'collision' ? 4 : 3;
-    const height = 2;
+    const [width, height] = defaultRegionSize(this.kind, this.tileSize, [worldWidth, worldHeight], this.snapStep);
     const item = { id: this.createId(prefix), shape: 'rect', rect: [snap((worldWidth - width) / 2, this.snapStep), snap((worldHeight - height) / 2, this.snapStep), width, height] };
     if (this.kind === 'collision') item.rotation = 0;
     if (this.kind === 'interaction') Object.assign(item, { type: 'inspect', prompt: '新交互区', action: 'inspect' });
@@ -556,6 +688,23 @@ export class CollisionEditor {
   render() {
     const graphics = this.graphics.clear();
     if (!this.enabled) return;
+    if (this.kind === 'visual') {
+      for (const item of this.items) {
+        const bounds = item.bounds;
+        if (!bounds) continue;
+        const selected = item === this.selected;
+        graphics.lineStyle(selected ? 4 : 2, selected ? COLORS.selected : COLORS.visual, 1);
+        graphics.strokeRect(bounds.x * this.tileSize, bounds.y * this.tileSize, bounds.width * this.tileSize, bounds.height * this.tileSize);
+        graphics.fillStyle(selected ? COLORS.selected : COLORS.visual, 1);
+        for (const [x, y] of [[bounds.x, bounds.y], [bounds.x + bounds.width, bounds.y], [bounds.x, bounds.y + bounds.height], [bounds.x + bounds.width, bounds.y + bounds.height]]) graphics.fillCircle(x * this.tileSize, y * this.tileSize, 6);
+        if (item.id === 'PLAYER' && item.anchor) {
+          graphics.lineStyle(2, COLORS.anchor, 1).strokeCircle(item.anchor.x * this.tileSize, item.anchor.y * this.tileSize, 9);
+          graphics.lineBetween(item.anchor.x * this.tileSize - 12, item.anchor.y * this.tileSize, item.anchor.x * this.tileSize + 12, item.anchor.y * this.tileSize);
+          graphics.lineBetween(item.anchor.x * this.tileSize, item.anchor.y * this.tileSize - 12, item.anchor.x * this.tileSize, item.anchor.y * this.tileSize + 12);
+        }
+      }
+      return;
+    }
     for (const kind of ['collision', 'interaction']) {
       const items = kind === 'collision'
         ? [...this.config.getCollisions(), ...this.actorItems]
