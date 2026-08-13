@@ -10,6 +10,11 @@ import { PrologueScene02 } from "@/scenes/Scene02/PrologueScene02";
 import { Ch01Sc01Scene } from "@/scenes/Scene03/Ch01Sc01Scene";
 import { Ch01Sc02Scene } from "@/scenes/Scene03/Ch01Sc02Scene";
 import { Ch01Sc03Scene } from "@/scenes/Scene03/Ch01Sc03Scene";
+import {
+	CHOICES as CH01_SC01_CHOICES,
+	PROFILE_DELTAS as CH01_SC01_PROFILE_DELTAS,
+} from "@/scenes/Scene03/ch01Sc01.content";
+import { FLAGS as CH01_SC01_FLAGS } from "@/scenes/Scene03/ch01Sc01.flags";
 import { setupFlashbackFlow } from "@/components/biz/FlashbackFlow";
 import { state } from "@/common/state";
 import { assetPath } from "@/common/paths";
@@ -115,6 +120,23 @@ export const useDirectorStore = defineStore("director", () => {
 		state.flags.add(choice.flag);
 	}
 
+	function completeCh01Sc01ForDev(): void {
+		const choice = CH01_SC01_CHOICES[Math.floor(Math.random() * CH01_SC01_CHOICES.length)];
+		state.choice = choice;
+		for (const candidate of CH01_SC01_CHOICES) state.flags.delete(candidate.flag);
+		for (const [axis, delta] of Object.entries(CH01_SC01_PROFILE_DELTAS[choice.id] ?? {}))
+			state.profile[axis] += delta;
+		for (const flag of [
+			CH01_SC01_FLAGS.VIDEO_SEEN,
+			CH01_SC01_FLAGS.OBS_BASIN,
+			CH01_SC01_FLAGS.OBS_DESK,
+			CH01_SC01_FLAGS.OBS_DOOR,
+		])
+			state.flags.add(flag);
+		state.flags.add(choice.flag);
+		SaveManager.autosave("CH01_SC01");
+	}
+
 	function clearStoryUi(): void {
 		hideIntro();
 		hideTask();
@@ -128,6 +150,15 @@ export const useDirectorStore = defineStore("director", () => {
 
 	function handleDevNextChapter(sceneKey?: string): void {
 		const activeKey = sceneKey ?? (game.value!.scene.getScenes(true).find((scene: any) => scene.zoneEditor) as any)?.scene.key;
+		if (activeKey === "Ch01Sc01Scene") {
+			clearStoryUi();
+			completeCh01Sc01ForDev();
+			state.mode = "transition";
+			state.playerLocked = true;
+			game.value!.events.emit("ch01:sc02-enter");
+			return;
+		}
+
 		randomizePrologueChoice();
 		state.flags.add("FLAG_PRO_Q01_COMPLETED");
 		clearStoryUi();
