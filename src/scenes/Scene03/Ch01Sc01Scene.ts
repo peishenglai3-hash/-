@@ -310,7 +310,7 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 				frames: PLAYER_FRAME_FILES.map((_, index) => ({
 					key: playerFrameKey(direction, index),
 				})),
-				frameRate: 8,
+				frameRate: 12,
 				repeat: -1,
 			});
 		}

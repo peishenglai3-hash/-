@@ -360,6 +360,7 @@ def process_variant(direction: DirectionInput, variant: str) -> dict[str, object
 def process_ch01_sc01_direction(direction_key: str, folder_name: str) -> dict[str, object]:
     folder = CH01_SC01_ASSET_ROOT / folder_name
     sources = natural_files(folder, ".jpg")
+    mirror_output = direction_key == "down"
     out_dir = folder / "processed" / "version-rekeyed"
     frames_dir = out_dir / "frames"
     runtime_dir = out_dir / "runtime"
@@ -386,6 +387,8 @@ def process_ch01_sc01_direction(direction_key: str, folder_name: str) -> dict[st
     for index, (source, alpha) in enumerate(zip(sources, alphas, strict=True), start=1):
         rgb = load_rgb(source)
         rgba = despill_rgba(rgb, alpha)[crop[1] : crop[3], crop[0] : crop[2]]
+        if mirror_output:
+            rgba = np.fliplr(rgba).copy()
         cropped_rgba.append(rgba)
         frame = Image.fromarray(rgba, "RGBA")
         frame.save(frames_dir / f"frame-{index:02}.png", compress_level=6)
@@ -421,6 +424,8 @@ def process_ch01_sc01_direction(direction_key: str, folder_name: str) -> dict[st
         "runtime": {"width": runtime_width, "height": RUNTIME_HEIGHT, "preserveAspectRatio": True},
         "export": {"format": "png", "transparent": True, "namePattern": "frame-{index:02}.png"},
     }
+    if mirror_output:
+        recipe["transform"] = {"horizontalFlip": True}
     (out_dir / "recipe.json").write_text(json.dumps(recipe, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     (out_dir / "qa-report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return {"direction": direction_key, "recipe": recipe, "report": report}

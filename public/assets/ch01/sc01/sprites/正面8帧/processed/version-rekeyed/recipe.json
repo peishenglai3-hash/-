@@ -22,6 +22,9 @@
     "anchorType": "source-position",
     "allowPerFrameTranslation": false
   },
+  "transform": {
+    "horizontalFlip": true
+  },
   "crop": {
     "x": 535,
     "y": 546,
