@@ -35,6 +35,7 @@ honghu_game/
 ├── .env.development                 # 开发环境变量（VITE_BASE=/）
 ├── .env.production                  # 生产环境变量（VITE_BASE=./）
 ├── CHANGELOG.md / PLAN_title_save_v1.0.md / README.md / LICENSE
+├── .agents/skills/hg-project-tips/SKILL.md  # 项目编码规范 skill（Import 置顶 / Setup Store / 避免过度设计）
 ├── public/
 │   ├── assets/
 │   │   ├── audio/                   # BGM（prologue_bgm.wav / title_bgm.mp3）
@@ -98,15 +99,21 @@ honghu_game/
 │   │   ├── inkTransition.ts         # 程序化墨迹转场（屏幕空间墨团扩散，闪回跳变用）
 │   │   ├── modernPlayerWalk.ts      # 现代主角逐帧行走共享素材（序章用）
 │   │   ├── paths.ts                 # 资源路径工具（assetPath，自动拼接 BASE_URL）
-│   │   ├── save.ts                  # 本地存档系统（SaveManager：auto/fixed 槽+设置+回退）
-│   │   ├── state.ts                 # 游戏状态（flags/profile/choice/risk/propStates/mode 等 + reset 函数）
 │   │   ├── transitionAudio.ts       # 转场合成音效控制器（TransitionAudioController）
 │   │   └── ui.ts                    # HUD 控制转发层（Proxy 代理到 Pinia hud store）
+│   ├── constants/
+│   │   ├── index.ts                 # 常量统一导出
+│   │   └── storage.ts               # localStorage 键名常量（redcode.settings / redcode.save.auto / redcode.save.fixed）
 │   ├── stores/
-│   │   ├── index.ts                 # 统一导出（useHudStore）
+│   │   ├── index.ts                 # 统一导出（useHudStore / useGameStateStore / useDirectorStore + gameSave 重导出）
 │   │   └── modules/
 │   │       ├── hud.ts               # HUD reactive 数据层（Pinia Setup Store，Vue + Phaser 共用）
-│   │       └── director.ts          # 流程编排器（Phaser.Game 单例 + 转场音效 + BGM + 场景路由）
+│   │       ├── director.ts          # 流程编排器（Phaser.Game 单例 + 转场音效 + BGM + 场景路由）
+│   │       ├── gameState.ts         # 游戏状态（GameState 类 + useGameStateStore；flags/profile/choice/risk/propStates/mode 等 + reset）
+│   │       └── gameSave.ts          # 存档系统（useGameSaveStore；auto/fixed 槽 + 设置 + 校验）
+│   ├── utils/
+│   │   ├── index.ts                 # 工具统一导出
+│   │   └── storage.ts               # localStorage 读写封装（settings/auto/fixed 的 get/set）
 │   ├── css/
 │   │   └── base.css                 # 全局布局/重置样式
 │   ├── scenes/
@@ -193,7 +200,7 @@ export function assetPath(path: string): string {
 
 游戏状态分为两层（外加流程编排层）：
 
-**游戏状态** — [src/common/state.ts](src/common/state.ts)，全局可变对象，所有模块直接导入引用：
+**游戏状态** — [src/stores/modules/gameState.ts](src/stores/modules/gameState.ts)，Pinia Setup Store，核心是 `GameState` 类实例（经 `useGameStateStore().state` 访问），各模块通过 store 读写：
 
 - `flags: Set<string>` — 剧情旗标，决定后续场景的状态注入
 - `profile: Record<string, number>` — 画像六维数值（`D`/`C`/`I`/`G`/`P`/`A`），由四选一产生不同增量
@@ -202,9 +209,9 @@ export function assetPath(path: string): string {
 - `propStates: Record<string, string>` — 道具状态，受 `story_state_bindings` 按 flag 注入不同文案
 - `mode: string` — 控制玩家行为模式（`intro`/`explore`/`narrative`/`choice`/`result`/`leave_walk` 等）
 - `playerLocked: boolean` — 控制玩家移动和交互锁定
-- 其余为场景本地瞬态字段（`audioReviewed`/`questionWritten`/`sleepStarted`/`taskOpen`/`inNarrative`/`monumentSeen`/`npcDialogue`/`leavePhase` 等）
+- 其余瞬态字段（`audioReviewed`/`questionWritten`/`sleepStarted`/`taskOpen`/`inNarrative`/`monumentSeen`/`npcDialogue`/`leavePhase` 等）也收在 `GameState` 类内
 
-辅助函数：`resetRunState()`（新开一局，全量清零）、`resetTransientState()`（读档/新游戏/转场进入场景前共用，只复位瞬态字段）。
+辅助方法：`resetRunState()`（新开一局，全量重建 `GameState`）、`resetTransientState()`（读档/新游戏/转场进入场景前共用，只复位瞬态字段）。
 
 **HUD 状态** — [src/stores/modules/hud.ts](src/stores/modules/hud.ts)，Pinia Setup Store，Vue 组件 + Phaser Scene 共用：
 
@@ -237,7 +244,7 @@ Vue 通过 `v-if` 按可见性渲染面板。转场系统由 biz overlay 组件�
 
 ### 场景1 → 场景2 状态传递
 
-`state.flags` 写入 `FLAG_PRO_*` 后，序章场景2 通过 `PRO02_logic.json` 的 `story_state_bindings` 将 flag 映射到 `stateKey`，再匹配 `PRO02_states.json` 注入 `propStates`：
+`gameState.state.flags` 写入 `FLAG_PRO_*` 后，序章场景2 通过 `PRO02_logic.json` 的 `story_state_bindings` 将 flag 映射到 `stateKey`，再匹配 `PRO02_states.json` 注入 `propStates`：
 
 - A 选项 → `FLAG_PRO_NAME_CHECKED` → `notebook: name_checked`
 - B 选项 → `FLAG_PRO_PHOTO_TAKEN` → `phone: monument_photo`
@@ -280,16 +287,16 @@ TitleScene (标题四热区)
 
 启动后 Phaser 自动进入 `TitleScene`（scene 列表首位）：设计图 `public/assets/ui/title_screen.png`（2000×1125）等比铺满 1280×720，四个烧录木牌按钮对应透明热区（创建/加载/设置/退出，悬停微光）。`TitleScene.handleAction` 直接处理四热区：
 
-- **创建（new）**：`resetRunState()` → 停 TitleScene → `Scene01` + `SaveManager.autosave("PROLOGUE_SC01")` → `showOverlay("Scene1Overlay")` 开场视频流程
+- **创建（new）**：`useGameStateStore().resetRunState()` → 停 TitleScene → `Scene01` + `useGameSaveStore().autosave("PROLOGUE_SC01")` → `showOverlay("Scene1Overlay")` 开场视频流程
 - **加载（load）**：`hud.title.loadOpen = true` → `TitleLoadPanel.vue` 列槽（固定检查点在前）→ `directorStore.startFromSave(save)` 直达目标场景，不重玩序章
 - **设置（settings）**：`hud.title.settingsOpen = true` → `TitleSettingsPanel.vue`（音乐/音效音量、文字速度三档），持久化 `redcode.settings`，订阅实时生效
 - **退出（quit）**：`window.close()` + 兜底提示
 
 停留标题期间循环播放 `title_bgm.mp3`（浏览器自动播放限制下于首次交互起播），进入正式游玩即停。
 
-### 存档系统（SaveManager）
+### 存档系统（gameSave）
 
-[src/common/save.ts](src/common/save.ts) 统一管理，localStorage 后端（几 KB 纯 JSON），全部读写 try/catch（隐私模式兜底），`version + checksum` 读档校验：
+存档逻辑集中在 [src/stores/modules/gameSave.ts](src/stores/modules/gameSave.ts) 的 `useGameSaveStore`（Pinia Setup Store），localStorage 后端（几 KB 纯 JSON），全部读写 try/catch（隐私模式兜底），`version + checksum` 读档校验；底层键名与读写封装拆到 [src/constants/storage.ts](src/constants/storage.ts) / [src/utils/storage.ts](src/utils/storage.ts)：
 
 | 槽 | 键 | 写入时机 | 内容 |
 |---|---|---|---|
@@ -298,7 +305,7 @@ TitleScene (标题四热区)
 
 - **场景映射**：`SCENE_KEY`（`SceneId` → Phaser scene key）、`SCENE_META`（label/checkpoint），`SceneId` 为 `PROLOGUE_SC01`/`PROLOGUE_SC02`/`CH01_SC01`/`CH01_SC02`/`CH01_SC03`。
 - **失败回退**：`directorStore.rollbackToCheckpoint()`（`window.rollbackToCheckpoint` 调试钩子）——读 fixed 槽恢复 state 后重启 Ch01Sc01Scene；不重玩现代序章、序章画像/标签保留、穿越后画像恢复存档态、三风险归 0。
-- **读档恢复**：`SaveManager.applyToState(save)` 还原 flags/profile/choice/risk/propStates 并复位瞬态字段。
+- **读档恢复**：`gameSave.applyToState(save)` 还原 flags/profile/choice/risk/propStates 并复位瞬态字段。
 - **设置**：`getSettings`/`updateSettings`/`onSettingsChange`/`getTextSpeedMult` 管理音量与文字速度，持久化 `redcode.settings`。
 - 序章结算仍兼容写 `redcode.prologue.flags` / `redcode.prologue.save`（旧键保留）。
 
@@ -405,3 +412,4 @@ img.src = assetPath('/assets/xxx/yyy.png');
 - **所有新文件使用 `.ts` 扩展名**（共享开发者工具除外，保留 `.js`）；Vue 组件使用 `.vue` 扩展名
 - 类型检查命令：`npx tsc --noEmit`
 - **Phaser Canvas 与 Vue DOM 分开管理**：Phaser 只操作 `<canvas>` 内的 `#game`，Vue 只操作 `#app` 内的 HUD DOM
+- 项目编码规范另见 `.agents/skills/hg-project-tips/SKILL.md`（Import 置顶、Setup Store 风格、避免过度设计、状态分层等）
