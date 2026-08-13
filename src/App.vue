@@ -2,7 +2,7 @@
  * @Author: 吴世扬 18368095041@163.com
  * @Date: 2026-08-11 11:46:35
  * @LastEditors: 吴世扬 18368095041@163.com
- * @LastEditTime: 2026-08-12 17:06:36
+ * @LastEditTime: 2026-08-13 11:59:42
  * @FilePath: /honghu_game/src/App.vue
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
 -->
@@ -25,6 +25,7 @@ import SceneFade from "@/components/ui/SceneFade.vue";
 import PausePanel from "@/components/ui/PausePanel.vue";
 import FlavorToast from "@/components/ui/FlavorToast.vue";
 import EndPanel from "@/components/ui/EndPanel.vue";
+import { useGameStateStore } from "@/stores/modules/gameState";
 
 const hud = useHudStore();
 const directorStore = useDirectorStore();
@@ -45,7 +46,6 @@ onMounted(() => {
 		const scene = game.scene.getScenes(true).find((item: any) => item.zoneEditor) as any;
 		scene?.zoneEditor.toggle();
 	});
-
 });
 
 // 开场视频开始播放：解锁 Web Audio

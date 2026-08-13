@@ -4,12 +4,13 @@ import { useHudStore } from "@/stores/modules/hud";
 import { useDirectorStore } from "@/stores/modules/director";
 import TransitionOverlay from "@/components/ui/TransitionOverlay.vue";
 import { clearFade } from "@/common/ui";
-import { state } from "@/common/state";
+import { useGameStateStore } from "@/stores/modules/gameState";
 import { ambience } from "@/common/ambience";
 import type { TransitionConfig } from "@/types/director";
 
 const hud = useHudStore();
 const directorStore = useDirectorStore();
+const gameState = useGameStateStore();
 
 const local = reactive({
 	active: false,
@@ -121,13 +122,13 @@ onMounted(() => {
 			/* ---- onComplete ---- */
 			clearFade();
 			g.scene.stop("Scene01");
-			state.mode = "intro";
-			state.playerLocked = true;
-			state.taskOpen = false;
-			state.paused = false;
-			state.narrativeQueue = [];
-			state.narrativeIndex = 0;
-			state.inNarrative = false;
+			gameState.state.mode = "intro";
+			gameState.state.playerLocked = true;
+			gameState.state.taskOpen = false;
+			gameState.state.paused = false;
+			gameState.state.narrativeQueue = [];
+			gameState.state.narrativeIndex = 0;
+			gameState.state.inNarrative = false;
 			ambience.unlock();
 			ambience.startRoom();
 			directorStore.enterScene("PrologueScene02", "PROLOGUE_SC02");
