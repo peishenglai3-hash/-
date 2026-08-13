@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { createKeyMap, isActionDown, onAction } from "@/common/actions";
-import { state } from "@/common/state";
+import { useGameStateStore } from "@/stores/modules/gameState";
 import {
 	showTask,
 	closeTask,
@@ -113,6 +113,10 @@ export class PrologueScene02 extends Phaser.Scene {
 	flavorArmed!: Map<string, boolean>;
 	introSide: boolean = false;
 
+	get state() {
+		return useGameStateStore().state;
+	}
+
 	constructor() {
 		super("PrologueScene02");
 	}
@@ -190,7 +194,7 @@ export class PrologueScene02 extends Phaser.Scene {
 			.setZoom(1);
 		onAction(this, "INTERACT", () => this.handleConfirm());
 		onAction(this, "ADVANCE", () => {
-			if (state.inNarrative) advanceNarrative();
+			if (this.state.inNarrative) advanceNarrative();
 			else if (itemPanelOpen()) closeItem();
 		});
 		onAction(this, "PAUSE", () => togglePause());
@@ -206,11 +210,11 @@ export class PrologueScene02 extends Phaser.Scene {
 			const flag = Object.keys(bindings.flag_map).find(
 				(name) => bindings.flag_map[name] === stateKey,
 			);
-			if (!flag || !state.flags.has(flag)) continue;
+			if (!flag || !this.state.flags.has(flag)) continue;
 			for (const [prop, value] of Object.entries(
 				this.statesData[stateKey] ?? {},
 			)) {
-				if (prop in state.propStates) state.propStates[prop] = value;
+				if (prop in this.state.propStates) this.state.propStates[prop] = value;
 			}
 		}
 	}
@@ -387,9 +391,9 @@ export class PrologueScene02 extends Phaser.Scene {
 
 	updateObjective() {
 		let target: string | null = null;
-		if (state.mode === "explore" && !state.sleepStarted) {
-			if (!state.audioReviewed) target = "recorder";
-			else if (!state.questionWritten) target = "notebook";
+		if (this.state.mode === "explore" && !this.state.sleepStarted) {
+			if (!this.state.audioReviewed) target = "recorder";
+			else if (!this.state.questionWritten) target = "notebook";
 			else target = "bed";
 		}
 		this.objectiveTarget = target;
@@ -401,7 +405,7 @@ export class PrologueScene02 extends Phaser.Scene {
 	}
 
 	updateFlavor() {
-		if (state.mode !== "explore" || state.playerLocked || state.paused)
+		if (this.state.mode !== "explore" || this.state.playerLocked || this.state.paused)
 			return;
 		const px = this.player.x / PX;
 		const py = this.player.y / PX;
@@ -419,13 +423,13 @@ export class PrologueScene02 extends Phaser.Scene {
 	}
 
 	handleConfirm() {
-		if (state.taskOpen) return closeTask();
+		if (this.state.taskOpen) return closeTask();
 		if (itemPanelOpen()) return closeItem();
 		this.interact();
 	}
 
 	interact() {
-		if (state.playerLocked || state.mode !== "explore") return;
+		if (this.state.playerLocked || this.state.mode !== "explore") return;
 		const zone = this.nearby();
 		if (!zone) return;
 		showPrompt("");
@@ -439,7 +443,7 @@ export class PrologueScene02 extends Phaser.Scene {
 					icon: assetPath("/assets/items/phone-icon.png"),
 					title: "手机",
 					text:
-						PROP_LINES.phone[state.propStates.phone] ??
+						PROP_LINES.phone[this.state.propStates.phone] ??
 						PROP_LINES.phone.default,
 				});
 			case "desk_look":
@@ -454,64 +458,64 @@ export class PrologueScene02 extends Phaser.Scene {
 	}
 
 	recorderReview(zone: InteractionZone) {
-		if (state.audioReviewed) {
+		if (this.state.audioReviewed) {
 			return this.oneLine(
-				zone.repeat_line_state?.[state.propStates.recorder] ??
+				zone.repeat_line_state?.[this.state.propStates.recorder] ??
 					zone.repeat_line!,
 			);
 		}
-		state.mode = "narrative";
+		this.state.mode = "narrative";
 		ambience.play("tape");
 		showItemPassive({
 			icon: assetPath("/assets/items/recorder-icon.png"),
 			title: "采访录音设备",
 			text:
-				PROP_LINES.recorder[state.propStates.recorder] ??
+				PROP_LINES.recorder[this.state.propStates.recorder] ??
 				PROP_LINES.recorder.default,
 		});
 		playNarrative(AUDIO_REVIEW, () => {
 			hideItem();
 			ambience.play("stopTape");
-			state.audioReviewed = true;
-			state.flags.add("FLAG_PRO02_AUDIO_REVIEWED");
-			state.mode = "explore";
+			this.state.audioReviewed = true;
+			this.state.flags.add("FLAG_PRO02_AUDIO_REVIEWED");
+			this.state.mode = "explore";
 			showTask(TASKS.afterAudio);
 		});
 	}
 
 	notebookWrite(zone: InteractionZone) {
-		if (!state.audioReviewed) {
-			const line = `${PROP_LINES.notebook[state.propStates.notebook] ?? PROP_LINES.notebook.default} ${zone.blocked_line ?? ONE_LINERS.notebookBlocked}`;
+		if (!this.state.audioReviewed) {
+			const line = `${PROP_LINES.notebook[this.state.propStates.notebook] ?? PROP_LINES.notebook.default} ${zone.blocked_line ?? ONE_LINERS.notebookBlocked}`;
 			return this.oneLine(line);
 		}
-		if (state.questionWritten)
+		if (this.state.questionWritten)
 			return this.oneLine(zone.repeat_line ?? ONE_LINERS.notebookRepeat);
-		state.mode = "narrative";
+		this.state.mode = "narrative";
 		showItemPassive({
 			icon: assetPath("/assets/items/notebook-written-icon.png"),
 			title: "实践笔记",
 			text:
-				PROP_LINES.notebook[state.propStates.notebook] ??
+				PROP_LINES.notebook[this.state.propStates.notebook] ??
 				PROP_LINES.notebook.default,
 		});
 		playNarrative(WRITE_QUESTION, () => {
 			hideItem();
-			state.questionWritten = true;
-			state.flags.add("FLAG_PRO02_QUESTION_WRITTEN");
+			this.state.questionWritten = true;
+			this.state.flags.add("FLAG_PRO02_QUESTION_WRITTEN");
 			this.startSleepChain();
 		});
 	}
 
 	bedLook() {
-		if (state.audioReviewed && state.questionWritten && !state.sleepStarted)
+		if (this.state.audioReviewed && this.state.questionWritten && !this.state.sleepStarted)
 			return this.startSleepChain();
 		return this.oneLine(ONE_LINERS.bed);
 	}
 
 	startSleepChain() {
-		if (state.sleepStarted) return;
-		state.sleepStarted = true;
-		state.mode = "narrative";
+		if (this.state.sleepStarted) return;
+		this.state.sleepStarted = true;
+		this.state.mode = "narrative";
 		showPrompt("");
 		playNarrative(FALL_ASLEEP, () => {
 			ambience.play("sleepFade");
@@ -521,7 +525,7 @@ export class PrologueScene02 extends Phaser.Scene {
 	}
 
 	oneLine(text: string) {
-		state.mode = "narrative";
+		this.state.mode = "narrative";
 		playNarrative(
 			[
 				{
@@ -536,16 +540,16 @@ export class PrologueScene02 extends Phaser.Scene {
 				},
 			],
 			() => {
-				state.mode = "explore";
+				this.state.mode = "explore";
 			},
 		);
 	}
 
 	startOpening() {
-		if (state.mode !== "intro") return;
-		state.mode = "narrative";
+		if (this.state.mode !== "intro") return;
+		this.state.mode = "narrative";
 		playNarrative(OPENING, () => {
-			state.mode = "explore";
+			this.state.mode = "explore";
 			showTask(TASKS.opening);
 		});
 	}
@@ -555,12 +559,12 @@ export class PrologueScene02 extends Phaser.Scene {
 			this.physics.world.debugGraphic.setVisible(false);
 		this.updateObjective();
 		this.updateFlavor();
-		if (state.paused) {
+		if (this.state.paused) {
 			this.player.setVelocity(0, 0);
 			return;
 		}
-		const canWalk = state.mode === "explore";
-		if (!this.player || state.playerLocked || !canWalk) {
+		const canWalk = this.state.mode === "explore";
+		if (!this.player || this.state.playerLocked || !canWalk) {
 			if (this.player) {
 				this.player.setVelocity(0, 0);
 				this.syncPlayerVisual(this.playerDirection, false);

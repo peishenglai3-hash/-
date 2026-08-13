@@ -3,7 +3,7 @@
 // 存储后端：localStorage（存档为几 KB 纯 JSON，无截图，远低于 5MB 配额；与现有 redcode.* 键一致）
 // 健壮性：全部读写 try/catch（隐私模式兜底）；version + checksum，读档校验失败自动丢弃
 // 设计参考：GitHub 调研（RPG-JS 策略模式 / Miu2D 版本迁移 / EasyRPG 固定检查点槽）
-import { state, resetTransientState } from "@/common/state";
+import { useGameStateStore } from "@/stores/modules/gameState";
 import type { GameSettings, RunSave, SceneId } from "@/types/common";
 
 const KEY_SETTINGS = "redcode.settings";
@@ -85,6 +85,7 @@ function buildSave(
 	fixed: string[],
 	risk: { identity: number; execution: number; coordination: number },
 ): RunSave {
+	const { state } = useGameStateStore();
 	const base = {
 		version: SAVE_VERSION,
 		kind,
@@ -114,6 +115,7 @@ function verify(raw: unknown): RunSave | null {
 export const SaveManager = {
 	// 场景切换自动存档：写 auto 槽（滚动覆写）
 	autosave(sceneId: SceneId): RunSave | null {
+		const { state } = useGameStateStore();
 		const tags = [...state.flags];
 		const fixed = tags.filter((t) => FIXED_TAGS.includes(t));
 		const save = buildSave("auto", sceneId, tags, fixed, { ...state.risk });
@@ -123,6 +125,7 @@ export const SaveManager = {
 	// 固定存档点：玩家进入陈继南家中、场景整体呈现时写入。
 	// 严格对齐任务单：仅保留序章画像与序章标签（过滤 CH01 旗标），三风险归 0，双固定标签。
 	writeFixedCheckpoint(): RunSave | null {
+		const { state } = useGameStateStore();
 		const tags = [...state.flags].filter((t) => !t.startsWith("CH01"));
 		const save = buildSave("fixed", "CH01_SC01", tags, [...FIXED_TAGS], {
 			identity: 0,
@@ -149,6 +152,7 @@ export const SaveManager = {
 
 	// 将存档还原到运行时 state（旗标/画像/选择/风险/道具状态），瞬态字段复位
 	applyToState(save: RunSave): void {
+		const { state, resetTransientState } = useGameStateStore();
 		state.flags = new Set([...save.tags, ...save.fixed]);
 		for (const axis of Object.keys(state.profile)) state.profile[axis] = 0;
 		for (const [axis, value] of Object.entries(save.profile))
