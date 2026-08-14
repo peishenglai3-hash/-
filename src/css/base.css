@@ -89,14 +89,15 @@ body {
 .dev-zone-actions { flex-wrap: wrap; }
 .dev-zone-actions button { flex: 1 0 45%; padding: 7px 5px; }
 .dev-zone-actions button.primary { border-color: #ffdf32; background: #514811; color: #fff8b2; }
+.dev-zone-actions button.dev-test-task { flex-basis: 100%; border-color: #55e7ff; background: #123c43; color: #bffaff; }
 .dev-zone-actions button.dev-next-chapter { flex-basis: 100%; border-color: #ff4fbf; background: #4b1733; color: #ffd7ed; }
 .dev-zone-editor output { display: block; margin-top: 9px; padding-top: 8px; border-top: 1px dashed #555; color: #ffbfdf; font-size: 10px; }
 .dev-zone-tabs button[data-kind="foreground"].active { border-color: #55e7ff; color: #55e7ff; box-shadow: inset 0 -2px #55e7ff; }
 .dev-zone-editor input:disabled, .dev-zone-editor select:disabled, .dev-zone-editor button:disabled { opacity: .45; cursor: not-allowed; }
 .dev-zone-actions button.armed { border-color: #55e7ff; background: #123c43; color: #bffaff; }
 
-body.dev-editor-active #app > :not(#game),
-body.dev-editor-active #app > :not(#game) * {
+body.dev-editor-active #app > :not(#game):not(.dev-player-tuning),
+body.dev-editor-active #app > :not(#game):not(.dev-player-tuning) * {
 	pointer-events: none !important;
 }
 
@@ -108,4 +109,9 @@ body.dev-editor-active #game canvas {
 body.dev-editor-active .dev-zone-editor,
 body.dev-editor-active .dev-zone-editor * {
 	pointer-events: auto;
+}
+
+body.dev-editor-active #app > .dev-player-tuning,
+body.dev-editor-active #app > .dev-player-tuning * {
+	pointer-events: auto !important;
 }

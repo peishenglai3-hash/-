@@ -38,6 +38,9 @@ export function hideResult() { store().hideResult(); }
 export function showTask(task: any) { store().showTask(task); }
 export function closeTask() { store().closeTask(); }
 export function hideTask() { store().hideTask(); }
+export function taskNeedsConfirmation() { return store().taskNeedsConfirmation(); }
+export function getPlayerMovementMultiplier() { return store().devPlayerTuning.movementMultiplier; }
+export function getPlayerAnimationMultiplier() { return store().devPlayerTuning.animationMultiplier; }
 export function showPrompt(text: string) { store().showPrompt(text); }
 export function hidePrompt() { store().hidePrompt(); }
 export function fadeToBlack() { store().fadeToBlack(); }

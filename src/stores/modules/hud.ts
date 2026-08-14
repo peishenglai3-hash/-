@@ -1,4 +1,4 @@
-import { ref, reactive } from "vue";
+import { computed, ref, reactive } from "vue";
 import { defineStore } from "pinia";
 import { useGameStateStore } from "@/stores/modules/gameState";
 import { getTextSpeedMult } from "@/common/save";
@@ -21,6 +21,10 @@ export interface NarrativeEntry {
 export interface TaskCard {
   title: string;
   detail: string;
+}
+
+export interface TaskCardEntry extends TaskCard {
+  id: number;
 }
 
 export interface ItemPanel {
@@ -56,6 +60,8 @@ let _narrativeTimer: number | null = null;
 let _narrativeQueue: NarrativeEntry[] = [];
 let _narrativeIndex = 0;
 let _narrativeOnComplete: (() => void) | null = null;
+let _taskId = 0;
+let _testTaskIndex = 0;
 
 // ===== 覆盖层场景类型（全屏流程组件，同一时刻只显示一个） =====
 
@@ -72,9 +78,22 @@ export const useHudStore = defineStore("hud", () => {
   // --- title sub panels ---
   const title = reactive({ loadOpen: false, settingsOpen: false });
 
+  // --- developer player tuning (runtime only) ---
+  const devEditorVisible = ref(false);
+  const devPlayerTuning = reactive({
+    movementMultiplier: 1,
+    animationMultiplier: 1,
+  });
+
   // --- task card ---
-  const taskCard = ref<TaskCard | null>(null);
-  const taskCenter = ref(false);
+  const taskCards = ref<TaskCardEntry[]>([]);
+  const taskCenterId = ref<number | null>(null);
+  const taskWindowStart = ref(0);
+  const taskCenter = computed(() => taskCenterId.value !== null);
+  const visibleTaskCards = computed(() =>
+    taskCards.value.slice(taskWindowStart.value, taskWindowStart.value + 3),
+  );
+  const taskWindowCount = computed(() => Math.max(1, taskCards.value.length - 2));
 
   // --- interaction prompt ---
   const prompt = ref("");
@@ -130,6 +149,15 @@ export const useHudStore = defineStore("hud", () => {
 
   // --- global lock ---
   const playerLocked = ref(false);
+
+  function setDevEditorVisible(visible: boolean) {
+    devEditorVisible.value = visible;
+  }
+
+  function resetDevPlayerTuning() {
+    devPlayerTuning.movementMultiplier = 1;
+    devPlayerTuning.animationMultiplier = 1;
+  }
 
   // ===== 内部函数 =====
 
@@ -273,30 +301,66 @@ export const useHudStore = defineStore("hud", () => {
   }
 
   // --- 任务卡片（两段式：居中强制确认 → 右上角待办） ---
-  function showTask(task: TaskCard) {
-    gameState.state.taskPreviousLock = gameState.state.playerLocked;
+  function showTask(task: TaskCard, centerWhenEmpty = true) {
+    const shouldCenter = centerWhenEmpty && taskCards.value.length === 0;
+    const entry = { ...task, id: ++_taskId };
+    taskCards.value.unshift(entry);
+    taskWindowStart.value = 0;
     gameState.state.taskOpen = true;
-    gameState.state.playerLocked = true;
-    taskCenter.value = true;
-    taskCard.value = task;
+    if (shouldCenter) {
+      gameState.state.taskPreviousLock = gameState.state.playerLocked;
+      gameState.state.playerLocked = true;
+      taskCenterId.value = entry.id;
+    }
   }
 
   function closeTask() {
     if (!gameState.state.taskOpen) return;
     // 第一段：居中 → 缩到右上角
-    if (taskCenter.value) {
-      taskCenter.value = false;
+    if (taskCenterId.value !== null) {
+      taskCenterId.value = null;
+      gameState.state.playerLocked = ["explore", "leave_walk"].includes(gameState.state.mode)
+        ? false
+        : gameState.state.taskPreviousLock;
       return;
     }
     // 第二段：右上角 → 彻底关闭
-    gameState.state.taskOpen = false;
-    taskCard.value = null;
-    gameState.state.playerLocked = gameState.state.taskPreviousLock;
+    taskCards.value.splice(taskWindowStart.value, 1);
+    taskWindowStart.value = Math.min(
+      taskWindowStart.value,
+      Math.max(0, taskCards.value.length - 3),
+    );
+    gameState.state.taskOpen = taskCards.value.length > 0;
   }
 
   function hideTask() {
     gameState.state.taskOpen = false;
-    taskCard.value = null;
+    taskCards.value = [];
+    taskCenterId.value = null;
+    taskWindowStart.value = 0;
+  }
+
+  function taskNeedsConfirmation(): boolean {
+    return taskCenterId.value !== null;
+  }
+
+  function showNewerTasks() {
+    taskWindowStart.value = Math.max(0, taskWindowStart.value - 1);
+  }
+
+  function showOlderTasks() {
+    taskWindowStart.value = Math.min(
+      Math.max(0, taskCards.value.length - 3),
+      taskWindowStart.value + 1,
+    );
+  }
+
+  function addTestTask() {
+    _testTaskIndex += 1;
+    showTask({
+      title: `测试任务 ${_testTaskIndex}`,
+      detail: "仅用于查看任务堆叠与切换效果，不会写入 JSON。",
+    }, false);
   }
 
   // --- 交互提示 ---
@@ -359,8 +423,14 @@ export const useHudStore = defineStore("hud", () => {
   return {
     overlay,
     title,
-    taskCard,
+    taskCards,
+    devEditorVisible,
+    devPlayerTuning,
     taskCenter,
+    taskCenterId,
+    taskWindowStart,
+    taskWindowCount,
+    visibleTaskCards,
     prompt,
     dialogue,
     itemPanel,
@@ -375,6 +445,8 @@ export const useHudStore = defineStore("hud", () => {
     playerLocked,
     // actions
     showFlavor,
+    setDevEditorVisible,
+    resetDevPlayerTuning,
     playNarrative,
     advanceNarrative,
     hideDialogue,
@@ -390,6 +462,10 @@ export const useHudStore = defineStore("hud", () => {
     showTask,
     closeTask,
     hideTask,
+    taskNeedsConfirmation,
+    showNewerTasks,
+    showOlderTasks,
+    addTestTask,
     showPrompt,
     hidePrompt,
     fadeToBlack,

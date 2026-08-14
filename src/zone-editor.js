@@ -151,6 +151,7 @@ export class CollisionEditor {
       <div class="dev-zone-actions">
         <button data-action="add">新增</button><button data-action="duplicate">复制</button><button data-action="mirror">水平镜像</button><button data-action="delete">删除</button>
         <button data-action="reset">重载</button><button data-action="save" class="primary">保存 JSON</button>
+        <button data-action="test-task" class="dev-test-task">增加测试任务</button>
         <button data-action="next-chapter" class="dev-next-chapter">随机属性并跳到下一章</button>
       </div>
       <output data-field="status">未保存的修改会在刷新后丢失</output>`;
@@ -192,6 +193,9 @@ export class CollisionEditor {
     this.deleteButton.onclick = () => this.remove();
     root.querySelector('[data-action="reset"]').onclick = () => this.reset();
     root.querySelector('[data-action="save"]').onclick = () => this.save();
+    root.querySelector('[data-action="test-task"]').onclick = () => {
+      window.dispatchEvent(new CustomEvent('honghu:dev-add-task'));
+    };
     root.querySelector('[data-action="next-chapter"]').onclick = () => {
       const sceneKey = this.scene.scene.key;
       this.setEnabled(false);
@@ -471,6 +475,7 @@ export class CollisionEditor {
   setEnabled(enabled) {
     this.enabled = enabled;
     document.body.classList.toggle('dev-editor-active', enabled);
+    window.dispatchEvent(new CustomEvent('honghu:dev-editor-toggle', { detail: { enabled } }));
     this.graphics.setVisible(enabled);
     this.panel.classList.toggle('hidden', !enabled);
     if (enabled) this.select(this.items[0] ?? null);

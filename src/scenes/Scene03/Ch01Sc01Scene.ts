@@ -4,6 +4,9 @@ import { useGameStateStore } from "@/stores/modules/gameState";
 import {
 	showTask,
 	closeTask,
+	taskNeedsConfirmation,
+	getPlayerMovementMultiplier,
+	getPlayerAnimationMultiplier,
 	hideTask,
 	showPrompt,
 	hidePrompt,
@@ -333,15 +336,13 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 
 	syncPlayerVisual(direction: string, moving: boolean) {
 		if (!this.playerVisual) return;
+		this.playerVisual.anims.timeScale = getPlayerAnimationMultiplier();
 		const dir = direction as PlayerDirection;
 		const firstFrame = playerFrameKey(dir, 0);
 		const source = this.textures.get(firstFrame).getSourceImage() as HTMLImageElement;
 		const displayHeight = this.actorVisualProfile.display_height;
 		const displayWidth = Math.round((source.width / source.height) * displayHeight);
 		this.playerVisual
-
-
-			.setDisplaySize(displayWidth, displayHeight)
 			.setDepth(this.depthForPlayer())
 			.setFlipX(false);
 		this.applyActorVisualPosition();
@@ -350,12 +351,17 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 			if (
 				this.playerVisual.anims.currentAnim?.key !== animation ||
 				!this.playerVisual.anims.isPlaying
-			)
+			) {
+				this.playerVisual.setTexture(firstFrame);
 				this.playerVisual.play(animation);
+			}
+			this.playerVisual.setDisplaySize(displayWidth, displayHeight);
 			return;
 		}
 		this.playerVisual.anims.stop();
-		this.playerVisual.setTexture(firstFrame);
+		this.playerVisual
+			.setTexture(firstFrame)
+			.setDisplaySize(displayWidth, displayHeight);
 	}
 
 	buildCollision() {
@@ -490,8 +496,10 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	}
 
 	handleConfirm() {
-		if (this.state.taskOpen) return closeTask();
+		if (taskNeedsConfirmation()) return closeTask();
 		if (itemPanelOpen()) return closeItem();
+		if (this.nearby()) return this.interact();
+		if (this.state.taskOpen) return closeTask();
 		this.interact();
 	}
 
@@ -513,7 +521,7 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 			}
 			return;
 		}
-		const speed = 220;
+		const speed = 220 * getPlayerMovementMultiplier();
 		let x = 0;
 		let y = 0;
 		if (isActionDown(this.keyMap, "MOVE_LEFT")) x -= 1;

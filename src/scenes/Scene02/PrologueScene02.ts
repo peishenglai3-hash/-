@@ -4,6 +4,9 @@ import { useGameStateStore } from "@/stores/modules/gameState";
 import {
 	showTask,
 	closeTask,
+	taskNeedsConfirmation,
+	getPlayerMovementMultiplier,
+	getPlayerAnimationMultiplier,
 	showPrompt,
 	playNarrative,
 	advanceNarrative,
@@ -337,6 +340,7 @@ export class PrologueScene02 extends Phaser.Scene {
 
 	syncPlayerVisual(direction: string, moving: boolean) {
 		if (!this.playerVisual) return;
+		this.playerVisual.anims.timeScale = getPlayerAnimationMultiplier();
 
 
 		this.applyActorVisualPosition();
@@ -423,8 +427,10 @@ export class PrologueScene02 extends Phaser.Scene {
 	}
 
 	handleConfirm() {
-		if (this.state.taskOpen) return closeTask();
+		if (taskNeedsConfirmation()) return closeTask();
 		if (itemPanelOpen()) return closeItem();
+		if (this.nearby()) return this.interact();
+		if (this.state.taskOpen) return closeTask();
 		this.interact();
 	}
 
@@ -571,7 +577,7 @@ export class PrologueScene02 extends Phaser.Scene {
 			}
 			return;
 		}
-		const speed = 150;
+		const speed = 150 * getPlayerMovementMultiplier();
 		let x = 0;
 		let y = 0;
 		if (isActionDown(this.keyMap, "MOVE_LEFT")) x -= 1;

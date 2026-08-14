@@ -5,6 +5,9 @@ import {
 	showTask,
 	hideTask,
 	closeTask,
+	taskNeedsConfirmation,
+	getPlayerMovementMultiplier,
+	getPlayerAnimationMultiplier,
 	showPrompt,
 	hidePrompt,
 	playNarrative,
@@ -23,9 +26,9 @@ import { CollisionEditor } from "../../zone-editor.js";
 // @ts-ignore Legacy actor collider helpers are shared by the editor.
 import { ensureActorColliderConfig, createActorColliderEntry } from "../../actor-collider.js";
 import {
-	CHEN_SOURCE_FRAME,
 	chenAnimKey,
 	chenDisplayWidth,
+	chenFrameSize,
 	chenFrameKey,
 	createChenWalkAnimations,
 	preloadChenWalk,
@@ -160,11 +163,12 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 	applyPlayerColliderBody() {
 		const profile = this.playerColliderProfile;
 		if (!profile || !this.player) return;
+		const source = chenFrameSize(this, "right");
 		this.player
 			.setSize(profile.size[0], profile.size[1])
 			.setOffset(
-				CHEN_SOURCE_FRAME.width / 2 + profile.offset[0],
-				CHEN_SOURCE_FRAME.height + profile.offset[1],
+				source.width / 2 + profile.offset[0],
+				source.height + profile.offset[1],
 			);
 	}
 
@@ -208,24 +212,33 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 		this.playerVisual = this.add
 			.sprite(this.player.x, this.player.y, chenFrameKey("right", 0))
 			.setOrigin(0.5, 1)
-			.setDisplaySize(chenDisplayWidth(PLAYER_DISPLAY_HEIGHT), PLAYER_DISPLAY_HEIGHT)
+			.setDisplaySize(
+				chenDisplayWidth(this, "right", PLAYER_DISPLAY_HEIGHT),
+				PLAYER_DISPLAY_HEIGHT,
+			)
 			.setDepth(801);
 	}
 
 	syncPlayerVisual(direction: ChenWalkDirection, moving: boolean) {
 		if (!this.playerVisual) return;
+		this.playerVisual.anims.timeScale = getPlayerAnimationMultiplier();
 		this.playerVisual
 			.setPosition(this.player.x, this.player.y)
-			.setDisplaySize(chenDisplayWidth(PLAYER_DISPLAY_HEIGHT), PLAYER_DISPLAY_HEIGHT)
 			.setFlipX(false);
+		const displayWidth = chenDisplayWidth(this, direction, PLAYER_DISPLAY_HEIGHT);
 		const animation = chenAnimKey(direction);
 		if (moving) {
-			if (this.playerVisual.anims.currentAnim?.key !== animation || !this.playerVisual.anims.isPlaying)
+			if (this.playerVisual.anims.currentAnim?.key !== animation || !this.playerVisual.anims.isPlaying) {
+				this.playerVisual.setTexture(chenFrameKey(direction, 0));
 				this.playerVisual.play(animation);
+			}
+			this.playerVisual.setDisplaySize(displayWidth, PLAYER_DISPLAY_HEIGHT);
 			return;
 		}
 		this.playerVisual.anims.stop();
-		this.playerVisual.setTexture(chenFrameKey(direction, 0));
+		this.playerVisual
+			.setTexture(chenFrameKey(direction, 0))
+			.setDisplaySize(displayWidth, PLAYER_DISPLAY_HEIGHT);
 	}
 
 	buildCollision() {
@@ -249,7 +262,7 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 			}
 			return;
 		}
-		const speed = 220;
+		const speed = 220 * getPlayerMovementMultiplier();
 		let x = 0;
 		let y = 0;
 		if (isActionDown(this.keyMap, "MOVE_LEFT")) x -= 1;
@@ -300,6 +313,8 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 	}
 
 	handleConfirm() {
+		if (taskNeedsConfirmation()) return closeTask();
+		if (this.nearby()) return this.interact();
 		if (this.state.taskOpen) return closeTask();
 		this.interact();
 	}

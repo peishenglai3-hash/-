@@ -1,52 +1,69 @@
 import type Phaser from "phaser";
 
-// 陈继南行走素材共享模块：第一章场景1 与 闪回一 共用同一套逐帧资源
-// 素材：public/assets/ch01/sc02/sprites/{dir}/frame-N.png（左向为修复版 5 帧，其余 8 帧）
 export type ChenWalkDirection = "down" | "up" | "left" | "right";
 
 export const CHEN_WALK_DIRS = ["down", "up", "left", "right"] as const;
 
-const FRAME_COUNT: Record<ChenWalkDirection, number> = {
-	down: 8,
-	up: 8,
-	right: 8,
-	left: 5,
+const FRAME_FILES = Array.from(
+	{ length: 8 },
+	(_, index) => `frame-${String(index + 1).padStart(2, "0")}.png`,
+);
+
+const FRAME_FOLDERS: Record<ChenWalkDirection, string> = {
+	down: "正面8帧",
+	up: "背面8帧",
+	left: "左侧8帧",
+	right: "右侧8帧",
 };
 
-export const CHEN_SOURCE_FRAME = { width: 1024, height: 1536 };
+export const chenFrameKey = (direction: ChenWalkDirection, index: number) =>
+	`chen-walk-${direction}-${index}`;
 
-export const chenFrameKey = (dir: ChenWalkDirection, index: number) =>
-	`chen-walk-${dir}-${index}`;
+export const chenAnimKey = (direction: ChenWalkDirection) =>
+	`chen-walk-${direction}-anim`;
 
-export const chenAnimKey = (dir: ChenWalkDirection) => `chen-walk-${dir}-anim`;
+export function chenFrameSize(
+	scene: Phaser.Scene,
+	direction: ChenWalkDirection,
+): { width: number; height: number } {
+	const source = scene.textures
+		.get(chenFrameKey(direction, 0))
+		.getSourceImage() as HTMLImageElement;
+	return { width: source.width, height: source.height };
+}
 
-export const chenDisplayWidth = (displayHeight: number) =>
-	Math.round((displayHeight * CHEN_SOURCE_FRAME.width) / CHEN_SOURCE_FRAME.height);
+export function chenDisplayWidth(
+	scene: Phaser.Scene,
+	direction: ChenWalkDirection,
+	displayHeight: number,
+): number {
+	const source = chenFrameSize(scene, direction);
+	return Math.round((displayHeight * source.width) / source.height);
+}
 
 export function preloadChenWalk(scene: Phaser.Scene): void {
-	for (const dir of CHEN_WALK_DIRS) {
-		for (let i = 0; i < FRAME_COUNT[dir]; i += 1) {
-			const key = chenFrameKey(dir, i);
-			if (!scene.textures.exists(key))
-				scene.load.image(key, `assets/ch01/sc02/sprites/${dir}/frame-${i + 1}.png`);
-		}
+	for (const direction of CHEN_WALK_DIRS) {
+		FRAME_FILES.forEach((file, index) => {
+			const key = chenFrameKey(direction, index);
+			if (scene.textures.exists(key)) return;
+			scene.load.image(
+				key,
+				`assets/ch01/sc01/sprites/${FRAME_FOLDERS[direction]}/processed/version-rekeyed/runtime/${file}`,
+			);
+		});
 	}
 }
 
 export function createChenWalkAnimations(scene: Phaser.Scene): void {
-	for (const dir of CHEN_WALK_DIRS) {
-		const key = chenAnimKey(dir);
+	for (const direction of CHEN_WALK_DIRS) {
+		const key = chenAnimKey(direction);
 		if (scene.anims.exists(key)) continue;
-		const count = FRAME_COUNT[dir];
-		// 左向 5 帧用乒乓序列（1-2-3-4-5-4-3-2）补成自然循环
-		const order =
-			dir === "left"
-				? [0, 1, 2, 3, 4, 3, 2, 1]
-				: Array.from({ length: count }, (_, i) => i);
 		scene.anims.create({
 			key,
-			frames: order.map((i) => ({ key: chenFrameKey(dir, i) })),
-			frameRate: 8,
+			frames: FRAME_FILES.map((_, index) => ({
+				key: chenFrameKey(direction, index),
+			})),
+			frameRate: 16,
 			repeat: -1,
 		});
 	}
