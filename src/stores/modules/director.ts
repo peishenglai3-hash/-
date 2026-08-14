@@ -10,6 +10,11 @@ import { PrologueScene02 } from "@/scenes/Scene02/PrologueScene02";
 import { Ch01Sc01Scene } from "@/scenes/Scene03/Ch01Sc01Scene";
 import { Ch01Sc02Scene } from "@/scenes/Scene03/Ch01Sc02Scene";
 import { Ch01Sc03Scene } from "@/scenes/Scene03/Ch01Sc03Scene";
+import {
+	CHOICES as CH01_SC01_CHOICES,
+	PROFILE_DELTAS as CH01_SC01_PROFILE_DELTAS,
+} from "@/scenes/Scene03/ch01Sc01.content";
+import { FLAGS as CH01_SC01_FLAGS } from "@/scenes/Scene03/ch01Sc01.flags";
 import { useGameStateStore } from "@/stores/modules/gameState";
 import { assetPath } from "@/common/paths";
 import {
@@ -105,17 +110,21 @@ export const useDirectorStore = defineStore("director", () => {
 	// 返回陈家链：SC01 暗号选择后 → 外景院墙；联络通知完成 → 回 SC01 告别
 	function setupFlashbackFlow(g: Phaser.Game): void {
 		g.events.on("ch01:sc02-enter", () => {
-			enterScene("Ch01Sc02Scene", "CH01_SC02");
-			// 延迟停止 SC01，避免在 ink tween 回调中销毁场景
-			window.setTimeout(() => g.scene.stop("Ch01Sc01Scene"), 0);
+			// 离开 tween 回调后先完整关闭旧场景，避免两个区域编辑器短暂共存。
+			window.setTimeout(() => {
+				g.scene.stop("Ch01Sc01Scene");
+				enterScene("Ch01Sc02Scene", "CH01_SC02");
+			}, 0);
 		});
 		g.events.on("ch01:sc02-complete", () => {
 			g.scene.stop("Ch01Sc02Scene");
 			enterScene("Ch01Sc01Scene", "CH01_SC01");
 		});
 		g.events.on("ch01:sc03-enter", () => {
-			enterScene("Ch01Sc03Scene", "CH01_SC03");
-			window.setTimeout(() => g.scene.stop("Ch01Sc01Scene"), 0);
+			window.setTimeout(() => {
+				g.scene.stop("Ch01Sc01Scene");
+				enterScene("Ch01Sc03Scene", "CH01_SC03");
+			}, 0);
 		});
 		g.events.on("ch01:sc03-complete", () => {
 			g.scene.stop("Ch01Sc03Scene");
@@ -135,6 +144,23 @@ export const useDirectorStore = defineStore("director", () => {
 		gameState.state.flags.add(choice.flag);
 	}
 
+	function completeCh01Sc01ForDev(): void {
+		const choice = CH01_SC01_CHOICES[Math.floor(Math.random() * CH01_SC01_CHOICES.length)];
+		gameState.state.choice = choice;
+		for (const candidate of CH01_SC01_CHOICES) gameState.state.flags.delete(candidate.flag);
+		for (const [axis, delta] of Object.entries(CH01_SC01_PROFILE_DELTAS[choice.id] ?? {}))
+			gameState.state.profile[axis] += delta;
+		for (const flag of [
+			CH01_SC01_FLAGS.VIDEO_SEEN,
+			CH01_SC01_FLAGS.OBS_BASIN,
+			CH01_SC01_FLAGS.OBS_DESK,
+			CH01_SC01_FLAGS.OBS_DOOR,
+		])
+			gameState.state.flags.add(flag);
+		gameState.state.flags.add(choice.flag);
+		gameSave.autosave("CH01_SC01");
+	}
+
 	function clearStoryUi(): void {
 		hideIntro();
 		hideTask();
@@ -147,7 +173,16 @@ export const useDirectorStore = defineStore("director", () => {
 	}
 
 	function handleDevNextChapter(sceneKey?: string): void {
-		const activeKey = sceneKey ?? (game.value!.scene.getScenes(true).find((scene: any) => scene.zoneEditor) as any)?.scene.key;
+		const activeKey = sceneKey ?? ([...game.value!.scene.getScenes(true)].reverse().find((scene: any) => scene.zoneEditor) as any)?.scene.key;
+		if (activeKey === "Ch01Sc01Scene") {
+			clearStoryUi();
+			completeCh01Sc01ForDev();
+			gameState.state.mode = "transition";
+			gameState.state.playerLocked = true;
+			game.value!.events.emit("ch01:sc02-enter");
+			return;
+		}
+
 		randomizePrologueChoice();
 		gameState.state.flags.add("FLAG_PRO_Q01_COMPLETED");
 		clearStoryUi();

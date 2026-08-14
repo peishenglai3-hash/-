@@ -179,9 +179,9 @@
       "type": "inspect",
       "rect": [
         19.75,
-        11.25,
-        8.75,
-        2.25
+        9.96875,
+        8.5,
+        3.03125
       ],
       "prompt": "查看碑文",
       "completion_flag": "FLAG_INT_MONUMENT_COMPLETED"
@@ -198,27 +198,13 @@
       "prompt": "查看田野工作材料"
     },
     {
-      "id": "PRO_Q01_TRIGGER",
-      "type": "event",
-      "rect": [
-        19.75,
-        12.75,
-        8.75,
-        1.5
-      ],
-      "required_flags": [
-        "FLAG_INT_MONUMENT_COMPLETED"
-      ],
-      "event_id": "PRO_Q01_TRIGGER"
-    },
-    {
       "id": "EXIT_TRIGGER",
       "type": "event",
       "rect": [
-        22,
-        25,
-        4,
-        1
+        21.375,
+        23.75,
+        5.75,
+        3
       ],
       "required_flags": [
         "FLAG_PRO_Q01_COMPLETED"
@@ -230,10 +216,10 @@
       "id": "NPC_CH00_STUDENT_A",
       "type": "dialogue",
       "rect": [
-        32.75,
-        19.5,
-        2.25,
-        2.5
+        31.875,
+        18.5,
+        3.8125,
+        3.5
       ],
       "prompt": "与同学甲交谈",
       "stage": "explore"
@@ -242,37 +228,13 @@
       "id": "NPC_CH00_STUDENT_B",
       "type": "dialogue",
       "rect": [
-        19.5,
-        16.75,
-        2,
-        2.75
+        18.75,
+        15.4375,
+        3.5,
+        4.125
       ],
       "prompt": "与同学乙交谈",
       "stage": "explore"
-    },
-    {
-      "id": "LEAVE_NPC_A",
-      "type": "dialogue",
-      "rect": [
-        25,
-        24,
-        2,
-        2
-      ],
-      "prompt": "与同学甲交谈",
-      "stage": "leave_walk"
-    },
-    {
-      "id": "LEAVE_NPC_B",
-      "type": "dialogue",
-      "rect": [
-        21,
-        24,
-        2,
-        2
-      ],
-      "prompt": "与同学乙交谈",
-      "stage": "leave_walk"
     }
   ],
   "actor_colliders": {
@@ -1570,16 +1532,16 @@
   },
   "actor_visuals": {
     "PLAYER": {
-      "display_height": 189.56475891506756,
+      "display_height": 182.71166021292447,
       "offset": [
-        -0.058122900009713874,
-        0.02879857502024663
+        -0.17743484541347243,
+        0
       ]
     },
     "NPC_CH00_STUDENT_A": {
-      "display_height": 178.3816819654428,
+      "display_height": 160,
       "offset": [
-        0.1436068903550236,
+        0,
         0
       ]
     },
@@ -1590,5 +1552,9 @@
         0
       ]
     }
+  },
+  "player_motion": {
+    "movement_multiplier": 1,
+    "animation_multiplier": 1
   }
 }

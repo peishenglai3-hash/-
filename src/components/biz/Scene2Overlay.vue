@@ -76,7 +76,7 @@ onMounted(() => {
 			g.scene.stop("Scene01");
 			gameState.state.mode = "intro";
 			gameState.state.playerLocked = true;
-			gameState.state.taskOpen = false;
+			hud.hideTask();
 			gameState.state.paused = false;
 			gameState.state.narrativeQueue = [];
 			gameState.state.narrativeIndex = 0;

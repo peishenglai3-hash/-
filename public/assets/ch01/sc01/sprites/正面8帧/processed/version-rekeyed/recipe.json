@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "variant": "version-rekeyed",
+  "frameCount": 8,
+  "sortRule": "filename-natural-order",
+  "source": {
+    "width": 2304,
+    "height": 4096
+  },
+  "matting": {
+    "method": "green-excess-chroma-key-plus-connectivity",
+    "greenExcessOpaqueThreshold": 8,
+    "greenExcessTransparentThreshold": 28,
+    "edgeFeather": true,
+    "decontaminateColor": true
+  },
+  "cleanup": {
+    "keepLargestSubject": true,
+    "minimumComponentArea": 12
+  },
+  "alignment": {
+    "anchorType": "source-position",
+    "allowPerFrameTranslation": false
+  },
+  "transform": {
+    "horizontalFlip": true
+  },
+  "crop": {
+    "x": 535,
+    "y": 546,
+    "width": 1260,
+    "height": 3175,
+    "padding": 20,
+    "method": "union-alpha-bounds"
+  },
+  "runtime": {
+    "width": 286,
+    "height": 720,
+    "preserveAspectRatio": true
+  },
+  "export": {
+    "format": "png",
+    "transparent": true,
+    "namePattern": "frame-{index:02}.png"
+  }
+}

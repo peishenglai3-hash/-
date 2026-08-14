@@ -17,6 +17,8 @@ const writableFiles = new Set([
 	"public/data/PRO02_logic.json",
 	"public/data/PRO02_interactions.json",
 	"public/data/ch01_sc01_chen_home_wake_manifest.json",
+	"public/data/ch01_sc02_flashback_petition_manifest.json",
+	"public/data/ch01_sc03_yard_manifest.json",
 ]);
 
 function zoneEditorApi(): Plugin {

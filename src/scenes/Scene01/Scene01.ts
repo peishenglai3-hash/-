@@ -5,6 +5,10 @@ import { useGameStateStore } from "@/stores/modules/gameState";
 import {
 	showTask,
 	closeTask,
+	taskNeedsConfirmation,
+	getPlayerMovementMultiplier,
+	getPlayerAnimationMultiplier,
+	applyDevPlayerMotionFromJson,
 	hideTask,
 	showPrompt,
 	playNarrative,
@@ -133,6 +137,7 @@ export class Scene01 extends Phaser.Scene {
 
 	create() {
 		this.manifest = this.cache.json.get("manifest");
+		applyDevPlayerMotionFromJson((this.manifest as any).player_motion);
 		this.setupActorColliders();
 		this.createKeyedTexture("student-b-front", "student-b-front-keyed");
 		this.createKeyedTexture("student-b-back", "student-b-back-keyed");
@@ -229,6 +234,7 @@ export class Scene01 extends Phaser.Scene {
 
 	syncPlayerVisual(direction: string, moving: boolean) {
 		if (!this.playerVisual) return;
+		this.playerVisual.anims.timeScale = getPlayerAnimationMultiplier();
 		this.playerVisual
 
 
@@ -381,6 +387,7 @@ export class Scene01 extends Phaser.Scene {
 			replaceDocuments: (next: any) => {
 				this.manifest = next[file];
 				documents[file] = this.manifest as any;
+				applyDevPlayerMotionFromJson((this.manifest as any).player_motion);
 				this.setupActorColliders();
 				this.applyActorVisualHeights();
 			},
@@ -540,8 +547,10 @@ export class Scene01 extends Phaser.Scene {
 	}
 
 	handleConfirm() {
-		if (this.state.taskOpen) return closeTask();
+		if (taskNeedsConfirmation()) return closeTask();
 		if (itemPanelOpen()) return closeItem();
+		if (this.nearby()) return this.interact();
+		if (this.state.taskOpen) return closeTask();
 		this.interact();
 	}
 
@@ -557,7 +566,7 @@ export class Scene01 extends Phaser.Scene {
 			}
 			return;
 		}
-		const speed = 150;
+		const speed = 150 * getPlayerMovementMultiplier();
 		let x = 0;
 		let y = 0;
 		if (isActionDown(this.keyMap, "MOVE_LEFT")) x -= 1;

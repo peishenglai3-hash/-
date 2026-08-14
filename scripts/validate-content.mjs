@@ -13,11 +13,15 @@ const {
 	AUDIO_REVIEW,
 	WRITE_QUESTION,
 	FALL_ASLEEP,
-	FLAVOR_SPOTS,
 } = await import("../src/scenes/Scene02/content.ts");
 const { TRANSITION_A, TRANSITION_B } = await import(
 	"../src/scenes/transitionData.ts"
 );
+const fs = await import("node:fs/promises");
+const flavorZones = JSON.parse(await fs.readFile(
+	new URL("../public/data/PRO02_interactions.json", import.meta.url),
+	"utf8",
+)).flavor_zones;
 
 const assert = (condition, message) => {
 	if (!condition) {
@@ -34,7 +38,8 @@ assert(OPENING.length === 6, "scene02 opening lock");
 assert(AUDIO_REVIEW.length === 4, "scene02 audio review lock");
 assert(WRITE_QUESTION.length === 13, "scene02 write question lock");
 assert(FALL_ASLEEP.length === 6, "scene02 fall asleep lock");
-assert(FLAVOR_SPOTS.length === 6, "scene02 flavor spots");
+assert(flavorZones.length === 6, "scene02 flavor zones");
+assert(flavorZones.every((zone) => zone.type === "flavor" && Array.isArray(zone.rect) && zone.rect.length === 4 && zone.line), "scene02 flavor zone shape");
 assert(TRANSITION_A.entries.length === 5, "transition A entries");
 assert(TRANSITION_B.entries.length === 21, "transition B entries");
 

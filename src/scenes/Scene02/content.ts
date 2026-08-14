@@ -376,45 +376,6 @@ export const PROP_LINES: Record<string, Record<string, string>> = {
 	},
 };
 
-export const FLAVOR_SPOTS = [
-	{
-		id: "bag",
-		at: [28.5, 33.2],
-		radius: 1.6,
-		line: "书包里塞着明天的走访路线和半盒润喉糖。",
-	},
-	{
-		id: "chair",
-		at: [43.5, 31.4],
-		radius: 1.6,
-		line: "塑料椅上搭着白天穿的外套。",
-	},
-	{
-		id: "fan",
-		at: [52.0, 23.4],
-		radius: 1.6,
-		line: "风扇摇着头，像谁在慢慢数数。",
-	},
-	{
-		id: "mug",
-		at: [21.9, 13.6],
-		radius: 2.0,
-		line: "马克杯见底了，茶叶沉在杯底。",
-	},
-	{
-		id: "bin",
-		at: [29.1, 19.6],
-		radius: 2.4,
-		line: "揉掉的纸团，每一个都写坏过一个开头。",
-	},
-	{
-		id: "books",
-		at: [20.0, 29.4],
-		radius: 2.0,
-		line: "书堆最上面那本，页码很久没动过。",
-	},
-];
-
 export const ONE_LINERS = {
 	desk: "台灯还亮着。相机、镜头和散开的采访纸摊了一桌。",
 	bed: "还不困。桌上的材料还没整理完。",

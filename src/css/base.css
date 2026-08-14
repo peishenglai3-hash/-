@@ -77,9 +77,10 @@ body {
 .dev-zone-editor header { display: flex; align-items: center; justify-content: space-between; margin: -6px -6px 10px; padding: 6px; color: #ffdf32; letter-spacing: .15em; cursor: grab; user-select: none; touch-action: none; }
 .dev-zone-editor header.dragging { cursor: grabbing; }
 .dev-zone-editor header button { width: 25px; height: 25px; padding: 0; border: 1px solid #666; background: #222; color: #fff; cursor: pointer; }
-.dev-zone-tabs, .dev-zone-actions { display: flex; gap: 6px; }
+.dev-zone-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
+.dev-zone-actions { display: flex; gap: 6px; }
 .dev-zone-editor button, .dev-zone-editor select, .dev-zone-editor input { border: 1px solid #5c5c5c; border-radius: 0; background: #242424; color: #fff; font: inherit; }
-.dev-zone-tabs button { flex: 1; min-width: 0; padding: 7px 3px; white-space: nowrap; }
+.dev-zone-tabs button { min-width: 0; padding: 7px 2px; font-size: 11px; white-space: nowrap; }
 .dev-zone-tabs button.active { border-color: #ffdf32; color: #ffdf32; box-shadow: inset 0 -2px #ff4fbf; }
 .dev-zone-editor > label { display: grid; gap: 4px; margin-top: 9px; color: #aaa; }
 .dev-zone-editor select, .dev-zone-editor input { width: 100%; padding: 6px; }
@@ -89,11 +90,21 @@ body {
 .dev-zone-actions { flex-wrap: wrap; }
 .dev-zone-actions button { flex: 1 0 45%; padding: 7px 5px; }
 .dev-zone-actions button.primary { border-color: #ffdf32; background: #514811; color: #fff8b2; }
+.dev-zone-actions button.dev-test-task { flex-basis: 100%; border-color: #55e7ff; background: #123c43; color: #bffaff; }
 .dev-zone-actions button.dev-next-chapter { flex-basis: 100%; border-color: #ff4fbf; background: #4b1733; color: #ffd7ed; }
-.dev-zone-editor output { display: block; margin-top: 9px; padding-top: 8px; border-top: 1px dashed #555; color: #ffbfdf; font-size: 10px; }
+.dev-zone-editor output[data-field="status"] { display: block; margin-top: 9px; padding-top: 8px; border-top: 1px dashed #555; color: #ffbfdf; font-size: 10px; }
 .dev-zone-tabs button[data-kind="foreground"].active { border-color: #55e7ff; color: #55e7ff; box-shadow: inset 0 -2px #55e7ff; }
+.dev-zone-tabs button[data-kind="flavor"].active { border-color: #62e68c; color: #62e68c; box-shadow: inset 0 -2px #62e68c; }
+.dev-zone-tabs button[data-kind="motion"].active { border-color: #55e7ff; color: #55e7ff; box-shadow: inset 0 -2px #55e7ff; }
 .dev-zone-editor input:disabled, .dev-zone-editor select:disabled, .dev-zone-editor button:disabled { opacity: .45; cursor: not-allowed; }
 .dev-zone-actions button.armed { border-color: #55e7ff; background: #123c43; color: #bffaff; }
+.dev-motion-panel { display: grid; gap: 12px; margin-top: 12px; padding: 10px; border: 1px solid #287681; background: #0b2428; }
+.dev-motion-panel label { display: grid; gap: 6px; color: #d7f9fc; }
+.dev-motion-panel label > span { display: flex; align-items: center; justify-content: space-between; }
+.dev-motion-panel output { color: #ffdf32; font-weight: 700; }
+.dev-motion-panel input[type="range"] { height: 18px; padding: 0; accent-color: #55e7ff; cursor: ew-resize; }
+.dev-motion-scale { display: flex; justify-content: space-between; margin-top: -8px; color: #78999d; font-size: 9px; }
+.dev-motion-panel button { padding: 7px 5px; border-color: #55e7ff; background: #123c43; color: #bffaff; cursor: pointer; }
 
 body.dev-editor-active #app > :not(#game),
 body.dev-editor-active #app > :not(#game) * {

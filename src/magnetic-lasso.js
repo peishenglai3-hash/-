@@ -337,6 +337,17 @@ export class ForegroundLassoTool {
     return pointer.button === 2 || pointer.event?.button === 2 || pointer.rightButtonDown?.();
   }
 
+  baselineAt(item, point) {
+    if (!item?.points?.length) return false;
+    const xs = item.points.map(([x]) => Number(x)).filter(Number.isFinite);
+    if (!xs.length) return false;
+    const sortY = this.editor.foregroundSortY(item);
+    const tolerance = Math.max(0.25, 9 / this.editor.tileSize);
+    return point.x >= Math.min(...xs) - tolerance
+      && point.x <= Math.max(...xs) + tolerance
+      && Math.abs(point.y - sortY) <= tolerance;
+  }
+
   pointerDown(pointer) {
     if (this.isRightButton(pointer)) {
       if (this.drawing) this.undo();
@@ -359,6 +370,16 @@ export class ForegroundLassoTool {
       return;
     }
 
+    if (this.baselineAt(this.editor.selected, point)) {
+      this.drag = {
+        mode: 'baseline',
+        start: point,
+        sortY: this.editor.foregroundSortY(this.editor.selected)
+      };
+      this.editor.setCursor('ns-resize');
+      return;
+    }
+
     const hit = [...this.editor.items].reverse().find((item) => pointInPolygon(item.points, point));
     if (!hit) {
       this.editor.select(null);
@@ -366,7 +387,15 @@ export class ForegroundLassoTool {
       return;
     }
     this.editor.select(hit);
-    this.drag = { start: point, points: structuredClone(hit.points), sortY: Number.isFinite(Number(hit.sort_y)) ? Number(hit.sort_y) : null };
+    const explicitSortY = hit.sort_y;
+    this.drag = {
+      mode: 'polygon',
+      start: point,
+      points: structuredClone(hit.points),
+      sortY: explicitSortY !== undefined && explicitSortY !== null && explicitSortY !== '' && Number.isFinite(Number(explicitSortY))
+        ? Number(explicitSortY)
+        : null
+    };
     this.editor.setCursor('move');
   }
 
@@ -411,7 +440,12 @@ export class ForegroundLassoTool {
       return;
     }
     if (this.drag && pointer.isDown && this.editor.selected) {
-      this.moveSelected(point);
+      if (this.drag.mode === 'baseline') this.moveBaseline(point);
+      else this.moveSelected(point);
+      return;
+    }
+    if (this.baselineAt(this.editor.selected, point)) {
+      this.editor.setCursor('ns-resize');
       return;
     }
     const hit = [...this.editor.items].reverse().find((item) => pointInPolygon(item.points, point));
@@ -422,7 +456,9 @@ export class ForegroundLassoTool {
     if (this.drawing || this.armed) return;
     if (this.drag) {
       this.editor.config.onChange('foreground');
-      this.editor.status.textContent = '套索位置已修改，点击保存 JSON 写入';
+      this.editor.status.textContent = this.drag.mode === 'baseline'
+        ? '遮挡判定线已修改，点击保存 JSON 写入'
+        : '套索位置已修改，点击保存 JSON 写入';
     }
     this.drag = null;
     this.pointerMove(pointer);
@@ -469,6 +505,21 @@ export class ForegroundLassoTool {
     this.editor.status.textContent = '有未保存修改';
   }
 
+  moveBaseline(point) {
+    const [, worldHeight] = this.editor.config.getWorldSize();
+    const dy = point.y - this.drag.start.y;
+    this.editor.selected.sort_y = clamp(snap(this.drag.sortY + dy, this.editor.snapStep), 0, worldHeight);
+
+    const now = performance.now();
+    if (now - this.lastRebuild >= 50) {
+      this.editor.config.onChange('foreground');
+      this.lastRebuild = now;
+    }
+    this.editor.refreshInputs();
+    this.editor.render();
+    this.editor.status.textContent = '有未保存修改';
+  }
+
   finish() {
     if (!this.drawing) return;
     if (this.anchors.length < 3) {
@@ -503,6 +554,7 @@ export class ForegroundLassoTool {
       id: this.editor.createId('foreground'),
       shape: 'polygon',
       points,
+      sort_y: Math.max(...points.map(([, y]) => y)),
       units: 'tiles',
       layer: 'foreground',
       enabled: true,
@@ -561,7 +613,10 @@ export class ForegroundLassoTool {
       const minX = Math.min(...points.map((point) => point.x));
       const maxX = Math.max(...points.map((point) => point.x));
       graphics.lineStyle(3, PREVIEW_COLOR, 1).lineBetween(minX, sortY, maxX, sortY);
-      graphics.fillStyle(PREVIEW_COLOR, 1).fillCircle(minX, sortY, 5).fillCircle(maxX, sortY, 5);
+      graphics.fillStyle(PREVIEW_COLOR, 1)
+        .fillCircle(minX, sortY, 5)
+        .fillCircle((minX + maxX) / 2, sortY, 6)
+        .fillCircle(maxX, sortY, 5);
     }
 
     const committed = this.rawPoints.map(({ x, y }) => ({ x: x * this.editor.tileSize, y: y * this.editor.tileSize }));

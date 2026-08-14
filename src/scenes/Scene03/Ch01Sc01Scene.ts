@@ -1,9 +1,14 @@
 import Phaser from "phaser";
 import { createKeyMap, isActionDown, onAction } from "@/common/actions";
+import { actorDepth, foregroundDepth, WORLD_INDICATOR_DEPTH } from "@/common/displayDepth";
 import { useGameStateStore } from "@/stores/modules/gameState";
 import {
 	showTask,
 	closeTask,
+	taskNeedsConfirmation,
+	getPlayerMovementMultiplier,
+	getPlayerAnimationMultiplier,
+	applyDevPlayerMotionFromJson,
 	hideTask,
 	showPrompt,
 	hidePrompt,
@@ -55,16 +60,24 @@ import { actorColliderBottomAt, ensureActorColliderConfig, createActorColliderEn
 
 const WORLD_W = 1672;
 const WORLD_H = 941;
-const PLAYER_FRAME = {
-	down: { width: 133, height: 302 },
-	up: { width: 138, height: 273 },
-	left: { width: 138, height: 266 },
-	right: { width: 134, height: 297 },
+const PLAYER_DIRECTIONS = ["down", "up", "left", "right"] as const;
+type PlayerDirection = (typeof PLAYER_DIRECTIONS)[number];
+const PLAYER_FRAME_FILES = Array.from(
+	{ length: 8 },
+	(_, index) => `frame-${String(index + 1).padStart(2, "0")}.png`,
+);
+const PLAYER_FRAME_FOLDERS: Record<PlayerDirection, string> = {
+	down: "正面8帧",
+	up: "背面8帧",
+	left: "左侧8帧",
+	right: "右侧8帧",
 };
+const playerFrameKey = (direction: PlayerDirection, index: number) =>
+	`ch01-sc01-player-${direction}-${index}`;
+const playerAnimationKey = (direction: PlayerDirection) =>
+	`ch01-sc01-player-${direction}-anim`;
 const PLAYER_DISPLAY_HEIGHT = 280;
 const CAMERA_ZOOM = 0.765;
-const ACTOR_DEPTH_BASE = 500;
-const actorDepth = (bottomY: number) => ACTOR_DEPTH_BASE + bottomY;
 
 interface ManifestData {
 	spawns: { id: string; position: [number, number]; facing: string }[];
@@ -109,7 +122,7 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	manifest!: ManifestData;
 	player!: Phaser.Physics.Arcade.Sprite;
 	playerVisual!: Phaser.GameObjects.Sprite;
-	playerDirection: string = "down";
+	playerDirection: PlayerDirection = "down";
 	keyMap!: ReturnType<typeof createKeyMap>;
 	camera!: Phaser.Cameras.Scene2D.Camera;
 	collisionRects!: {
@@ -162,21 +175,13 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 			"assets/ch01/sc01/video/finale_leave.mp4",
 		);
 
-		const dirs: ("down" | "up" | "left" | "right")[] = [
-			"down",
-			"up",
-			"left",
-			"right",
-		];
-		for (const dir of dirs) {
-			this.load.spritesheet(
-				`chen-walk-${dir}`,
-				`assets/ch01/sc01/sprites/walk_${dir}.png`,
-				{
-					frameWidth: PLAYER_FRAME[dir].width,
-					frameHeight: PLAYER_FRAME[dir].height,
-				},
-			);
+		for (const direction of PLAYER_DIRECTIONS) {
+			PLAYER_FRAME_FILES.forEach((file, index) => {
+				this.load.image(
+					playerFrameKey(direction, index),
+					`assets/ch01/sc01/sprites/${PLAYER_FRAME_FOLDERS[direction]}/processed/version-rekeyed/runtime/${file}`,
+				);
+			});
 		}
 		// Prop icons are loaded on demand by the Vue ItemPanel; no Phaser preload needed.
 	}
@@ -184,13 +189,14 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	create() {
 		this.resetHud();
 		this.manifest = this.cache.json.get("ch01_sc01_manifest");
+		applyDevPlayerMotionFromJson((this.manifest as any).player_motion);
 		this.setupActorCollider();
 		this.physics.world.setBounds(0, 0, WORLD_W, WORLD_H);
 		this.background = this.add.image(WORLD_W / 2, WORLD_H / 2, "ch01_sc01_bg").setDepth(-20);
 		this.foregroundOcclusion = new ForegroundOcclusionRenderer(this, {
 			background: this.background,
 			getObjects: () => (this.manifest as any).foreground_occlusion?.objects ?? [],
-			resolveDepth: (object: any) => actorDepth(foregroundBottomPx(object, 1) ?? 0) + 0.001,
+			resolveDepth: (object: any) => foregroundDepth(foregroundBottomPx(object, 1) ?? 0),
 			tileSize: 1,
 		});
 		this.buildCollision();
@@ -202,7 +208,7 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 			.sprite(
 				playerSpawn.position[0],
 				playerSpawn.position[1],
-				"chen-walk-down",
+				playerFrameKey("down", 0),
 			)
 			.setOrigin(0.5, 1)
 			.setDepth(actorDepth(actorColliderBottomAt(
@@ -320,23 +326,23 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	}
 
 	setupPlayerVisual() {
-		for (const dir of ["down", "up", "left", "right"] as const) {
+		for (const direction of PLAYER_DIRECTIONS) {
+			const key = playerAnimationKey(direction);
+			if (this.anims.exists(key)) continue;
 			this.anims.create({
-				key: `chen-walk-${dir}-anim`,
-				frames: this.anims.generateFrameNumbers(`chen-walk-${dir}`, {
-					start: 0,
-					end: 7,
-				}),
-				frameRate: 8,
+				key,
+				frames: PLAYER_FRAME_FILES.map((_, index) => ({
+					key: playerFrameKey(direction, index),
+				})),
+				frameRate: 16,
 				repeat: -1,
 			});
 		}
-		const frame = PLAYER_FRAME.down;
-		const displayWidth = Math.round(
-			(frame.width / frame.height) * PLAYER_DISPLAY_HEIGHT,
-		);
+		const initialKey = playerFrameKey("down", 0);
+		const source = this.textures.get(initialKey).getSourceImage() as HTMLImageElement;
+		const displayWidth = Math.round((source.width / source.height) * PLAYER_DISPLAY_HEIGHT);
 		this.playerVisual = this.add
-			.sprite(this.player.x, this.player.y, "chen-walk-down", 0)
+			.sprite(this.player.x, this.player.y, initialKey)
 			.setOrigin(0.5, 1)
 			.setDisplaySize(displayWidth, PLAYER_DISPLAY_HEIGHT)
 
@@ -347,28 +353,32 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 
 	syncPlayerVisual(direction: string, moving: boolean) {
 		if (!this.playerVisual) return;
-		const dir = direction as keyof typeof PLAYER_FRAME;
-		const frame = PLAYER_FRAME[dir];
+		this.playerVisual.anims.timeScale = getPlayerAnimationMultiplier();
+		const dir = direction as PlayerDirection;
+		const firstFrame = playerFrameKey(dir, 0);
+		const source = this.textures.get(firstFrame).getSourceImage() as HTMLImageElement;
 		const displayHeight = this.actorVisualProfile.display_height;
-		const displayWidth = Math.round((frame.width / frame.height) * displayHeight);
+		const displayWidth = Math.round((source.width / source.height) * displayHeight);
 		this.playerVisual
-
-
-			.setDisplaySize(displayWidth, displayHeight)
 			.setDepth(this.depthForPlayer())
 			.setFlipX(false);
 		this.applyActorVisualPosition();
 		if (moving) {
-			const animation = `chen-walk-${direction}-anim`;
+			const animation = playerAnimationKey(dir);
 			if (
 				this.playerVisual.anims.currentAnim?.key !== animation ||
 				!this.playerVisual.anims.isPlaying
-			)
+			) {
+				this.playerVisual.setTexture(firstFrame);
 				this.playerVisual.play(animation);
+			}
+			this.playerVisual.setDisplaySize(displayWidth, displayHeight);
 			return;
 		}
 		this.playerVisual.anims.stop();
-		this.playerVisual.setTexture(`chen-walk-${direction}`, 0);
+		this.playerVisual
+			.setTexture(firstFrame)
+			.setDisplaySize(displayWidth, displayHeight);
 	}
 
 	buildCollision() {
@@ -423,8 +433,10 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 
 	applyPlayerVisualHeight(height: number) {
 		if (!this.playerVisual || !Number.isFinite(height) || height <= 0) return;
-		const frame = PLAYER_FRAME[this.playerDirection as keyof typeof PLAYER_FRAME];
-		this.playerVisual.setDisplaySize(Math.round((frame.width / frame.height) * height), height);
+		const source = this.textures
+			.get(playerFrameKey(this.playerDirection, 0))
+			.getSourceImage() as HTMLImageElement;
+		this.playerVisual.setDisplaySize(Math.round((source.width / source.height) * height), height);
 		this.applyActorVisualPosition();
 	}
 
@@ -436,8 +448,9 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	applyPlayerColliderBody() {
 		const profile = this.playerColliderProfile;
 		if (!profile || !this.player) return;
+		const source = this.textures.get(playerFrameKey("down", 0)).getSourceImage() as HTMLImageElement;
 		this.player.setSize(profile.size[0], profile.size[1])
-			.setOffset(PLAYER_FRAME.down.width / 2 + profile.offset[0], PLAYER_FRAME.down.height + profile.offset[1]);
+			.setOffset(source.width / 2 + profile.offset[0], source.height + profile.offset[1]);
 	}
 
 	depthForPlayer(): number {
@@ -468,6 +481,7 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 			replaceDocuments: (next: any) => {
 				this.manifest = next[file];
 				documents[file] = this.manifest as any;
+				applyDevPlayerMotionFromJson((this.manifest as any).player_motion);
 				this.setupActorCollider();
 				this.applyPlayerVisualHeight(this.actorVisualProfile.display_height);
 			},
@@ -506,7 +520,7 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 					strokeThickness: 4,
 				})
 				.setOrigin(0.5)
-				.setDepth(1000);
+				.setDepth(WORLD_INDICATOR_DEPTH);
 			this.tweens.add({
 				targets: mark,
 				scale: { from: 1, to: 1.2 },
@@ -519,8 +533,10 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	}
 
 	handleConfirm() {
-		if (this.state.taskOpen) return closeTask();
+		if (taskNeedsConfirmation()) return closeTask();
 		if (itemPanelOpen()) return closeItem();
+		if (this.nearby()) return this.interact();
+		if (this.state.taskOpen) return closeTask();
 		this.interact();
 	}
 
@@ -542,7 +558,7 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 			}
 			return;
 		}
-		const speed = 220;
+		const speed = 220 * getPlayerMovementMultiplier();
 		let x = 0;
 		let y = 0;
 		if (isActionDown(this.keyMap, "MOVE_LEFT")) x -= 1;

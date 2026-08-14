@@ -5,6 +5,10 @@ import {
 	showTask,
 	hideTask,
 	closeTask,
+	taskNeedsConfirmation,
+	getPlayerMovementMultiplier,
+	getPlayerAnimationMultiplier,
+	applyDevPlayerMotionFromJson,
 	showPrompt,
 	hidePrompt,
 	playNarrative,
@@ -21,11 +25,11 @@ import { YARD_CHAIN } from "./ch01Return.content";
 // @ts-ignore Shared developer tools support both grid and pixel-coordinate scenes.
 import { CollisionEditor } from "../../zone-editor.js";
 // @ts-ignore Legacy actor collider helpers are shared by the editor.
-import { ensureActorColliderConfig, createActorColliderEntry } from "../../actor-collider.js";
+import { ensureActorColliderConfig, createActorColliderEntry, ensureActorVisualConfig, createActorVisualEntry } from "../../actor-collider.js";
 import {
-	CHEN_SOURCE_FRAME,
 	chenAnimKey,
 	chenDisplayWidth,
+	chenFrameSize,
 	chenFrameKey,
 	createChenWalkAnimations,
 	preloadChenWalk,
@@ -51,6 +55,8 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 	zoneEditor: any;
 	playerColliderProfile: any;
 	actorColliderEntries: any[] = [];
+	actorVisualProfiles: Record<string, any> = {};
+	actorVisualEntries: any[] = [];
 	manifest!: ManifestData;
 	player!: Phaser.Physics.Arcade.Sprite;
 	playerVisual!: Phaser.GameObjects.Sprite;
@@ -90,6 +96,7 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 	create() {
 		this.resetHud();
 		this.manifest = this.cache.json.get("ch01_sc03_manifest");
+		applyDevPlayerMotionFromJson((this.manifest as any).player_motion);
 		this.setupActorCollider();
 		this.physics.world.setBounds(0, 0, WORLD_W, WORLD_H);
 		this.add.image(WORLD_W / 2, WORLD_H / 2, "ch01_sc03_bg").setDepth(-20);
@@ -105,6 +112,7 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 		this.player.setCollideWorldBounds(true);
 		this.player.setVisible(false);
 		this.setupPlayerVisual();
+		this.applyActorVisualHeight("PLAYER", this.actorVisualProfiles.PLAYER.display_height);
 
 		// NPC 联络员：静止于右侧院墙阴影旁
 		const liaisonSpawn = this.manifest.spawns.find((entry) => entry.id === "NPC_LIAISON")!;
@@ -116,6 +124,8 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 				LIAISON_DISPLAY_HEIGHT,
 			)
 			.setDepth(799);
+		this.applyActorVisualHeight("NPC_LIAISON", this.actorVisualProfiles.NPC_LIAISON.display_height);
+		this.applyActorVisualPosition("NPC_LIAISON");
 
 		this.camera = this.cameras.main
 			.setBounds(0, 0, WORLD_W, WORLD_H)
@@ -155,16 +165,68 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 				tileSize: 1,
 			}),
 		];
+		this.actorVisualProfiles = {
+			PLAYER: ensureActorVisualConfig(this.manifest as any, "PLAYER", PLAYER_DISPLAY_HEIGHT),
+			NPC_LIAISON: ensureActorVisualConfig(this.manifest as any, "NPC_LIAISON", LIAISON_DISPLAY_HEIGHT),
+		};
+		this.actorVisualEntries = [
+			createActorVisualEntry({
+				id: "PLAYER",
+				label: "陈继南（玩家）",
+				getActor: () => this.playerVisual,
+				getProfile: () => this.actorVisualProfiles.PLAYER,
+				getAnchor: () => ({ x: this.player.x, y: this.player.y }),
+				onPositionChange: () => this.applyActorVisualPosition("PLAYER"),
+				tileSize: 1,
+			}),
+			createActorVisualEntry({
+				id: "NPC_LIAISON",
+				label: "联络人（NPC）",
+				getActor: () => this.liaison,
+				getProfile: () => this.actorVisualProfiles.NPC_LIAISON,
+				getAnchor: () => this.actorSpawnPosition("NPC_LIAISON"),
+				onPositionChange: () => this.applyActorVisualPosition("NPC_LIAISON"),
+				tileSize: 1,
+			}),
+		];
+	}
+
+	actorSpawnPosition(id: string): { x: number; y: number } | null {
+		const spawn = this.manifest?.spawns?.find((entry) => entry.id === id);
+		return spawn ? { x: spawn.position[0], y: spawn.position[1] } : null;
+	}
+
+	applyActorVisualHeight(id: string, height: number) {
+		if (!Number.isFinite(height) || height <= 0) return;
+		const actor = id === "PLAYER" ? this.playerVisual : id === "NPC_LIAISON" ? this.liaison : null;
+		if (!actor) return;
+		if (id === "PLAYER") {
+			const source = chenFrameSize(this, "right");
+			actor.setDisplaySize(Math.round((source.width / source.height) * height), height);
+		} else {
+			actor.setDisplaySize(Math.round((1024 / 1536) * height), height);
+		}
+		this.applyActorVisualPosition(id);
+	}
+
+	applyActorVisualPosition(id: string) {
+		const actor = id === "PLAYER" ? this.playerVisual : id === "NPC_LIAISON" ? this.liaison : null;
+		const anchor = id === "PLAYER" && this.player
+			? { x: this.player.x, y: this.player.y }
+			: this.actorSpawnPosition(id);
+		const offset = this.actorVisualProfiles[id]?.offset ?? [0, 0];
+		if (actor && anchor) actor.setPosition(anchor.x + offset[0], anchor.y + offset[1]);
 	}
 
 	applyPlayerColliderBody() {
 		const profile = this.playerColliderProfile;
 		if (!profile || !this.player) return;
+		const source = chenFrameSize(this, "right");
 		this.player
 			.setSize(profile.size[0], profile.size[1])
 			.setOffset(
-				CHEN_SOURCE_FRAME.width / 2 + profile.offset[0],
-				CHEN_SOURCE_FRAME.height + profile.offset[1],
+				source.width / 2 + profile.offset[0],
+				source.height + profile.offset[1],
 			);
 	}
 
@@ -186,11 +248,16 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 			getDefaultForegroundDepth: () => 2000,
 			getWorldSize: () => [WORLD_W, WORLD_H],
 			getActorColliders: () => this.actorColliderEntries,
+			getActorVisuals: () => this.actorVisualEntries,
+			onActorVisualChange: (id: string, height: number) => this.applyActorVisualHeight(id, height),
 			getMagneticSource: () => this.textures.get("ch01_sc03_bg").getSourceImage(),
 			replaceDocuments: (next: any) => {
 				this.manifest = next[file];
 				documents[file] = this.manifest as any;
+				applyDevPlayerMotionFromJson((this.manifest as any).player_motion);
 				this.setupActorCollider();
+				this.applyActorVisualHeight("PLAYER", this.actorVisualProfiles.PLAYER.display_height);
+				this.applyActorVisualHeight("NPC_LIAISON", this.actorVisualProfiles.NPC_LIAISON.display_height);
 			},
 			onChange: (kind: string) => {
 				if (!kind || kind === "collision") {
@@ -208,24 +275,33 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 		this.playerVisual = this.add
 			.sprite(this.player.x, this.player.y, chenFrameKey("right", 0))
 			.setOrigin(0.5, 1)
-			.setDisplaySize(chenDisplayWidth(PLAYER_DISPLAY_HEIGHT), PLAYER_DISPLAY_HEIGHT)
+			.setDisplaySize(
+				chenDisplayWidth(this, "right", PLAYER_DISPLAY_HEIGHT),
+				PLAYER_DISPLAY_HEIGHT,
+			)
 			.setDepth(801);
 	}
 
 	syncPlayerVisual(direction: ChenWalkDirection, moving: boolean) {
 		if (!this.playerVisual) return;
-		this.playerVisual
-			.setPosition(this.player.x, this.player.y)
-			.setDisplaySize(chenDisplayWidth(PLAYER_DISPLAY_HEIGHT), PLAYER_DISPLAY_HEIGHT)
-			.setFlipX(false);
+		this.playerVisual.anims.timeScale = getPlayerAnimationMultiplier();
+		this.applyActorVisualPosition("PLAYER");
+		this.playerVisual.setFlipX(false);
+		const displayHeight = this.actorVisualProfiles.PLAYER.display_height;
+		const displayWidth = chenDisplayWidth(this, direction, displayHeight);
 		const animation = chenAnimKey(direction);
 		if (moving) {
-			if (this.playerVisual.anims.currentAnim?.key !== animation || !this.playerVisual.anims.isPlaying)
+			if (this.playerVisual.anims.currentAnim?.key !== animation || !this.playerVisual.anims.isPlaying) {
+				this.playerVisual.setTexture(chenFrameKey(direction, 0));
 				this.playerVisual.play(animation);
+			}
+			this.playerVisual.setDisplaySize(displayWidth, displayHeight);
 			return;
 		}
 		this.playerVisual.anims.stop();
-		this.playerVisual.setTexture(chenFrameKey(direction, 0));
+		this.playerVisual
+			.setTexture(chenFrameKey(direction, 0))
+			.setDisplaySize(displayWidth, displayHeight);
 	}
 
 	buildCollision() {
@@ -250,7 +326,7 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 			}
 			return;
 		}
-		const speed = 220;
+		const speed = 220 * getPlayerMovementMultiplier();
 		let x = 0;
 		let y = 0;
 		if (isActionDown(this.keyMap, "MOVE_LEFT")) x -= 1;
@@ -301,6 +377,8 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 	}
 
 	handleConfirm() {
+		if (taskNeedsConfirmation()) return closeTask();
+		if (this.nearby()) return this.interact();
 		if (this.state.taskOpen) return closeTask();
 		this.interact();
 	}

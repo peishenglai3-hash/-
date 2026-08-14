@@ -36,15 +36,19 @@ onMounted(() => {
 	directorStore.init(gameEl.value!);
 
 	const game = directorStore.game!;
+	window.addEventListener("honghu:dev-add-task", () => hud.addTestTask());
 
 	// P 键切换区域编辑器
 	window.addEventListener("keydown", (event) => {
 		if (event.code !== "KeyP") return;
 		const editorPanel = document.querySelector(".dev-zone-editor");
 		const target = event.target as HTMLElement | null;
-		if (["INPUT", "TEXTAREA", "SELECT"].includes(target?.tagName ?? "") && !editorPanel?.contains(target)) return;
+		if (
+			["INPUT", "TEXTAREA", "SELECT"].includes(target?.tagName ?? "") &&
+			!editorPanel?.contains(target)
+		) return;
 		event.preventDefault();
-		const scene = game.scene.getScenes(true).find((item: any) => item.zoneEditor) as any;
+		const scene = [...game.scene.getScenes(true)].reverse().find((item: any) => item.zoneEditor) as any;
 		scene?.zoneEditor.toggle();
 	});
 });

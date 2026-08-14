@@ -1,7 +1,7 @@
 // ui.ts — HUD 控制接口，所有函数转发到 Pinia store
 // Phaser Scene 继续通过此模块控制 HUD，无需关心底层是 Vue 还是原生 DOM
 
-import { useHudStore } from "@/stores/modules/hud";
+import { useHudStore, type DevPlayerMotionConfig } from "@/stores/modules/hud";
 
 // 延迟获取 store 实例，避免模块初始化时调用（此时 Pinia 尚未安装）
 function store() {
@@ -38,6 +38,14 @@ export function hideResult() { store().hideResult(); }
 export function showTask(task: any) { store().showTask(task); }
 export function closeTask() { store().closeTask(); }
 export function hideTask() { store().hideTask(); }
+export function taskNeedsConfirmation() { return store().taskNeedsConfirmation(); }
+export function getPlayerMovementMultiplier() { return store().devPlayerTuning.movementMultiplier; }
+export function getPlayerAnimationMultiplier() { return store().devPlayerTuning.animationMultiplier; }
+export function setPlayerMovementMultiplier(value: number) { store().devPlayerTuning.movementMultiplier = value; }
+export function setPlayerAnimationMultiplier(value: number) { store().devPlayerTuning.animationMultiplier = value; }
+export function resetDevPlayerTuning() { store().resetDevPlayerTuning(); }
+export function getDevPlayerMotionJson() { return store().devPlayerMotionJson(); }
+export function applyDevPlayerMotionFromJson(motion?: DevPlayerMotionConfig) { store().applyDevPlayerMotionFromJson(motion); }
 export function showPrompt(text: string) { store().showPrompt(text); }
 export function hidePrompt() { store().hidePrompt(); }
 export function fadeToBlack() { store().fadeToBlack(); }

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Build and compare two transparent modern-player animation variants."""
+"""Build transparent eight-frame player animations and QA previews."""
 
 from __future__ import annotations
 
+import argparse
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -14,6 +15,7 @@ from PIL import Image, ImageDraw
 
 PROJECT = Path(__file__).resolve().parent.parent
 ASSET_ROOT = PROJECT / "public" / "assets" / "characters" / "player" / "modern"
+CH01_SC01_ASSET_ROOT = PROJECT / "public" / "assets" / "ch01" / "sc01" / "sprites"
 FRAME_COUNT = 8
 RUNTIME_HEIGHT = 720
 PAD = 20
@@ -22,6 +24,12 @@ DIRECTIONS = {
     "down": "正面8帧",
     "left": "左面8帧",
     "right": "右面8帧",
+    "up": "背面8帧",
+}
+CH01_SC01_DIRECTIONS = {
+    "down": "正面8帧",
+    "left": "左侧8帧",
+    "right": "右侧8帧",
     "up": "背面8帧",
 }
 
@@ -237,12 +245,13 @@ def evaluate_frames(
         x0, y0, x1, y1 = alpha_bbox(alpha)
         padding.append((x0, y0, alpha.shape[1] - x1, alpha.shape[0] - y1))
 
+    stable_anchor_limit = alpha.shape[0] * 0.01
     checks = {
         "sameDimensions": same_dimensions,
         "backgroundRemoved": max(green_ratios) < 0.002,
         "noDetachedPixels": max(components) == 1,
         "noClippedSubject": min(min(values) for values in padding) >= 1,
-        "stableAnchor": float(np.std(bottoms)) <= 5.0,
+        "stableAnchor": float(np.std(bottoms)) <= stable_anchor_limit,
         "minimalPadding": max(min(values) for values in padding) <= 12,
         "loopPositionStable": loop_delta <= 35.0,
     }
@@ -265,6 +274,7 @@ def evaluate_frames(
             "componentCounts": components,
             "runtimeOpaqueAreas": opaque_areas,
             "bottomStandardDeviation": round(float(np.std(bottoms)), 3),
+            "stableAnchorLimit": round(stable_anchor_limit, 3),
             "footCenterStandardDeviation": round(float(np.std(foot_centers)), 3),
             "loopCentroidDelta": round(loop_delta, 3),
             "crop": list(crop),
@@ -347,6 +357,114 @@ def process_variant(direction: DirectionInput, variant: str) -> dict[str, object
     return {"direction": direction.key, "variant": variant, "recipe": recipe, "report": report}
 
 
+def process_ch01_sc01_direction(direction_key: str, folder_name: str) -> dict[str, object]:
+    folder = CH01_SC01_ASSET_ROOT / folder_name
+    sources = natural_files(folder, ".jpg")
+    mirror_output = direction_key == "down"
+    out_dir = folder / "processed" / "version-rekeyed"
+    frames_dir = out_dir / "frames"
+    runtime_dir = out_dir / "runtime"
+    frames_dir.mkdir(parents=True, exist_ok=True)
+    runtime_dir.mkdir(parents=True, exist_ok=True)
+
+    alphas: list[np.ndarray] = []
+    boxes: list[tuple[int, int, int, int]] = []
+    source_size: tuple[int, int] | None = None
+    for source in sources:
+        rgb = load_rgb(source)
+        source_size = (rgb.shape[1], rgb.shape[0])
+        alpha = largest_component(raw_soft_alpha(rgb))
+        alphas.append(alpha)
+        boxes.append(alpha_bbox(alpha))
+
+    assert source_size is not None
+    crop = union_bbox(boxes, source_size)
+    crop_width = crop[2] - crop[0]
+    crop_height = crop[3] - crop[1]
+    runtime_width = round(crop_width * RUNTIME_HEIGHT / crop_height)
+    runtime_frames: list[Image.Image] = []
+    cropped_rgba: list[np.ndarray] = []
+    for index, (source, alpha) in enumerate(zip(sources, alphas, strict=True), start=1):
+        rgb = load_rgb(source)
+        rgba = despill_rgba(rgb, alpha)[crop[1] : crop[3], crop[0] : crop[2]]
+        if mirror_output:
+            rgba = np.fliplr(rgba).copy()
+        cropped_rgba.append(rgba)
+        frame = Image.fromarray(rgba, "RGBA")
+        frame.save(frames_dir / f"frame-{index:02}.png", compress_level=6)
+        scaled = frame.resize((runtime_width, RUNTIME_HEIGHT), Image.Resampling.LANCZOS)
+        scaled.save(runtime_dir / f"frame-{index:02}.png", optimize=True)
+        runtime_frames.append(scaled)
+
+    save_preview(runtime_frames, out_dir)
+    report = evaluate_frames(cropped_rgba, runtime_frames, crop, [{} for _ in sources])
+    recipe = {
+        "version": 1,
+        "variant": "version-rekeyed",
+        "frameCount": FRAME_COUNT,
+        "sortRule": "filename-natural-order",
+        "source": {"width": source_size[0], "height": source_size[1]},
+        "matting": {
+            "method": "green-excess-chroma-key-plus-connectivity",
+            "greenExcessOpaqueThreshold": 8,
+            "greenExcessTransparentThreshold": 28,
+            "edgeFeather": True,
+            "decontaminateColor": True,
+        },
+        "cleanup": {"keepLargestSubject": True, "minimumComponentArea": 12},
+        "alignment": {"anchorType": "source-position", "allowPerFrameTranslation": False},
+        "crop": {
+            "x": crop[0],
+            "y": crop[1],
+            "width": crop_width,
+            "height": crop_height,
+            "padding": PAD,
+            "method": "union-alpha-bounds",
+        },
+        "runtime": {"width": runtime_width, "height": RUNTIME_HEIGHT, "preserveAspectRatio": True},
+        "export": {"format": "png", "transparent": True, "namePattern": "frame-{index:02}.png"},
+    }
+    if mirror_output:
+        recipe["transform"] = {"horizontalFlip": True}
+    (out_dir / "recipe.json").write_text(json.dumps(recipe, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (out_dir / "qa-report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return {"direction": direction_key, "recipe": recipe, "report": report}
+
+
+def save_ch01_sc01_summary(results: list[dict[str, object]]) -> None:
+    previews: list[tuple[str, Image.Image]] = []
+    for direction_key, folder_name in CH01_SC01_DIRECTIONS.items():
+        path = CH01_SC01_ASSET_ROOT / folder_name / "processed" / "version-rekeyed" / "runtime" / "frame-01.png"
+        with Image.open(path) as source:
+            previews.append((direction_key, source.convert("RGBA")))
+
+    cell_width = max(frame.width for _, frame in previews) + 40
+    cell_height = RUNTIME_HEIGHT + 60
+    sheet = Image.new("RGB", (cell_width * 4, cell_height), (35, 39, 38))
+    draw = ImageDraw.Draw(sheet)
+    for index, (label, frame) in enumerate(previews):
+        x = index * cell_width
+        panel = checkerboard((cell_width, RUNTIME_HEIGHT))
+        panel.paste(frame, ((cell_width - frame.width) // 2, 0), frame)
+        sheet.paste(panel, (x, 0))
+        draw.text((x + 12, RUNTIME_HEIGHT + 18), label, fill=(240, 238, 228))
+    sheet.save(CH01_SC01_ASSET_ROOT / "qa-comparison.png", optimize=True)
+
+    summary = {
+        "variant": "version-rekeyed",
+        "allDirectionsPassed": all(bool(item["report"]["passed"]) for item in results),
+        "directionScores": {
+            str(item["direction"]): item["report"]["metrics"]["qualityScore"] for item in results
+        },
+        "warnings": {
+            str(item["direction"]): item["report"]["warnings"] for item in results
+        },
+    }
+    (CH01_SC01_ASSET_ROOT / "qa-summary.json").write_text(
+        json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+
+
 def save_comparison(results: list[dict[str, object]]) -> None:
     cells: list[tuple[str, Image.Image]] = []
     for direction_key, folder_name in DIRECTIONS.items():
@@ -400,7 +518,7 @@ def save_comparison(results: list[dict[str, object]]) -> None:
     )
 
 
-def main() -> None:
+def process_modern_player() -> None:
     results: list[dict[str, object]] = []
     for direction_key, folder_name in DIRECTIONS.items():
         direction = load_direction(direction_key, folder_name)
@@ -412,6 +530,32 @@ def main() -> None:
     save_comparison(results)
     summary = json.loads((ASSET_ROOT / "qa-summary.json").read_text(encoding="utf-8"))
     print(f"selected {summary['selected']}")
+
+
+def process_ch01_sc01_player() -> None:
+    results: list[dict[str, object]] = []
+    for direction_key, folder_name in CH01_SC01_DIRECTIONS.items():
+        result = process_ch01_sc01_direction(direction_key, folder_name)
+        results.append(result)
+        score = result["report"]["metrics"]["qualityScore"]
+        warnings = result["report"]["warnings"]
+        print(f"{direction_key:>5} version-rekeyed score={score} warnings={warnings}")
+    save_ch01_sc01_summary(results)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--target",
+        choices=("modern", "ch01-sc01", "all"),
+        default="modern",
+        help="asset set to rebuild",
+    )
+    args = parser.parse_args()
+    if args.target in ("modern", "all"):
+        process_modern_player()
+    if args.target in ("ch01-sc01", "all"):
+        process_ch01_sc01_player()
 
 
 if __name__ == "__main__":

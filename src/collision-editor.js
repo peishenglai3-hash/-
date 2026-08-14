@@ -60,7 +60,7 @@ export class CollisionEditor {
       <label data-section="depth">层级 Depth<input data-field="depth" type="number" step="1"></label>
       <label>吸附<select data-field="snap"><option value="1">1 格</option><option value="0.5">0.5 格</option><option value="0.25" selected>0.25 格</option><option value="0.125">0.125 格</option></select></label>
       <p data-field="help">拖动矩形移动；拖动四边或四角缩放。</p>
-      <div class="dev-zone-actions"><button data-action="add">新增</button><button data-action="delete">删除</button><button data-action="reset">重载</button><button data-action="save" class="primary">保存 JSON</button><button data-action="next-chapter" class="dev-next-chapter">随机属性并跳到下一章</button></div>
+      <div class="dev-zone-actions"><button data-action="add">新增</button><button data-action="delete">删除</button><button data-action="reset">重载</button><button data-action="save" class="primary">保存 JSON</button><button data-action="test-task" class="dev-test-task">增加测试任务</button><button data-action="next-chapter" class="dev-next-chapter">随机属性并跳到下一章</button></div>
       <output data-field="status">未保存的修改会在刷新后丢失</output>`;
     document.body.appendChild(root);
     this.panel = root;
@@ -94,6 +94,9 @@ export class CollisionEditor {
     root.querySelector('[data-action="delete"]').onclick = () => this.remove();
     root.querySelector('[data-action="reset"]').onclick = () => this.reset();
     root.querySelector('[data-action="save"]').onclick = () => this.save();
+    root.querySelector('[data-action="test-task"]').onclick = () => {
+      window.dispatchEvent(new CustomEvent('honghu:dev-add-task'));
+    };
     root.querySelector('[data-action="next-chapter"]').onclick = () => {
       const sceneKey = this.scene.scene.key;
       this.setEnabled(false);
@@ -229,6 +232,8 @@ export class CollisionEditor {
   }
   setEnabled(enabled) {
     this.enabled = enabled;
+    document.body.classList.toggle('dev-editor-active', enabled);
+    window.dispatchEvent(new CustomEvent('honghu:dev-editor-toggle', { detail: { enabled } }));
     this.graphics.setVisible(enabled);
     this.panel.classList.toggle('hidden', !enabled);
     if (enabled) this.select(this.items[0] ?? null);

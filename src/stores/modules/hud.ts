@@ -1,4 +1,4 @@
-import { ref, reactive } from "vue";
+import { computed, ref, reactive } from "vue";
 import { defineStore } from "pinia";
 import { useGameStateStore } from "@/stores/modules/gameState";
 import { useGameSaveStore } from "@/stores";
@@ -21,6 +21,10 @@ export interface NarrativeEntry {
 export interface TaskCard {
   title: string;
   detail: string;
+}
+
+export interface TaskCardEntry extends TaskCard {
+  id: number;
 }
 
 export interface ItemPanel {
@@ -53,6 +57,11 @@ export interface EndPanel {
   risk: string;
 }
 
+export interface DevPlayerMotionConfig {
+  movement_multiplier?: number;
+  animation_multiplier?: number;
+}
+
 // ===== 内部状态（模块级，非响应式） =====
 
 let _flavorTimer: number | null = null;
@@ -60,6 +69,20 @@ let _narrativeTimer: number | null = null;
 let _narrativeQueue: NarrativeEntry[] = [];
 let _narrativeIndex = 0;
 let _narrativeOnComplete: (() => void) | null = null;
+let _taskId = 0;
+let _testTaskIndex = 0;
+const DEV_PLAYER_TUNING_DEFAULT = 1;
+const DEV_PLAYER_TUNING_MIN = 0.25;
+const DEV_PLAYER_TUNING_MAX = 3;
+
+function clampDevPlayerTuning(value: number): number {
+  return Math.min(DEV_PLAYER_TUNING_MAX, Math.max(DEV_PLAYER_TUNING_MIN, value));
+}
+
+function normalizedDevPlayerTuning(value: unknown, fallback = DEV_PLAYER_TUNING_DEFAULT): number {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? clampDevPlayerTuning(numeric) : fallback;
+}
 
 // ===== 覆盖层场景类型（全屏流程组件，同一时刻只显示一个） =====
 
@@ -77,9 +100,21 @@ export const useHudStore = defineStore("hud", () => {
   // --- title sub panels ---
   const title = reactive({ loadOpen: false, settingsOpen: false });
 
+  // --- developer player tuning ---
+  const devPlayerTuning = reactive({
+    movementMultiplier: DEV_PLAYER_TUNING_DEFAULT,
+    animationMultiplier: DEV_PLAYER_TUNING_DEFAULT,
+  });
+
   // --- task card ---
-  const taskCard = ref<TaskCard | null>(null);
-  const taskCenter = ref(false);
+  const taskCards = ref<TaskCardEntry[]>([]);
+  const taskCenterId = ref<number | null>(null);
+  const taskWindowStart = ref(0);
+  const taskCenter = computed(() => taskCenterId.value !== null);
+  const visibleTaskCards = computed(() =>
+    taskCards.value.slice(taskWindowStart.value, taskWindowStart.value + 3),
+  );
+  const taskWindowCount = computed(() => Math.max(1, taskCards.value.length - 2));
 
   // --- interaction prompt ---
   const prompt = ref("");
@@ -135,6 +170,23 @@ export const useHudStore = defineStore("hud", () => {
 
   // --- global lock ---
   const playerLocked = ref(false);
+
+  function resetDevPlayerTuning() {
+    devPlayerTuning.movementMultiplier = DEV_PLAYER_TUNING_DEFAULT;
+    devPlayerTuning.animationMultiplier = DEV_PLAYER_TUNING_DEFAULT;
+  }
+
+  function applyDevPlayerMotionFromJson(config?: DevPlayerMotionConfig) {
+    devPlayerTuning.movementMultiplier = normalizedDevPlayerTuning(config?.movement_multiplier);
+    devPlayerTuning.animationMultiplier = normalizedDevPlayerTuning(config?.animation_multiplier);
+  }
+
+  function devPlayerMotionJson(): DevPlayerMotionConfig {
+    return {
+      movement_multiplier: normalizedDevPlayerTuning(devPlayerTuning.movementMultiplier),
+      animation_multiplier: normalizedDevPlayerTuning(devPlayerTuning.animationMultiplier),
+    };
+  }
 
   // ===== 内部函数 =====
 
@@ -278,30 +330,66 @@ export const useHudStore = defineStore("hud", () => {
   }
 
   // --- 任务卡片（两段式：居中强制确认 → 右上角待办） ---
-  function showTask(task: TaskCard) {
-    gameState.state.taskPreviousLock = gameState.state.playerLocked;
+  function showTask(task: TaskCard, centerWhenEmpty = true) {
+    const shouldCenter = centerWhenEmpty && taskCards.value.length === 0;
+    const entry = { ...task, id: ++_taskId };
+    taskCards.value.unshift(entry);
+    taskWindowStart.value = 0;
     gameState.state.taskOpen = true;
-    gameState.state.playerLocked = true;
-    taskCenter.value = true;
-    taskCard.value = task;
+    if (shouldCenter) {
+      gameState.state.taskPreviousLock = gameState.state.playerLocked;
+      gameState.state.playerLocked = true;
+      taskCenterId.value = entry.id;
+    }
   }
 
   function closeTask() {
     if (!gameState.state.taskOpen) return;
     // 第一段：居中 → 缩到右上角
-    if (taskCenter.value) {
-      taskCenter.value = false;
+    if (taskCenterId.value !== null) {
+      taskCenterId.value = null;
+      gameState.state.playerLocked = ["explore", "leave_walk"].includes(gameState.state.mode)
+        ? false
+        : gameState.state.taskPreviousLock;
       return;
     }
     // 第二段：右上角 → 彻底关闭
-    gameState.state.taskOpen = false;
-    taskCard.value = null;
-    gameState.state.playerLocked = gameState.state.taskPreviousLock;
+    taskCards.value.splice(taskWindowStart.value, 1);
+    taskWindowStart.value = Math.min(
+      taskWindowStart.value,
+      Math.max(0, taskCards.value.length - 3),
+    );
+    gameState.state.taskOpen = taskCards.value.length > 0;
   }
 
   function hideTask() {
     gameState.state.taskOpen = false;
-    taskCard.value = null;
+    taskCards.value = [];
+    taskCenterId.value = null;
+    taskWindowStart.value = 0;
+  }
+
+  function taskNeedsConfirmation(): boolean {
+    return taskCenterId.value !== null;
+  }
+
+  function showNewerTasks() {
+    taskWindowStart.value = Math.max(0, taskWindowStart.value - 1);
+  }
+
+  function showOlderTasks() {
+    taskWindowStart.value = Math.min(
+      Math.max(0, taskCards.value.length - 3),
+      taskWindowStart.value + 1,
+    );
+  }
+
+  function addTestTask() {
+    _testTaskIndex += 1;
+    showTask({
+      title: `测试任务 ${_testTaskIndex}`,
+      detail: "仅用于查看任务堆叠与切换效果，不会写入 JSON。",
+    }, false);
   }
 
   // --- 交互提示 ---
@@ -376,8 +464,13 @@ export const useHudStore = defineStore("hud", () => {
   return {
     overlay,
     title,
-    taskCard,
+    taskCards,
+    devPlayerTuning,
     taskCenter,
+    taskCenterId,
+    taskWindowStart,
+    taskWindowCount,
+    visibleTaskCards,
     prompt,
     dialogue,
     itemPanel,
@@ -392,6 +485,9 @@ export const useHudStore = defineStore("hud", () => {
     playerLocked,
     // actions
     showFlavor,
+    resetDevPlayerTuning,
+    applyDevPlayerMotionFromJson,
+    devPlayerMotionJson,
     playNarrative,
     advanceNarrative,
     hideDialogue,
@@ -407,6 +503,10 @@ export const useHudStore = defineStore("hud", () => {
     showTask,
     closeTask,
     hideTask,
+    taskNeedsConfirmation,
+    showNewerTasks,
+    showOlderTasks,
+    addTestTask,
     showPrompt,
     hidePrompt,
     fadeToBlack,
