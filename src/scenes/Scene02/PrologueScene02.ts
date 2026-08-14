@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { createKeyMap, isActionDown, onAction } from "@/common/actions";
+import { WORLD_INDICATOR_DEPTH } from "@/common/displayDepth";
 import { useGameStateStore } from "@/stores/modules/gameState";
 import {
 	showTask,
@@ -7,6 +8,7 @@ import {
 	taskNeedsConfirmation,
 	getPlayerMovementMultiplier,
 	getPlayerAnimationMultiplier,
+	applyDevPlayerMotionFromJson,
 	showPrompt,
 	playNarrative,
 	advanceNarrative,
@@ -45,7 +47,6 @@ import {
 	TASKS,
 	PROP_LINES,
 	ONE_LINERS,
-	FLAVOR_SPOTS,
 } from "./content";
 
 const PX = 32;
@@ -85,6 +86,14 @@ interface InteractionZone {
 interface InteractionData {
 	margin_tiles: number;
 	zones: InteractionZone[];
+	flavor_zones?: FlavorZone[];
+}
+
+interface FlavorZone {
+	id: string;
+	type: "flavor";
+	rect: [number, number, number, number];
+	line: string;
 }
 
 export class PrologueScene02 extends Phaser.Scene {
@@ -138,6 +147,7 @@ export class PrologueScene02 extends Phaser.Scene {
 
 	create() {
 		this.logic = this.cache.json.get("logic");
+		applyDevPlayerMotionFromJson((this.logic as any).player_motion);
 		this.setupActorCollider();
 		this.interactionData = this.cache.json.get("interactions");
 		this.statesData = this.cache.json.get("states");
@@ -189,7 +199,7 @@ export class PrologueScene02 extends Phaser.Scene {
 			this.applyPlayerVisualHeight(this.actorVisualProfile.display_height);
 		}
 		this.setupObjectiveMarker();
-		this.flavorArmed = new Map(FLAVOR_SPOTS.map((spot) => [spot.id, true]));
+		this.flavorArmed = new Map((this.interactionData.flavor_zones ?? []).map((zone) => [zone.id, true]));
 		this.keyMap = createKeyMap(this);
 		this.cameras.main
 			.setBounds(0, 0, this.logic.world_size[0], this.logic.world_size[1])
@@ -278,8 +288,13 @@ export class PrologueScene02 extends Phaser.Scene {
 		const documents = { [logicFile]: this.logic as any, [interactionsFile]: this.interactionData as any };
 		this.zoneEditor = new CollisionEditor(this, {
 			documents,
+			tileSize: PX,
 			getCollisions: () => (this.logic as any).collision_zones,
 			getInteractions: () => (this.interactionData as any).zones,
+			getFlavorZones: () => {
+				(this.interactionData as any).flavor_zones ??= [];
+				return (this.interactionData as any).flavor_zones;
+			},
 			getForegrounds: () => {
 				const logic = this.logic as any;
 				logic.foreground_layers ??= { reserved: true, objects: [] };
@@ -287,7 +302,7 @@ export class PrologueScene02 extends Phaser.Scene {
 				return logic.foreground_layers.objects;
 			},
 			getDefaultForegroundDepth: () => 100,
-			getWorldSize: () => this.logic.world_size,
+			getWorldSize: () => [this.logic.logical_grid.width, this.logic.logical_grid.height],
 			getActorColliders: () => this.actorColliderEntries,
 			getActorVisuals: () => this.actorVisualEntries,
 			onActorVisualChange: (_id: string, height: number) => this.applyPlayerVisualHeight(height),
@@ -297,8 +312,10 @@ export class PrologueScene02 extends Phaser.Scene {
 				this.interactionData = next[interactionsFile];
 				documents[logicFile] = this.logic as any;
 				documents[interactionsFile] = this.interactionData as any;
+				applyDevPlayerMotionFromJson((this.logic as any).player_motion);
 				this.setupActorCollider();
 				this.applyPlayerVisualHeight(this.actorVisualProfile.display_height);
+				this.flavorArmed = new Map((this.interactionData.flavor_zones ?? []).map((zone: FlavorZone) => [zone.id, true]));
 			},
 			onChange: (kind: string) => {
 				if (!kind || kind === "collision") {
@@ -370,7 +387,7 @@ export class PrologueScene02 extends Phaser.Scene {
 	setupObjectiveMarker() {
 		this.objectiveMarker = this.add
 			.container(0, 0)
-			.setDepth(180)
+			.setDepth(WORLD_INDICATOR_DEPTH)
 			.setVisible(false);
 		const bang = this.add
 			.text(0, 0, "!", {
@@ -413,15 +430,17 @@ export class PrologueScene02 extends Phaser.Scene {
 			return;
 		const px = this.player.x / PX;
 		const py = this.player.y / PX;
-		for (const spot of FLAVOR_SPOTS) {
-			const distance = Math.hypot(px - spot.at[0], py - spot.at[1]);
-			if (distance <= spot.radius) {
-				if (this.flavorArmed.get(spot.id)) {
-					this.flavorArmed.set(spot.id, false);
-					showFlavor(spot.line);
+		for (const zone of this.interactionData.flavor_zones ?? []) {
+			const [x, y, width, height] = zone.rect;
+			const inside = px >= x && px <= x + width && py >= y && py <= y + height;
+			const outside = px < x - 1 || px > x + width + 1 || py < y - 1 || py > y + height + 1;
+			if (inside) {
+				if (this.flavorArmed.get(zone.id) !== false) {
+					this.flavorArmed.set(zone.id, false);
+					showFlavor(zone.line);
 				}
-			} else if (distance > spot.radius + 1) {
-				this.flavorArmed.set(spot.id, true);
+			} else if (outside) {
+				this.flavorArmed.set(zone.id, true);
 			}
 		}
 	}

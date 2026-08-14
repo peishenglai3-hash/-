@@ -110,17 +110,21 @@ export const useDirectorStore = defineStore("director", () => {
 	// 返回陈家链：SC01 暗号选择后 → 外景院墙；联络通知完成 → 回 SC01 告别
 	function setupFlashbackFlow(g: Phaser.Game): void {
 		g.events.on("ch01:sc02-enter", () => {
-			enterScene("Ch01Sc02Scene", "CH01_SC02");
-			// 延迟停止 SC01，避免在 ink tween 回调中销毁场景
-			window.setTimeout(() => g.scene.stop("Ch01Sc01Scene"), 0);
+			// 离开 tween 回调后先完整关闭旧场景，避免两个区域编辑器短暂共存。
+			window.setTimeout(() => {
+				g.scene.stop("Ch01Sc01Scene");
+				enterScene("Ch01Sc02Scene", "CH01_SC02");
+			}, 0);
 		});
 		g.events.on("ch01:sc02-complete", () => {
 			g.scene.stop("Ch01Sc02Scene");
 			enterScene("Ch01Sc01Scene", "CH01_SC01");
 		});
 		g.events.on("ch01:sc03-enter", () => {
-			enterScene("Ch01Sc03Scene", "CH01_SC03");
-			window.setTimeout(() => g.scene.stop("Ch01Sc01Scene"), 0);
+			window.setTimeout(() => {
+				g.scene.stop("Ch01Sc01Scene");
+				enterScene("Ch01Sc03Scene", "CH01_SC03");
+			}, 0);
 		});
 		g.events.on("ch01:sc03-complete", () => {
 			g.scene.stop("Ch01Sc03Scene");
@@ -169,7 +173,7 @@ export const useDirectorStore = defineStore("director", () => {
 	}
 
 	function handleDevNextChapter(sceneKey?: string): void {
-		const activeKey = sceneKey ?? (game.value!.scene.getScenes(true).find((scene: any) => scene.zoneEditor) as any)?.scene.key;
+		const activeKey = sceneKey ?? ([...game.value!.scene.getScenes(true)].reverse().find((scene: any) => scene.zoneEditor) as any)?.scene.key;
 		if (activeKey === "Ch01Sc01Scene") {
 			clearStoryUi();
 			completeCh01Sc01ForDev();

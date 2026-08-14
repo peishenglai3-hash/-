@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { createKeyMap, isActionDown, onAction } from "@/common/actions";
+import { actorDepth, foregroundDepth, WORLD_INDICATOR_DEPTH } from "@/common/displayDepth";
 import { useGameStateStore } from "@/stores/modules/gameState";
 import {
 	showTask,
@@ -8,6 +9,7 @@ import {
 	taskNeedsConfirmation,
 	getPlayerMovementMultiplier,
 	getPlayerAnimationMultiplier,
+	applyDevPlayerMotionFromJson,
 	showPrompt,
 	hidePrompt,
 	playNarrative,
@@ -36,9 +38,11 @@ import { FLAGS2 } from "./ch01Sc02.flags";
 // @ts-ignore Shared developer tools support both grid and pixel-coordinate scenes.
 import { CollisionEditor } from "../../zone-editor.js";
 // @ts-ignore Legacy actor collider helpers are shared by the editor.
-import { ensureActorColliderConfig, createActorColliderEntry } from "../../actor-collider.js";
+import { actorColliderBottomAt, actorColliderRectAt, ensureActorColliderConfig, createActorColliderEntry } from "../../actor-collider.js";
+// @ts-ignore Shared collision geometry supports the rotated rectangles shown in the editor.
+import { aabbOverlapsRotatedRect } from "../../collision-geometry.js";
 // @ts-ignore Foreground occlusion renderer clips background copies above the player.
-import { ForegroundOcclusionRenderer } from "../../foreground-occlusion.js";
+import { ForegroundOcclusionRenderer, foregroundBottomPx } from "../../foreground-occlusion.js";
 import {
 	chenAnimKey,
 	chenDisplayWidth,
@@ -59,7 +63,7 @@ const CAMERA_ZOOM = 0.765;
 
 interface ManifestData {
 	spawns: { id: string; position: [number, number]; facing: string }[];
-	collision: { id: string; rect: [number, number, number, number] }[];
+	collision: { id: string; rect: [number, number, number, number]; rotation?: number }[];
 	interactions: { id: string; prompt?: string; rect: [number, number, number, number]; type?: string }[];
 	foreground_occlusion?: { reserved: boolean; objects: unknown[] };
 }
@@ -77,7 +81,7 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 	playerDirection: ChenWalkDirection = "down";
 	keyMap!: ReturnType<typeof createKeyMap>;
 	camera!: Phaser.Cameras.Scene2D.Camera;
-	collisionRects!: { id: string; x: number; y: number; width: number; height: number }[];
+	collisionRects!: { id: string; rect: [number, number, number, number]; rotation: number }[];
 	observationMarks: Phaser.GameObjects.Text[] = [];
 
 	get state() {
@@ -112,6 +116,7 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 	create() {
 		this.resetHud();
 		this.manifest = this.cache.json.get("ch01_sc02_manifest");
+		applyDevPlayerMotionFromJson((this.manifest as any).player_motion);
 		this.setupActorCollider();
 		this.physics.world.setBounds(0, 0, WORLD_W, WORLD_H);
 		const bg = this.add.image(WORLD_W / 2, WORLD_H / 2, "ch01_sc02_bg").setDepth(-20);
@@ -121,7 +126,12 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 		this.player = this.physics.add
 			.sprite(playerSpawn.position[0], playerSpawn.position[1], chenFrameKey("down", 0))
 			.setOrigin(0.5, 1)
-			.setDepth(800);
+			.setDepth(actorDepth(actorColliderBottomAt(
+				playerSpawn.position[0],
+				playerSpawn.position[1],
+				this.playerColliderProfile,
+				1,
+			)));
 		this.applyPlayerColliderBody();
 		this.player.setCollideWorldBounds(true);
 		this.player.setVisible(false);
@@ -136,7 +146,7 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 				Math.round((FISHERMAN_DISPLAY_HEIGHT * 1024) / 1536),
 				FISHERMAN_DISPLAY_HEIGHT,
 			)
-			.setDepth(799);
+			.setDepth(actorDepth(fisherSpawn.position[1]));
 
 		this.camera = this.cameras.main
 			.setBounds(0, 0, WORLD_W, WORLD_H)
@@ -219,13 +229,15 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 			replaceDocuments: (next: any) => {
 				this.manifest = next[file];
 				documents[file] = this.manifest as any;
+				applyDevPlayerMotionFromJson((this.manifest as any).player_motion);
 				this.setupActorCollider();
 			},
-			onChange: (kind: string) => {
+				onChange: (kind: string) => {
 				if (!kind || kind === "collision") {
 					this.buildCollision();
 					this.applyPlayerColliderBody();
 				}
+				if (!kind || kind === "foreground") this.foregroundRenderer?.rebuild();
 			},
 		});
 	}
@@ -235,7 +247,7 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 		this.foregroundRenderer = new ForegroundOcclusionRenderer(this, {
 			background: bg,
 			getObjects: () => (this.manifest as any).foreground_occlusion?.objects ?? [],
-			resolveDepth: (object: any) => object?.depth ?? 2000,
+			resolveDepth: (object: any) => foregroundDepth(foregroundBottomPx(object, 1) ?? 0),
 			tileSize: 1,
 		});
 	}
@@ -251,7 +263,11 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 				chenDisplayWidth(this, "down", PLAYER_DISPLAY_HEIGHT),
 				PLAYER_DISPLAY_HEIGHT,
 			)
-			.setDepth(801);
+			.setDepth(this.depthForPlayer());
+	}
+
+	depthForPlayer(): number {
+		return actorDepth(actorColliderBottomAt(this.player.x, this.player.y, this.playerColliderProfile, 1));
 	}
 
 	syncPlayerVisual(direction: ChenWalkDirection, moving: boolean) {
@@ -281,10 +297,9 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 	}
 
 	buildCollision() {
-		// 正式碰撞：读取 manifest 中已配置的碰撞矩形（墙、家具、门窗）
+		// Keep the same rect and rotation that the zone editor renders.
 		this.collisionRects = (this.manifest.collision ?? []).map((entry) => {
-			const [x, y, w, h] = entry.rect;
-			return { id: entry.id, x, y, width: w, height: h };
+			return { id: entry.id, rect: [...entry.rect] as [number, number, number, number], rotation: entry.rotation ?? 0 };
 		});
 	}
 
@@ -301,7 +316,7 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 				strokeThickness: 4,
 			})
 			.setOrigin(0.5)
-			.setDepth(1000);
+			.setDepth(WORLD_INDICATOR_DEPTH);
 		this.tweens.add({ targets: mark, scale: { from: 1, to: 1.2 }, duration: 600, yoyo: true, repeat: -1 });
 		this.observationMarks.push(mark);
 	}
@@ -316,6 +331,11 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 
 	update() {
 		if (this.physics.world?.debugGraphic) this.physics.world.debugGraphic.setVisible(false);
+		if (this.player) {
+			const depth = this.depthForPlayer();
+			this.player.setDepth(depth);
+			this.playerVisual?.setDepth(depth);
+		}
 		const canWalk = this.state.mode === "explore";
 		// 交互提示始终更新——即使玩家被任务卡锁定也要显示
 		this.updatePrompt();
@@ -343,17 +363,13 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 	}
 
 	tryMove(dx: number, dy: number) {
-		const halfW = 28;
-		const halfH = 18;
 		const canOccupy = (nextX: number, nextY: number) => {
-			if (nextX - halfW < 0 || nextY - halfH < 0 || nextX + halfW > WORLD_W || nextY + halfH > WORLD_H)
+			const playerRect = actorColliderRectAt(nextX, nextY, this.playerColliderProfile, 1);
+			const [left, top, width, height] = playerRect;
+			if (left < 0 || top < 0 || left + width > WORLD_W || top + height > WORLD_H)
 				return false;
 			return !this.collisionRects.some(
-				(rect) =>
-					nextX + halfW > rect.x &&
-					nextX - halfW < rect.x + rect.width &&
-					nextY + halfH > rect.y &&
-					nextY - halfH < rect.y + rect.height,
+				(obstacle) => aabbOverlapsRotatedRect(playerRect, obstacle.rect, obstacle.rotation),
 			);
 		};
 		if (canOccupy(this.player.x + dx, this.player.y)) this.player.x += dx;

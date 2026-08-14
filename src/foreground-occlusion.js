@@ -32,14 +32,14 @@ function toWorldPoints(points, units, tileSize) {
 }
 
 export function foregroundBottomPx(object, tileSize = DEFAULT_TILE_SIZE) {
-  const points = toWorldPoints(object?.points ?? object?.polygon, object?.units, tileSize);
-  if (points?.length) return Math.max(...points.map((point) => point.y));
-
-  // Keep legacy data readable, but valid polygons always sort by their lowest point.
   const explicit = object?.sort_y;
-  return explicit !== undefined && explicit !== null && explicit !== '' && Number.isFinite(Number(explicit))
-    ? Number(explicit) * tileSize
-    : null;
+  if (explicit !== undefined && explicit !== null && explicit !== '' && Number.isFinite(Number(explicit))) {
+    return Number(explicit) * tileSize;
+  }
+
+  // Existing foreground data without a manual baseline still defaults to the polygon bottom.
+  const points = toWorldPoints(object?.points ?? object?.polygon, object?.units, tileSize);
+  return points?.length ? Math.max(...points.map((point) => point.y)) : null;
 }
 
 export const foregroundBaselinePx = foregroundBottomPx;

@@ -1,13 +1,22 @@
 import { normalizeDegrees, pointInRotatedRect, rotatedRectPoints } from './collision-geometry.js';
 import { ForegroundLassoTool } from './magnetic-lasso.js';
+import {
+  getDevPlayerMotionJson,
+  getPlayerAnimationMultiplier,
+  getPlayerMovementMultiplier,
+  resetDevPlayerTuning,
+  setPlayerAnimationMultiplier,
+  setPlayerMovementMultiplier
+} from './common/ui.ts';
 
-const COLORS = { collision: 0xff4fbf, interaction: 0xffdf32, visual: 0x55e7ff, anchor: 0xff3b30, selected: 0xffffff, rotation: 0x55e7ff };
+const COLORS = { collision: 0xff4fbf, interaction: 0xffdf32, flavor: 0x62e68c, visual: 0x55e7ff, anchor: 0xff3b30, selected: 0xffffff, rotation: 0x55e7ff };
 const HANDLE_RADIUS = 0.38;
 const ROTATION_HANDLE_OFFSET = 0.85;
 const ALIGNMENT_SNAP_PX = 8;
 const DEFAULT_REGION_SIZE_PX = {
   collision: [128, 64],
-  interaction: [96, 64]
+  interaction: [96, 64],
+  flavor: [96, 96]
 };
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
@@ -90,14 +99,21 @@ export class CollisionEditor {
       scene.events.off('postupdate', this.render, this);
       this.lasso.cancel(false);
       this.setCursor('default');
+      const wasEnabled = this.enabled;
+      this.enabled = false;
       this.panel.remove();
+      if (wasEnabled && !document.querySelector('.dev-zone-editor:not(.hidden)')) {
+        document.body.classList.remove('dev-editor-active');
+      }
     });
   }
 
   get sourceItems() {
+    if (this.kind === 'motion') return [];
     if (this.kind === 'visual') return this.config.getActorVisuals?.() ?? [];
     if (this.kind === 'collision') return this.config.getCollisions();
     if (this.kind === 'interaction') return this.config.getInteractions();
+    if (this.kind === 'flavor') return this.config.getFlavorZones?.() ?? [];
     return this.config.getForegrounds?.() ?? [];
   }
 
@@ -122,9 +138,13 @@ export class CollisionEditor {
   }
 
   foregroundSortY(item) {
+    const explicit = item?.sort_y;
+    if (explicit !== undefined && explicit !== null && explicit !== '' && Number.isFinite(Number(explicit))) {
+      return Number(explicit);
+    }
     const ys = item?.points?.map(([, y]) => Number(y)).filter(Number.isFinite) ?? [];
     if (ys.length) return Math.max(...ys);
-    return Number.isFinite(Number(item?.sort_y)) ? Number(item.sort_y) : 0;
+    return 0;
   }
 
   createPanel() {
@@ -135,18 +155,26 @@ export class CollisionEditor {
       <div class="dev-zone-tabs">
         <button data-kind="collision" class="active">碰撞箱</button>
         <button data-kind="interaction">交互区</button>
+        <button data-kind="flavor">风味区</button>
         <button data-kind="foreground">前景套索</button>
         <button data-kind="visual">角色贴图</button>
+        <button data-kind="motion">角色运动</button>
       </div>
-      <label>区域<select data-field="item"></select></label>
-      <label>名称 / ID<input data-field="id" type="text" spellcheck="false"></label>
+      <label data-section="item">区域<select data-field="item"></select></label>
+      <label data-section="id">名称 / ID<input data-field="id" type="text" spellcheck="false"></label>
       <div class="dev-zone-grid" data-section="rect">
         ${['x', 'y', 'w', 'h'].map((key) => `<label>${key.toUpperCase()}<input data-field="${key}" type="number" step="0.25"></label>`).join('')}
       </div>
       <label data-section="rotation">旋转角度（°）<input data-field="rotation" type="number" step="1"></label>
-      <label data-section="depth">最低点 Y（格，自动）<input data-field="depth" type="number" step="0.125" disabled></label>
+      <label data-section="depth">判定线 Y（水平）<input data-field="depth" type="number" step="0.125"></label>
       <label data-section="visual-size">贴图高度（像素）<input data-field="visual-height" type="number" min="1" step="1"></label>
       <label data-section="snap">吸附<select data-field="snap"><option value="1">1 格</option><option value="0.5">0.5 格</option><option value="0.25" selected>0.25 格</option><option value="0.125">0.125 格</option></select></label>
+      <section class="dev-motion-panel hidden" data-section="motion">
+        <label><span>角色移动速度 <output data-motion-output="movement">100%</output></span><input data-motion-input="movement" type="range" min="0.25" max="3" step="0.05"></label>
+        <label><span>行走动画速度 <output data-motion-output="animation">100%</output></span><input data-motion-input="animation" type="range" min="0.25" max="3" step="0.05"></label>
+        <div class="dev-motion-scale"><span>25%</span><span>100%</span><span>300%</span></div>
+        <button type="button" data-action="reset-motion">恢复默认</button>
+      </section>
       <p data-field="help">拖动矩形移动；拖动四边或四角缩放；拖动顶部圆点旋转。</p>
       <div class="dev-zone-actions">
         <button data-action="add">新增</button><button data-action="duplicate">复制</button><button data-action="mirror">水平镜像</button><button data-action="delete">删除</button>
@@ -157,17 +185,24 @@ export class CollisionEditor {
       <output data-field="status">未保存的修改会在刷新后丢失</output>`;
     document.body.appendChild(root);
     this.panel = root;
+    this.flavorTab = root.querySelector('[data-kind="flavor"]');
+    this.flavorTab.classList.toggle('hidden', !this.config.getFlavorZones);
     this.itemSelect = root.querySelector('[data-field="item"]');
     this.status = root.querySelector('[data-field="status"]');
     this.idInput = root.querySelector('[data-field="id"]');
     this.depthInput = root.querySelector('[data-field="depth"]');
     this.visualHeightInput = root.querySelector('[data-field="visual-height"]');
     this.rotationInput = root.querySelector('[data-field="rotation"]');
+    this.motionMovementInput = root.querySelector('[data-motion-input="movement"]');
+    this.motionAnimationInput = root.querySelector('[data-motion-input="animation"]');
+    this.motionMovementOutput = root.querySelector('[data-motion-output="movement"]');
+    this.motionAnimationOutput = root.querySelector('[data-motion-output="animation"]');
     this.help = root.querySelector('[data-field="help"]');
     this.addButton = root.querySelector('[data-action="add"]');
     this.duplicateButton = root.querySelector('[data-action="duplicate"]');
     this.mirrorButton = root.querySelector('[data-action="mirror"]');
     this.deleteButton = root.querySelector('[data-action="delete"]');
+    this.resetButton = root.querySelector('[data-action="reset"]');
     this.bindPanelDrag();
 
     root.addEventListener('pointerdown', (event) => event.stopPropagation());
@@ -183,15 +218,19 @@ export class CollisionEditor {
     });
     this.itemSelect.onchange = () => this.select(this.items[Number(this.itemSelect.value)] ?? null);
     this.idInput.onchange = () => this.rename();
+    this.depthInput.onchange = () => this.lasso.applyDepth();
     this.rotationInput.oninput = () => this.applyRotation();
     this.visualHeightInput.oninput = () => this.applyVisualHeight();
+    this.motionMovementInput.oninput = () => this.applyMotionInput('movement');
+    this.motionAnimationInput.oninput = () => this.applyMotionInput('animation');
     root.querySelector('[data-field="snap"]').onchange = (event) => { this.snapStep = Number(event.target.value); };
     for (const key of ['x', 'y', 'w', 'h']) root.querySelector(`[data-field="${key}"]`).onchange = () => this.applyInputs();
     this.addButton.onclick = () => this.add();
     this.duplicateButton.onclick = () => this.duplicate();
     this.mirrorButton.onclick = () => this.mirror();
     this.deleteButton.onclick = () => this.remove();
-    root.querySelector('[data-action="reset"]').onclick = () => this.reset();
+    this.resetButton.onclick = () => this.reset();
+    root.querySelector('[data-action="reset-motion"]').onclick = () => this.resetMotion();
     root.querySelector('[data-action="save"]').onclick = () => this.save();
     root.querySelector('[data-action="test-task"]').onclick = () => {
       window.dispatchEvent(new CustomEvent('honghu:dev-add-task'));
@@ -406,8 +445,10 @@ export class CollisionEditor {
   alignmentCandidates(axis) {
     const edgeIndexes = axis === 'x' ? [0, 2] : [1, 3];
     const candidates = [];
-    for (const kind of ['collision', 'interaction']) {
-      const items = kind === 'collision' ? this.config.getCollisions() : this.config.getInteractions();
+    for (const kind of ['collision', 'interaction', 'flavor']) {
+      const items = kind === 'collision'
+        ? this.config.getCollisions()
+        : kind === 'interaction' ? this.config.getInteractions() : this.config.getFlavorZones?.() ?? [];
       for (const item of items) {
         if (item === this.selected || !item?.rect || this.rotationOf(item, kind) !== 0) continue;
         const [startIndex, sizeIndex] = edgeIndexes;
@@ -475,7 +516,6 @@ export class CollisionEditor {
   setEnabled(enabled) {
     this.enabled = enabled;
     document.body.classList.toggle('dev-editor-active', enabled);
-    window.dispatchEvent(new CustomEvent('honghu:dev-editor-toggle', { detail: { enabled } }));
     this.graphics.setVisible(enabled);
     this.panel.classList.toggle('hidden', !enabled);
     if (enabled) this.select(this.items[0] ?? null);
@@ -490,18 +530,28 @@ export class CollisionEditor {
 
   updatePanelMode() {
     const foreground = this.kind === 'foreground';
+    const flavor = this.kind === 'flavor';
     const visual = this.kind === 'visual';
+    const motion = this.kind === 'motion';
     const collision = this.kind === 'collision';
     const actorCollider = Boolean(this.selected?.actorCollider);
-    this.panel.querySelector('[data-section="rect"]').classList.toggle('hidden', foreground || visual);
+    this.panel.querySelector('[data-section="item"]').classList.toggle('hidden', motion);
+    this.panel.querySelector('[data-section="id"]').classList.toggle('hidden', motion);
+    this.panel.querySelector('[data-section="rect"]').classList.toggle('hidden', foreground || visual || motion);
     this.panel.querySelector('[data-section="rotation"]').classList.toggle('hidden', !collision || actorCollider);
     this.panel.querySelector('[data-section="depth"]').classList.toggle('hidden', !foreground);
     this.panel.querySelector('[data-section="visual-size"]').classList.toggle('hidden', !visual);
-    this.panel.querySelector('[data-section="snap"]').classList.toggle('hidden', visual);
-    if (visual) {
+    this.panel.querySelector('[data-section="snap"]').classList.toggle('hidden', visual || motion);
+    this.panel.querySelector('[data-section="motion"]').classList.toggle('hidden', !motion);
+    if (motion) {
+      this.help.textContent = '滑块实时作用于当前人物；保存 JSON 写入当前场景，恢复默认回到 100%。';
+      this.refreshMotionInputs();
+    } else if (visual) {
       this.help.textContent = '拖动人物调整贴图位置；拖动四角圆点等比缩放。玩家红色十字表示真实移动点。仅影响当前章节，点击保存 JSON 写入。';
     } else if (foreground) {
-      this.help.textContent = '左键：添加锚点并磁吸图像边缘\n右键：撤销上一步 · 双击：自动闭合完成 · Esc：取消\n遮挡顺序自动比较套索最低点与人物脚底碰撞箱底边；最低点更靠下的一方显示在前。';
+      this.help.textContent = '左键：添加锚点并磁吸图像边缘\n右键：撤销上一步 · 双击：自动闭合完成 · Esc：取消\n拖动黄色水平线或输入 Y 值调整判定线；判定线比人物脚底更靠下时，前景显示在人物上方。';
+    } else if (flavor) {
+      this.help.textContent = '拖动内部：移动 · 拖动边/角：调整方形风味区\n玩家进入区域时自动显示风味提示；文案在 JSON 的 line 字段中修改。';
     } else if (actorCollider) {
       this.help.textContent = '角色碰撞箱：拖动内部修改脚点偏移，拖动边/角修改尺寸。\n碰撞箱会实时跟随人物；角色项不可删除、复制、镜像或旋转。';
     } else if (collision) {
@@ -510,7 +560,10 @@ export class CollisionEditor {
       this.help.textContent = '拖动内部：移动 · 拖动边/角：缩放。';
     }
     this.addButton.textContent = foreground ? (this.lasso?.armed || this.lasso?.drawing ? '正在套索…' : '开始套索') : '新增';
-    this.addButton.disabled = visual;
+    for (const button of [this.addButton, this.duplicateButton, this.mirrorButton, this.deleteButton, this.resetButton]) {
+      button.classList.toggle('hidden', motion);
+    }
+    this.addButton.disabled = visual || motion;
     this.addButton.classList.toggle('armed', Boolean(this.lasso?.armed || this.lasso?.drawing));
   }
 
@@ -538,7 +591,7 @@ export class CollisionEditor {
     this.idInput.value = this.selected?.id ?? '';
     this.idInput.disabled = !this.selected || actorCollider || this.kind === 'visual';
     this.depthInput.value = this.selected && this.kind === 'foreground' ? this.foregroundSortY(this.selected) : '';
-    this.depthInput.disabled = true;
+    this.depthInput.disabled = this.kind !== 'foreground' || !this.selected;
     this.visualHeightInput.value = this.kind === 'visual' ? this.actorVisualHeight(this.selected) : '';
     this.visualHeightInput.disabled = this.kind !== 'visual' || !this.selected;
     this.rotationInput.value = this.selected && this.kind === 'collision' && !actorCollider ? this.rotationOf(this.selected) : '';
@@ -551,6 +604,37 @@ export class CollisionEditor {
     this.duplicateButton.disabled = !this.selected || actorCollider || this.kind === 'visual';
     this.mirrorButton.disabled = !this.selected || actorCollider || this.kind === 'visual';
     this.deleteButton.disabled = !this.selected || actorCollider || this.kind === 'visual';
+  }
+
+  refreshMotionInputs() {
+    const movement = getPlayerMovementMultiplier();
+    const animation = getPlayerAnimationMultiplier();
+    this.motionMovementInput.value = String(movement);
+    this.motionAnimationInput.value = String(animation);
+    this.motionMovementOutput.textContent = `${Math.round(movement * 100)}%`;
+    this.motionAnimationOutput.textContent = `${Math.round(animation * 100)}%`;
+  }
+
+  applyMotionInput(kind) {
+    const input = kind === 'movement' ? this.motionMovementInput : this.motionAnimationInput;
+    const value = Number(input.value);
+    if (!Number.isFinite(value)) return this.refreshMotionInputs();
+    if (kind === 'movement') setPlayerMovementMultiplier(value);
+    else setPlayerAnimationMultiplier(value);
+    this.refreshMotionInputs();
+    this.status.textContent = '角色运动参数有未保存的修改';
+  }
+
+  resetMotion() {
+    resetDevPlayerTuning();
+    this.refreshMotionInputs();
+    this.status.textContent = '已恢复默认 100%，点击保存 JSON 写入';
+  }
+
+  syncPlayerMotionDocument() {
+    const entries = Object.entries(this.config.documents);
+    const target = entries.find(([file]) => file !== 'public/data/PRO02_interactions.json') ?? entries[0];
+    if (target) target[1].player_motion = getDevPlayerMotionJson();
   }
 
   rename() {
@@ -609,12 +693,13 @@ export class CollisionEditor {
   add() {
     if (this.kind === 'foreground') return this.lasso.arm();
     if (this.kind === 'visual') return;
-    const prefix = this.kind === 'collision' ? 'collision' : 'interaction';
+    const prefix = this.kind === 'collision' ? 'collision' : this.kind;
     const [worldWidth, worldHeight] = this.config.getWorldSize();
     const [width, height] = defaultRegionSize(this.kind, this.tileSize, [worldWidth, worldHeight], this.snapStep);
     const item = { id: this.createId(prefix), shape: 'rect', rect: [snap((worldWidth - width) / 2, this.snapStep), snap((worldHeight - height) / 2, this.snapStep), width, height] };
     if (this.kind === 'collision') item.rotation = 0;
     if (this.kind === 'interaction') Object.assign(item, { type: 'inspect', prompt: '新交互区', action: 'inspect' });
+    if (this.kind === 'flavor') Object.assign(item, { type: 'flavor', line: '新的风味提示' });
     this.sourceItems.push(item);
     this.select(item);
     this.changed('已新增区域');
@@ -693,6 +778,7 @@ export class CollisionEditor {
   render() {
     const graphics = this.graphics.clear();
     if (!this.enabled) return;
+    if (this.kind === 'motion') return;
     if (this.kind === 'visual') {
       for (const item of this.items) {
         const bounds = item.bounds;
@@ -710,10 +796,10 @@ export class CollisionEditor {
       }
       return;
     }
-    for (const kind of ['collision', 'interaction']) {
+    for (const kind of ['collision', 'interaction', 'flavor']) {
       const items = kind === 'collision'
         ? [...this.config.getCollisions(), ...this.actorItems]
-        : this.config.getInteractions();
+        : kind === 'interaction' ? this.config.getInteractions() : this.config.getFlavorZones?.() ?? [];
       graphics.lineStyle(3, COLORS[kind], 1);
       graphics.fillStyle(COLORS[kind], 0.12);
       for (const item of items) this.renderRect(graphics, item, kind);
@@ -740,6 +826,7 @@ export class CollisionEditor {
   }
 
   async save() {
+    this.syncPlayerMotionDocument();
     const documents = this.config.documents;
     try {
       for (const [file, data] of Object.entries(documents)) {

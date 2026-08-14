@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { createKeyMap, isActionDown, onAction } from "@/common/actions";
+import { actorDepth, foregroundDepth, WORLD_INDICATOR_DEPTH } from "@/common/displayDepth";
 import { useGameStateStore } from "@/stores/modules/gameState";
 import {
 	showTask,
@@ -7,6 +8,7 @@ import {
 	taskNeedsConfirmation,
 	getPlayerMovementMultiplier,
 	getPlayerAnimationMultiplier,
+	applyDevPlayerMotionFromJson,
 	hideTask,
 	showPrompt,
 	hidePrompt,
@@ -76,8 +78,6 @@ const playerAnimationKey = (direction: PlayerDirection) =>
 	`ch01-sc01-player-${direction}-anim`;
 const PLAYER_DISPLAY_HEIGHT = 280;
 const CAMERA_ZOOM = 0.765;
-const ACTOR_DEPTH_BASE = 500;
-const actorDepth = (bottomY: number) => ACTOR_DEPTH_BASE + bottomY;
 
 interface ManifestData {
 	spawns: { id: string; position: [number, number]; facing: string }[];
@@ -189,13 +189,14 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	create() {
 		this.resetHud();
 		this.manifest = this.cache.json.get("ch01_sc01_manifest");
+		applyDevPlayerMotionFromJson((this.manifest as any).player_motion);
 		this.setupActorCollider();
 		this.physics.world.setBounds(0, 0, WORLD_W, WORLD_H);
 		this.background = this.add.image(WORLD_W / 2, WORLD_H / 2, "ch01_sc01_bg").setDepth(-20);
 		this.foregroundOcclusion = new ForegroundOcclusionRenderer(this, {
 			background: this.background,
 			getObjects: () => (this.manifest as any).foreground_occlusion?.objects ?? [],
-			resolveDepth: (object: any) => actorDepth(foregroundBottomPx(object, 1) ?? 0) + 0.001,
+			resolveDepth: (object: any) => foregroundDepth(foregroundBottomPx(object, 1) ?? 0),
 			tileSize: 1,
 		});
 		this.buildCollision();
@@ -480,6 +481,7 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 			replaceDocuments: (next: any) => {
 				this.manifest = next[file];
 				documents[file] = this.manifest as any;
+				applyDevPlayerMotionFromJson((this.manifest as any).player_motion);
 				this.setupActorCollider();
 				this.applyPlayerVisualHeight(this.actorVisualProfile.display_height);
 			},
@@ -518,7 +520,7 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 					strokeThickness: 4,
 				})
 				.setOrigin(0.5)
-				.setDepth(1000);
+				.setDepth(WORLD_INDICATOR_DEPTH);
 			this.tweens.add({
 				targets: mark,
 				scale: { from: 1, to: 1.2 },

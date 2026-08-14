@@ -16,7 +16,6 @@ import Scene3Overlay from "@/components/biz/Scene3Overlay.vue";
 import TitleLoadPanel from "@/components/ui/TitleLoadPanel.vue";
 import TitleSettingsPanel from "@/components/ui/TitleSettingsPanel.vue";
 import TaskCard from "@/components/ui/TaskCard.vue";
-import DevPlayerTuningPanel from "@/components/ui/DevPlayerTuningPanel.vue";
 import InteractionPrompt from "@/components/ui/InteractionPrompt.vue";
 import DialoguePanel from "@/components/ui/DialoguePanel.vue";
 import ItemPanel from "@/components/ui/ItemPanel.vue";
@@ -38,23 +37,18 @@ onMounted(() => {
 
 	const game = directorStore.game!;
 	window.addEventListener("honghu:dev-add-task", () => hud.addTestTask());
-	window.addEventListener("honghu:dev-editor-toggle", ((event: CustomEvent<{ enabled: boolean }>) => {
-		hud.setDevEditorVisible(event.detail.enabled);
-	}) as EventListener);
 
 	// P 键切换区域编辑器
 	window.addEventListener("keydown", (event) => {
 		if (event.code !== "KeyP") return;
 		const editorPanel = document.querySelector(".dev-zone-editor");
 		const target = event.target as HTMLElement | null;
-		const tuningPanel = document.querySelector(".dev-player-tuning");
 		if (
 			["INPUT", "TEXTAREA", "SELECT"].includes(target?.tagName ?? "") &&
-			!editorPanel?.contains(target) &&
-			!tuningPanel?.contains(target)
+			!editorPanel?.contains(target)
 		) return;
 		event.preventDefault();
-		const scene = game.scene.getScenes(true).find((item: any) => item.zoneEditor) as any;
+		const scene = [...game.scene.getScenes(true)].reverse().find((item: any) => item.zoneEditor) as any;
 		scene?.zoneEditor.toggle();
 	});
 });
@@ -77,7 +71,6 @@ function onDone() {
 	<TitleSettingsPanel />
 	<Scene1Overlay v-if="hud.overlay === 'Scene1Overlay'" @start="onStart" @done="onDone" />
 	<Scene2Overlay v-if="hud.overlay === 'Scene2Overlay'" />
-	<DevPlayerTuningPanel />
 	<Scene3Overlay v-if="hud.overlay === 'Scene3Overlay'" />
 	<TaskCard />
 	<InteractionPrompt />

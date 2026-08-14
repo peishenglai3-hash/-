@@ -8,6 +8,7 @@ import {
 	taskNeedsConfirmation,
 	getPlayerMovementMultiplier,
 	getPlayerAnimationMultiplier,
+	applyDevPlayerMotionFromJson,
 	hideTask,
 	showPrompt,
 	playNarrative,
@@ -136,6 +137,7 @@ export class Scene01 extends Phaser.Scene {
 
 	create() {
 		this.manifest = this.cache.json.get("manifest");
+		applyDevPlayerMotionFromJson((this.manifest as any).player_motion);
 		this.setupActorColliders();
 		this.createKeyedTexture("student-b-front", "student-b-front-keyed");
 		this.createKeyedTexture("student-b-back", "student-b-back-keyed");
@@ -385,6 +387,7 @@ export class Scene01 extends Phaser.Scene {
 			replaceDocuments: (next: any) => {
 				this.manifest = next[file];
 				documents[file] = this.manifest as any;
+				applyDevPlayerMotionFromJson((this.manifest as any).player_motion);
 				this.setupActorColliders();
 				this.applyActorVisualHeights();
 			},

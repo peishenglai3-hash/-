@@ -57,6 +57,11 @@ export interface EndPanel {
   risk: string;
 }
 
+export interface DevPlayerMotionConfig {
+  movement_multiplier?: number;
+  animation_multiplier?: number;
+}
+
 // ===== 内部状态（模块级，非响应式） =====
 
 let _flavorTimer: number | null = null;
@@ -66,6 +71,18 @@ let _narrativeIndex = 0;
 let _narrativeOnComplete: (() => void) | null = null;
 let _taskId = 0;
 let _testTaskIndex = 0;
+const DEV_PLAYER_TUNING_DEFAULT = 1;
+const DEV_PLAYER_TUNING_MIN = 0.25;
+const DEV_PLAYER_TUNING_MAX = 3;
+
+function clampDevPlayerTuning(value: number): number {
+  return Math.min(DEV_PLAYER_TUNING_MAX, Math.max(DEV_PLAYER_TUNING_MIN, value));
+}
+
+function normalizedDevPlayerTuning(value: unknown, fallback = DEV_PLAYER_TUNING_DEFAULT): number {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? clampDevPlayerTuning(numeric) : fallback;
+}
 
 // ===== 覆盖层场景类型（全屏流程组件，同一时刻只显示一个） =====
 
@@ -83,11 +100,10 @@ export const useHudStore = defineStore("hud", () => {
   // --- title sub panels ---
   const title = reactive({ loadOpen: false, settingsOpen: false });
 
-  // --- developer player tuning (runtime only) ---
-  const devEditorVisible = ref(false);
+  // --- developer player tuning ---
   const devPlayerTuning = reactive({
-    movementMultiplier: 1,
-    animationMultiplier: 1,
+    movementMultiplier: DEV_PLAYER_TUNING_DEFAULT,
+    animationMultiplier: DEV_PLAYER_TUNING_DEFAULT,
   });
 
   // --- task card ---
@@ -155,13 +171,21 @@ export const useHudStore = defineStore("hud", () => {
   // --- global lock ---
   const playerLocked = ref(false);
 
-  function setDevEditorVisible(visible: boolean) {
-    devEditorVisible.value = visible;
+  function resetDevPlayerTuning() {
+    devPlayerTuning.movementMultiplier = DEV_PLAYER_TUNING_DEFAULT;
+    devPlayerTuning.animationMultiplier = DEV_PLAYER_TUNING_DEFAULT;
   }
 
-  function resetDevPlayerTuning() {
-    devPlayerTuning.movementMultiplier = 1;
-    devPlayerTuning.animationMultiplier = 1;
+  function applyDevPlayerMotionFromJson(config?: DevPlayerMotionConfig) {
+    devPlayerTuning.movementMultiplier = normalizedDevPlayerTuning(config?.movement_multiplier);
+    devPlayerTuning.animationMultiplier = normalizedDevPlayerTuning(config?.animation_multiplier);
+  }
+
+  function devPlayerMotionJson(): DevPlayerMotionConfig {
+    return {
+      movement_multiplier: normalizedDevPlayerTuning(devPlayerTuning.movementMultiplier),
+      animation_multiplier: normalizedDevPlayerTuning(devPlayerTuning.animationMultiplier),
+    };
   }
 
   // ===== 内部函数 =====
@@ -441,7 +465,6 @@ export const useHudStore = defineStore("hud", () => {
     overlay,
     title,
     taskCards,
-    devEditorVisible,
     devPlayerTuning,
     taskCenter,
     taskCenterId,
@@ -462,8 +485,9 @@ export const useHudStore = defineStore("hud", () => {
     playerLocked,
     // actions
     showFlavor,
-    setDevEditorVisible,
     resetDevPlayerTuning,
+    applyDevPlayerMotionFromJson,
+    devPlayerMotionJson,
     playNarrative,
     advanceNarrative,
     hideDialogue,

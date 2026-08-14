@@ -8,6 +8,7 @@ import {
 	taskNeedsConfirmation,
 	getPlayerMovementMultiplier,
 	getPlayerAnimationMultiplier,
+	applyDevPlayerMotionFromJson,
 	showPrompt,
 	hidePrompt,
 	playNarrative,
@@ -93,6 +94,7 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 	create() {
 		this.resetHud();
 		this.manifest = this.cache.json.get("ch01_sc03_manifest");
+		applyDevPlayerMotionFromJson((this.manifest as any).player_motion);
 		this.setupActorCollider();
 		this.physics.world.setBounds(0, 0, WORLD_W, WORLD_H);
 		this.add.image(WORLD_W / 2, WORLD_H / 2, "ch01_sc03_bg").setDepth(-20);
@@ -194,6 +196,7 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 			replaceDocuments: (next: any) => {
 				this.manifest = next[file];
 				documents[file] = this.manifest as any;
+				applyDevPlayerMotionFromJson((this.manifest as any).player_motion);
 				this.setupActorCollider();
 			},
 			onChange: (kind: string) => {
