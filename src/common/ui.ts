@@ -44,5 +44,5 @@ export function fadeToBlack() { store().fadeToBlack(); }
 export function clearFade() { store().clearFade(); }
 export function togglePause() { store().togglePause(); }
 export function hideIntro() { store().hideIntro(); }
-export function showEndPanel(save: any) { store().showEndPanel(save); }
+export function showEndPanel(save: any, endMeta?: any) { store().showEndPanel(save, endMeta); }
 export function hideEndPanel() { store().hideEndPanel(); }

@@ -20,8 +20,20 @@ export const PROP_PATHS = {
 	INK_PEN: assetPath("/assets/ch01/sc01/props/PROP009_010_InkAndPen_Icon.png"),
 	BASIN: assetPath("/assets/ch01/sc01/props/PROP026_SmallWashStandAndCopperBasin_Icon_v01.png"),
 	BOOK: assetPath("/assets/ch01/sc01/props/PROP004_ThreadBoundBook_Icon_v01.png"),
-	LAMP: assetPath("/assets/ch01/sc01/props/PROP013_OilLamp_Icon_v01.png"),
-	BOWLS: assetPath("/assets/ch01/sc01/props/PROP028_MultiplePorcelainBowls_Icon_v01.png"),
+	LAMP: assetPath("/assets/ch01/sc01/props/PROP016_Lantern_Icon_v01.png"),
+	BOWLS: assetPath("/assets/ch01/sc01/props/PROP029_SinglePorcelainBowl_Icon_v01.png"),
+	BOWLS_MULTI: assetPath("/assets/ch01/sc01/props/PROP028_MultiplePorcelainBowls_Icon_v01.png"),
+};
+
+/** manifest 的 prop_icon 是短名（如 PROP016），实际图标文件名含完整描述名，短名拼不出真路径 */
+export const PROP_ICON_FILES: Record<string, string> = {
+	PROP004: PROP_PATHS.BOOK,
+	PROP009: PROP_PATHS.INKSTONE,
+	PROP016: PROP_PATHS.LAMP,
+	PROP018: PROP_PATHS.HAORI,
+	PROP026: PROP_PATHS.BASIN,
+	PROP028: PROP_PATHS.BOWLS_MULTI,
+	PROP029: PROP_PATHS.BOWLS,
 };
 
 export const INTRO_NARRATIVE: NarrativeEntry[] = [
@@ -395,5 +407,13 @@ export const TASKS_CH01_SC01 = {
 	leave: {
 		title: "离开陈家",
 		detail: "推开半掩的木门，进入院子",
+	},
+	doorCode: {
+		title: "门外有人",
+		detail: "走到半掩的木门前，看看是谁在夜里叩门",
+	},
+	yard: {
+		title: "走到院墙下",
+		detail: "随联络人到院墙阴影下听安排",
 	},
 };

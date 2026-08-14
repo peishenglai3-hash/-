@@ -229,8 +229,11 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 	}
 
 	buildCollision() {
-		// TODO: 碰撞墙暂时禁用，后续由专人修复
-		this.collisionRects = [];
+		// 正式碰撞：读取 manifest 中已配置的碰撞矩形（墙、家具、门窗）
+		this.collisionRects = (this.manifest.collision ?? []).map((entry) => {
+			const [x, y, w, h] = entry.rect;
+			return { id: entry.id, x, y, width: w, height: h };
+		});
 	}
 
 	/* ===== 移动 ===== */

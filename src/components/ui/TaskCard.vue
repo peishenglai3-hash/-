@@ -22,6 +22,9 @@ function onClose() {
 	right: 18px;
 	width: 280px;
 	padding: 10px 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
 	text-align: left;
 	border: 1px solid #a98a57;
 	border-radius: 8px;
@@ -29,11 +32,6 @@ function onClose() {
 	color: #f6ead0;
 	box-shadow: 0 4px 14px #0009;
 	z-index: 22;
-}
-
-.task-card strong,
-.task-card span {
-	display: block;
 }
 
 .task-card strong {
@@ -44,20 +42,15 @@ function onClose() {
 }
 
 .task-card > span {
-	margin-top: 4px;
-	padding-right: 56px;
 	font-size: 12px;
 	line-height: 1.35;
 }
 
 .task-dismiss {
-	position: absolute;
-	right: 10px;
-	bottom: 10px;
+	align-self: flex-end;
 	display: inline-flex;
 	align-items: center;
 	gap: 3px;
-	margin: 0 !important;
 	color: #ead6ad;
 	font-size: 9px !important;
 }
@@ -94,7 +87,7 @@ kbd {
 	right: 50%;
 	transform: translate(50%, -50%);
 	width: 380px;
-	padding: 18px 22px;
+	padding: 18px 22px 10px;
 	border: 2px solid #daa520;
 	border-radius: 12px;
 	box-shadow: 0 0 28px #daa52066, 0 8px 32px #000c;

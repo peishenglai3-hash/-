@@ -1,12 +1,20 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from "vue";
 import { useHudStore } from "@/stores/modules/hud";
+import { useDirectorStore } from "@/stores/modules/director";
 const hud = useHudStore();
+const director = useDirectorStore();
 
-const onClose = () => hud.hideEndPanel();
+const onClose = () => {
+	if (hud.endPanel?.next === "title") {
+		director.goToTitle();
+		return;
+	}
+	hud.hideEndPanel();
+};
 
 function onKeyDown(e: KeyboardEvent) {
-	if (hud.endPanel) hud.hideEndPanel();
+	if (hud.endPanel) onClose();
 }
 
 onMounted(() => {
@@ -21,13 +29,13 @@ onUnmounted(() => {
 <template>
 	<div v-if="hud.endPanel" class="end-panel" @click.self="onClose">
 		<div class="end-card">
-			<strong>序章·名字留在纸上｜完成</strong>
+			<strong>{{ hud.endPanel.title }}</strong>
 			<span>{{ hud.endPanel.checkpoint }}</span>
 			<span>{{ hud.endPanel.profile }}</span>
 			<span>{{ hud.endPanel.tags }}</span>
 			<span>{{ hud.endPanel.risk }}</span>
-			<small>第一章·陈继南家中醒来</small>
-			<button class="enter-chapter" @click="onClose">进入第一章</button>
+			<small>{{ hud.endPanel.hint }}</small>
+			<button class="enter-chapter" @click="onClose">{{ hud.endPanel.buttonLabel }}</button>
 		</div>
 	</div>
 </template>
