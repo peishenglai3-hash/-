@@ -4,7 +4,7 @@ import { useDirectorStore } from "@/stores/modules/director";
 import { useGameStateStore } from "@/stores/modules/gameState";
 import { assetPath } from "@/common/paths";
 import { showFlavor } from "@/common/ui";
-import { onSettingsChange, getSettings, SaveManager } from "@/common/save";
+import { useGameSaveStore } from "@/stores";
 
 // 游戏初始界面：设计图全屏 + 四个烧录木牌按钮的透明热区（悬停微光）
 const HOTSPOTS = [
@@ -57,11 +57,12 @@ export class TitleScene extends Phaser.Scene {
 		this.ensureTitleBgm();
 
 		// 设置变更时同步 BGM 音量
-		onSettingsChange((s) => {
+		const gameSave = useGameSaveStore();
+		gameSave.onSettingsChange((s) => {
 			this.titleBgm.volume = s.bgmVolume;
 		});
 		// 初始音量
-		this.titleBgm.volume = getSettings().bgmVolume;
+		this.titleBgm.volume = gameSave.getSettings().bgmVolume;
 	}
 
 	/* ===== 按钮动作 ===== */
@@ -74,7 +75,7 @@ export class TitleScene extends Phaser.Scene {
 				useGameStateStore().resetRunState();
 				this.scene.stop("TitleScene");
 				game.scene.start("Scene01");
-				SaveManager.autosave("PROLOGUE_SC01");
+				useGameSaveStore().autosave("PROLOGUE_SC01");
 				useHudStore().showOverlay("Scene1Overlay");
 				break;
 			}

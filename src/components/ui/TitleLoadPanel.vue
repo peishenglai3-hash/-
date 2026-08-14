@@ -2,12 +2,13 @@
 import { computed } from "vue";
 import { useHudStore } from "@/stores/modules/hud";
 import { useDirectorStore } from "@/stores/modules/director";
-import { SaveManager } from "@/common/save";
+import { useGameSaveStore } from "@/stores";
 import type { RunSave } from "@/types/common";
 
 const hud = useHudStore();
+const gameSave = useGameSaveStore();
 
-const slots = computed<RunSave[]>(() => SaveManager.listSlots());
+const slots = computed<RunSave[]>(() => gameSave.listSlots());
 
 function fmtTime(ts: number): string {
 	return new Date(ts).toLocaleString("zh-CN", { hour12: false });

@@ -15,8 +15,9 @@ const {
 	FALL_ASLEEP,
 	FLAVOR_SPOTS,
 } = await import("../src/scenes/Scene02/content.ts");
-const { TRANSITION_A } = await import("../src/director/flow/Scene01ToScene02.ts");
-const { TRANSITION_B } = await import("../src/director/flow/Scene02ToSettlement.ts");
+const { TRANSITION_A, TRANSITION_B } = await import(
+	"../src/scenes/transitionData.ts"
+);
 
 const assert = (condition, message) => {
 	if (!condition) {
