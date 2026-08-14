@@ -839,8 +839,14 @@ export class CollisionEditor {
     const actors = this.config.getActorVisuals?.() ?? [];
     const active = new Set();
     for (const item of actors) {
-      const bounds = item?.bounds;
-      const anchor = item?.anchor;
+      let bounds;
+      let anchor;
+      try {
+        bounds = item?.bounds;
+        anchor = item?.anchor;
+      } catch {
+        continue;
+      }
       if (!bounds || !anchor) continue;
       active.add(item);
       const selected = item === this.selected && this.kind === 'visual';
@@ -859,7 +865,6 @@ export class CollisionEditor {
       const markerLabel = item.textureKey
         ? `${item.id ?? 'ACTOR'}\n${item.label ?? '角色'}\n贴图: ${item.textureKey}`
         : `${item.id ?? 'ACTOR'}\n${item.label ?? '角色'}`;
-      const label = `${item.id ?? 'ACTOR'}\n${item.label ?? '角色'}`;
       let text = this.actorMarkerTexts.get(item);
       if (!text) {
         text = this.scene.add.text(0, 0, markerLabel, {

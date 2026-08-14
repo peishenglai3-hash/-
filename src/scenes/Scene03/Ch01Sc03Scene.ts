@@ -287,15 +287,15 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 		this.playerVisual.anims.timeScale = getPlayerAnimationMultiplier();
 		this.applyActorVisualPosition("PLAYER");
 		this.playerVisual.setFlipX(false);
-			const displayHeight = this.actorVisualProfiles.PLAYER.display_height;
-			const displayWidth = chenDisplayWidth(this, direction, displayHeight);
+		const displayHeight = this.actorVisualProfiles.PLAYER.display_height;
+		const displayWidth = chenDisplayWidth(this, direction, displayHeight);
 		const animation = chenAnimKey(direction);
 		if (moving) {
 			if (this.playerVisual.anims.currentAnim?.key !== animation || !this.playerVisual.anims.isPlaying) {
 				this.playerVisual.setTexture(chenFrameKey(direction, 0));
 				this.playerVisual.play(animation);
 			}
-				this.playerVisual.setDisplaySize(displayWidth, displayHeight);
+			this.playerVisual.setDisplaySize(displayWidth, displayHeight);
 			return;
 		}
 		this.playerVisual.anims.stop();
