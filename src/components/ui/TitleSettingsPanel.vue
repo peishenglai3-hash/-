@@ -1,24 +1,26 @@
 <script setup lang="ts">
 import { reactive } from "vue";
 import { useHudStore } from "@/stores/modules/hud";
-const hud = useHudStore();
-import { getSettings, updateSettings } from "@/common/save";
+import { useGameSaveStore } from "@/stores";
 
-const form = reactive(getSettings());
+const hud = useHudStore();
+const gameSave = useGameSaveStore();
+
+const form = reactive(gameSave.getSettings());
 
 function onBgm(value: number) {
 	form.bgmVolume = value;
-	updateSettings({ bgmVolume: value });
+	gameSave.updateSettings({ bgmVolume: value });
 }
 
 function onSfx(value: number) {
 	form.sfxVolume = value;
-	updateSettings({ sfxVolume: value });
+	gameSave.updateSettings({ sfxVolume: value });
 }
 
 function onSpeed(value: number) {
 	form.textSpeed = value;
-	updateSettings({ textSpeed: value });
+	gameSave.updateSettings({ textSpeed: value });
 }
 
 function close() {

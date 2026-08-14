@@ -1,3 +1,11 @@
+<!--
+ * @Author: 吴世扬 18368095041@163.com
+ * @Date: 2026-08-13 08:10:50
+ * @LastEditors: 吴世扬 18368095041@163.com
+ * @LastEditTime: 2026-08-13 16:00:18
+ * @FilePath: /github_honghu_game/.agents/skills/hg-project-tips/SKILL.md
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+-->
 ---
 name: "hg-project-tips"
 description: "洪湖游戏项目编码规范和最佳实践。在修改或新增本项目代码时自动应用，确保代码风格一致。"
@@ -63,3 +71,9 @@ export const useMyStore = defineStore("my", {
 - 只在逻辑不明确时添加注释
 - 不为一次性操作创建辅助函数或抽象
 - 三条相似代码优于过早抽象
+
+## 5. 状态分层：全局用 Pinia store，瞬时数据下沉
+
+- 除非特别提及，全局共享数据统一放入 Pinia store（Setup Store 风格）
+- 场景/组件内部的瞬时状态（临时标志、局部交互状态等）下沉到对应场景类或组件自身
+- 避免把所有运行时字段堆进一个「上帝类」或臃肿对象

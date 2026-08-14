@@ -22,8 +22,8 @@ const assetBase = import.meta.env.BASE_URL || "/";
 					alt=""
 				/>
 			</div>
-			<div class="dialogue-speaker">{{ hud.dialogue.speaker }}</div>
 		</div>
+		<div class="dialogue-speaker">{{ hud.dialogue.speaker }}</div>
 		<div class="dialogue-copy">
 			<div class="dialogue-text">{{ hud.dialogue.displayedText }}</div>
 			<div class="dialogue-hint">{{ hud.dialogue.hint }}</div>
@@ -35,9 +35,9 @@ const assetBase = import.meta.env.BASE_URL || "/";
 .dialogue-panel {
 	position: absolute;
 	left: 50%;
-	bottom: 12px;
+	bottom: 20px;
 	transform: translateX(-50%);
-	width: 520px;
+	width: 400px;
 	aspect-ratio: 2629 / 1398;
 	pointer-events: auto;
 	background: url("/assets/ui/keyed/dialogue.png") center / 100% 100%
@@ -89,8 +89,14 @@ const assetBase = import.meta.env.BASE_URL || "/";
 }
 
 .dialogue-speaker {
-	writing-mode: vertical-rl;
-	text-orientation: upright;
+	position: absolute;
+	left: 5%;
+	bottom: 9%;
+	/* writing-mode: vertical-rl; */
+	/* text-orientation: upright; */
+	height: 10%;
+	width: 27%;
+	text-align: center;
 	font-size: 15px;
 	font-weight: 700;
 	letter-spacing: 0.28em;
@@ -133,6 +139,8 @@ const assetBase = import.meta.env.BASE_URL || "/";
 .dialogue-panel .dialogue-hint {
 	align-self: flex-end;
 	margin-top: 0.35rem;
+	margin-right: 26px;
+	margin-bottom: 2px;
 	font-size: 12px;
 	opacity: 0.7;
 }
@@ -152,6 +160,9 @@ const assetBase = import.meta.env.BASE_URL || "/";
 
 	.dialogue-text {
 		font-size: clamp(12px, 1.8vw, 15px);
+	}
+	.dialogue-speaker {
+		font-size: 11px;
 	}
 }
 </style>

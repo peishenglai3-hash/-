@@ -25,6 +25,7 @@ import SceneFade from "@/components/ui/SceneFade.vue";
 import PausePanel from "@/components/ui/PausePanel.vue";
 import FlavorToast from "@/components/ui/FlavorToast.vue";
 import EndPanel from "@/components/ui/EndPanel.vue";
+import ChapterTitleCard from "@/components/ui/ChapterTitleCard.vue";
 import { useGameStateStore } from "@/stores/modules/gameState";
 
 const hud = useHudStore();
@@ -77,4 +78,5 @@ function onDone() {
 	<PausePanel />
 	<FlavorToast />
 	<EndPanel />
+	<ChapterTitleCard />
 </template>
