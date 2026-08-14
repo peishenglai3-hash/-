@@ -1676,6 +1676,16 @@
       ]
     }
   },
+  "actor_visuals": {
+    "PLAYER": {
+      "display_height": 280,
+      "offset": [0, 0]
+    },
+    "NPC_FISHERMAN": {
+      "display_height": 320,
+      "offset": [0, 0]
+    }
+  },
   "player_motion": {
     "movement_multiplier": 1,
     "animation_multiplier": 1

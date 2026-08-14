@@ -90,6 +90,8 @@ export class CollisionEditor {
     this.snapStep = config.snapStep ?? 0.25;
     this.original = clone(config.documents);
     this.graphics = scene.add.graphics().setDepth(5000).setVisible(false);
+    this.actorMarkerGraphics = scene.add.graphics().setDepth(5001).setVisible(false);
+    this.actorMarkerTexts = new Map();
     this.createPanel();
     this.lasso = new ForegroundLassoTool(this);
     this.updatePanelMode();
@@ -99,6 +101,9 @@ export class CollisionEditor {
       scene.events.off('postupdate', this.render, this);
       this.lasso.cancel(false);
       this.setCursor('default');
+      for (const text of this.actorMarkerTexts.values()) text.destroy();
+      this.actorMarkerTexts.clear();
+      this.actorMarkerGraphics.destroy();
       const wasEnabled = this.enabled;
       this.enabled = false;
       this.panel.remove();
@@ -580,6 +585,7 @@ export class CollisionEditor {
   refreshList() {
     this.itemSelect.innerHTML = this.items.map((item, index) => {
       const name = item.label ?? item.id ?? `${this.kind}_${index + 1}`;
+      if (item.actorVisual) return `<option value="${index}">角色 · ${item.id} · ${name}</option>`;
       return `<option value="${index}">${item.actorCollider ? `人物 · ${name}` : name}</option>`;
     }).join('');
     this.itemSelect.value = String(Math.max(0, this.items.indexOf(this.selected)));
@@ -777,6 +783,7 @@ export class CollisionEditor {
 
   render() {
     const graphics = this.graphics.clear();
+    this.renderActorMarkers();
     if (!this.enabled) return;
     if (this.kind === 'motion') return;
     if (this.kind === 'visual') {
@@ -822,6 +829,58 @@ export class CollisionEditor {
           graphics.fillStyle(COLORS.selected, 1).fillRect(point.x * this.tileSize - 6, point.y * this.tileSize - 6, 12, 12);
         }
       }
+    }
+  }
+
+  renderActorMarkers() {
+    const graphics = this.actorMarkerGraphics.clear();
+    const visible = this.enabled;
+    graphics.setVisible(visible);
+    const actors = this.config.getActorVisuals?.() ?? [];
+    const active = new Set();
+    for (const item of actors) {
+      const bounds = item?.bounds;
+      const anchor = item?.anchor;
+      if (!bounds || !anchor) continue;
+      active.add(item);
+      const selected = item === this.selected && this.kind === 'visual';
+      const color = selected ? COLORS.selected : COLORS.visual;
+      const left = bounds.x * this.tileSize;
+      const top = bounds.y * this.tileSize;
+      const width = bounds.width * this.tileSize;
+      const height = bounds.height * this.tileSize;
+      const anchorX = anchor.x * this.tileSize;
+      const anchorY = anchor.y * this.tileSize;
+      graphics.lineStyle(selected ? 3 : 2, color, 0.95);
+      graphics.strokeRect(left, top, width, height);
+      graphics.lineBetween(anchorX - 10, anchorY, anchorX + 10, anchorY);
+      graphics.lineBetween(anchorX, anchorY - 10, anchorX, anchorY + 10);
+      graphics.fillStyle(COLORS.anchor, 1).fillCircle(anchorX, anchorY, 5);
+      const markerLabel = item.textureKey
+        ? `${item.id ?? 'ACTOR'}\n${item.label ?? '角色'}\n贴图: ${item.textureKey}`
+        : `${item.id ?? 'ACTOR'}\n${item.label ?? '角色'}`;
+      const label = `${item.id ?? 'ACTOR'}\n${item.label ?? '角色'}`;
+      let text = this.actorMarkerTexts.get(item);
+      if (!text) {
+        text = this.scene.add.text(0, 0, markerLabel, {
+          color: '#d7f9fc',
+          fontFamily: 'monospace',
+          fontSize: '14px',
+          fontStyle: 'bold',
+          stroke: '#061417',
+          strokeThickness: 4,
+          backgroundColor: '#08232dcc',
+          padding: { left: 6, right: 6, top: 3, bottom: 3 },
+          align: 'center',
+        }).setOrigin(0.5, 1).setDepth(5002);
+        this.actorMarkerTexts.set(item, text);
+      }
+      text.setText(markerLabel).setPosition(left + width / 2, top - 8).setVisible(visible);
+      graphics.lineStyle(1, color, 0.8);
+      graphics.lineBetween(left + width / 2, top, left + width / 2, top - 8);
+    }
+    for (const [item, text] of this.actorMarkerTexts) {
+      if (!active.has(item)) text.setVisible(false);
     }
   }
 

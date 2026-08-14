@@ -38,7 +38,7 @@ import { FLAGS2 } from "./ch01Sc02.flags";
 // @ts-ignore Shared developer tools support both grid and pixel-coordinate scenes.
 import { CollisionEditor } from "../../zone-editor.js";
 // @ts-ignore Legacy actor collider helpers are shared by the editor.
-import { actorColliderBottomAt, actorColliderRectAt, ensureActorColliderConfig, createActorColliderEntry } from "../../actor-collider.js";
+import { actorColliderBottomAt, actorColliderRectAt, ensureActorColliderConfig, createActorColliderEntry, ensureActorVisualConfig, createActorVisualEntry } from "../../actor-collider.js";
 // @ts-ignore Shared collision geometry supports the rotated rectangles shown in the editor.
 import { aabbOverlapsRotatedRect } from "../../collision-geometry.js";
 // @ts-ignore Foreground occlusion renderer clips background copies above the player.
@@ -74,6 +74,8 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 	foregroundRenderer: any;
 	playerColliderProfile: any;
 	actorColliderEntries: any[] = [];
+	actorVisualProfiles: Record<string, any> = {};
+	actorVisualEntries: any[] = [];
 	manifest!: ManifestData;
 	player!: Phaser.Physics.Arcade.Sprite;
 	playerVisual!: Phaser.GameObjects.Sprite;
@@ -136,6 +138,7 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 		this.player.setCollideWorldBounds(true);
 		this.player.setVisible(false);
 		this.setupPlayerVisual();
+		this.applyActorVisualHeight("PLAYER", this.actorVisualProfiles.PLAYER.display_height);
 
 		// 渔民：整场位置固定于门槛外，随剧情切换三态
 		const fisherSpawn = this.manifest.spawns.find((entry) => entry.id === "NPC_FISHERMAN")!;
@@ -147,6 +150,8 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 				FISHERMAN_DISPLAY_HEIGHT,
 			)
 			.setDepth(actorDepth(fisherSpawn.position[1]));
+		this.applyActorVisualHeight("NPC_FISHERMAN", this.actorVisualProfiles.NPC_FISHERMAN.display_height);
+		this.applyActorVisualPosition("NPC_FISHERMAN");
 
 		this.camera = this.cameras.main
 			.setBounds(0, 0, WORLD_W, WORLD_H)
@@ -193,6 +198,57 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 				tileSize: 1,
 			}),
 		];
+		this.actorVisualProfiles = {
+			PLAYER: ensureActorVisualConfig(this.manifest as any, "PLAYER", PLAYER_DISPLAY_HEIGHT),
+			NPC_FISHERMAN: ensureActorVisualConfig(this.manifest as any, "NPC_FISHERMAN", FISHERMAN_DISPLAY_HEIGHT),
+		};
+		this.actorVisualEntries = [
+			createActorVisualEntry({
+				id: "PLAYER",
+				label: "陈继南（玩家）",
+				getActor: () => this.playerVisual,
+				getProfile: () => this.actorVisualProfiles.PLAYER,
+				getAnchor: () => ({ x: this.player.x, y: this.player.y }),
+				onPositionChange: () => this.applyActorVisualPosition("PLAYER"),
+				tileSize: 1,
+			}),
+			createActorVisualEntry({
+				id: "NPC_FISHERMAN",
+				label: "渔夫（NPC）",
+				getActor: () => this.fisherman,
+				getProfile: () => this.actorVisualProfiles.NPC_FISHERMAN,
+				getAnchor: () => this.actorSpawnPosition("NPC_FISHERMAN"),
+				onPositionChange: () => this.applyActorVisualPosition("NPC_FISHERMAN"),
+				tileSize: 1,
+			}),
+		];
+	}
+
+	actorSpawnPosition(id: string): { x: number; y: number } | null {
+		const spawn = this.manifest?.spawns?.find((entry) => entry.id === id);
+		return spawn ? { x: spawn.position[0], y: spawn.position[1] } : null;
+	}
+
+	applyActorVisualHeight(id: string, height: number) {
+		if (!Number.isFinite(height) || height <= 0) return;
+		const actor = id === "PLAYER" ? this.playerVisual : id === "NPC_FISHERMAN" ? this.fisherman : null;
+		if (!actor) return;
+		if (id === "PLAYER") {
+			const source = chenFrameSize(this, "down");
+			actor.setDisplaySize(Math.round((source.width / source.height) * height), height);
+		} else {
+			actor.setDisplaySize(Math.round((1024 / 1536) * height), height);
+		}
+		this.applyActorVisualPosition(id);
+	}
+
+	applyActorVisualPosition(id: string) {
+		const actor = id === "PLAYER" ? this.playerVisual : id === "NPC_FISHERMAN" ? this.fisherman : null;
+		const anchor = id === "PLAYER" && this.player
+			? { x: this.player.x, y: this.player.y }
+			: this.actorSpawnPosition(id);
+		const offset = this.actorVisualProfiles[id]?.offset ?? [0, 0];
+		if (actor && anchor) actor.setPosition(anchor.x + offset[0], anchor.y + offset[1]);
 	}
 
 	applyPlayerColliderBody() {
@@ -225,12 +281,16 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 			getDefaultForegroundDepth: () => 2000,
 			getWorldSize: () => [WORLD_W, WORLD_H],
 			getActorColliders: () => this.actorColliderEntries,
+			getActorVisuals: () => this.actorVisualEntries,
+			onActorVisualChange: (id: string, height: number) => this.applyActorVisualHeight(id, height),
 			getMagneticSource: () => this.textures.get("ch01_sc02_bg").getSourceImage(),
 			replaceDocuments: (next: any) => {
 				this.manifest = next[file];
 				documents[file] = this.manifest as any;
 				applyDevPlayerMotionFromJson((this.manifest as any).player_motion);
 				this.setupActorCollider();
+				this.applyActorVisualHeight("PLAYER", this.actorVisualProfiles.PLAYER.display_height);
+				this.applyActorVisualHeight("NPC_FISHERMAN", this.actorVisualProfiles.NPC_FISHERMAN.display_height);
 			},
 				onChange: (kind: string) => {
 				if (!kind || kind === "collision") {
@@ -273,23 +333,23 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 	syncPlayerVisual(direction: ChenWalkDirection, moving: boolean) {
 		if (!this.playerVisual) return;
 		this.playerVisual.anims.timeScale = getPlayerAnimationMultiplier();
-		this.playerVisual
-			.setPosition(this.player.x, this.player.y)
-			.setFlipX(false);
-		const displayWidth = chenDisplayWidth(this, direction, PLAYER_DISPLAY_HEIGHT);
+		this.applyActorVisualPosition("PLAYER");
+		this.playerVisual.setFlipX(false);
+		const displayHeight = this.actorVisualProfiles.PLAYER.display_height;
+		const displayWidth = chenDisplayWidth(this, direction, displayHeight);
 		const animation = chenAnimKey(direction);
 		if (moving) {
 			if (this.playerVisual.anims.currentAnim?.key !== animation || !this.playerVisual.anims.isPlaying) {
 				this.playerVisual.setTexture(chenFrameKey(direction, 0));
 				this.playerVisual.play(animation);
 			}
-			this.playerVisual.setDisplaySize(displayWidth, PLAYER_DISPLAY_HEIGHT);
+			this.playerVisual.setDisplaySize(displayWidth, displayHeight);
 			return;
 		}
 		this.playerVisual.anims.stop();
 		this.playerVisual
 			.setTexture(chenFrameKey(direction, 0))
-			.setDisplaySize(displayWidth, PLAYER_DISPLAY_HEIGHT);
+			.setDisplaySize(displayWidth, displayHeight);
 	}
 
 	setFisherman(texture: "fisherman_idle" | "fisherman_petition" | "fisherman_fish") {

@@ -45,6 +45,9 @@ export function createActorVisualEntry({ id, label, getActor, getProfile, getAnc
       const actor = getActor();
       return actor?.displayWidth ?? '';
     },
+    get textureKey() {
+      return getActor()?.texture?.key ?? '';
+    },
     get bounds() {
       const bounds = getActor()?.getBounds?.();
       if (!bounds) return null;

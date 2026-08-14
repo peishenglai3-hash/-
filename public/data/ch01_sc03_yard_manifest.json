@@ -24,5 +24,19 @@
 	"foreground_occlusion": {
 		"reserved": true,
 		"objects": []
+	},
+	"actor_visuals": {
+		"PLAYER": {
+			"display_height": 380,
+			"offset": [0, 0]
+		},
+		"NPC_LIAISON": {
+			"display_height": 360,
+			"offset": [0, 0]
+		}
+	},
+	"player_motion": {
+		"movement_multiplier": 1,
+		"animation_multiplier": 1
 	}
 }
