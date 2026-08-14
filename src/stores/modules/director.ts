@@ -1,7 +1,7 @@
 import { ref } from "vue";
 import { defineStore } from "pinia";
 import Phaser from "phaser";
-import type { RunSave, SaveData, SceneId } from "@/types/common";
+import type { GameSettings, RunSave, SaveData, SceneId } from "@/types/common";
 import { TransitionAudioController } from "@/common/transitionAudio";
 import { CHOICES, PROFILE_DELTAS, SCENE_EXIT } from "@/scenes/Scene01/content";
 import { TitleScene } from "@/scenes/Title/TitleScene";
@@ -28,12 +28,7 @@ import {
 	showPrompt,
 	clearFade,
 } from "@/common/ui";
-import {
-	SaveManager,
-	SCENE_KEY,
-	getSettings,
-	onSettingsChange,
-} from "@/common/save";
+import { useGameSaveStore, SCENE_KEY } from "@/stores";
 import { ambience } from "@/common/ambience";
 
 function createGame(parent: HTMLElement): Phaser.Game {
@@ -61,6 +56,7 @@ function createGame(parent: HTMLElement): Phaser.Game {
 
 export const useDirectorStore = defineStore("director", () => {
 	const gameState = useGameStateStore();
+	const gameSave = useGameSaveStore();
 	const game = ref<Phaser.Game | null>(null);
 	const transitionAudio = new TransitionAudioController();
 	const bgm = new Audio(assetPath("/assets/audio/prologue_bgm.wav"));
@@ -96,8 +92,8 @@ export const useDirectorStore = defineStore("director", () => {
 			enterScene("Ch01Sc01Scene", "CH01_SC01");
 		}) as EventListener);
 
-		onSettingsChange((s) => applySettings(s));
-		applySettings(getSettings());
+		gameSave.onSettingsChange((s) => applySettings(s));
+		applySettings(gameSave.getSettings());
 
 		window.addEventListener("honghu:dev-next-chapter", ((event: CustomEvent<{ sceneKey?: string }>) => {
 			handleDevNextChapter(event.detail?.sceneKey);
@@ -158,7 +154,7 @@ export const useDirectorStore = defineStore("director", () => {
 		])
 			gameState.state.flags.add(flag);
 		gameState.state.flags.add(choice.flag);
-		SaveManager.autosave("CH01_SC01");
+		gameSave.autosave("CH01_SC01");
 	}
 
 	function clearStoryUi(): void {
@@ -215,7 +211,7 @@ export const useDirectorStore = defineStore("director", () => {
 
 	/* ===== 设置 ===== */
 
-	function applySettings(s: ReturnType<typeof getSettings>): void {
+	function applySettings(s: GameSettings): void {
 		bgm.volume = s.bgmVolume;
 		game.value!.sound.volume = s.sfxVolume;
 		ambience.setVolume(s.sfxVolume);
@@ -224,7 +220,7 @@ export const useDirectorStore = defineStore("director", () => {
 	/* ===== 存档 & 场景切换 ===== */
 
 	function startFromSave(save: RunSave): void {
-		SaveManager.applyToState(save);
+		gameSave.applyToState(save);
 		game.value!.scene.stop("TitleScene");
 		if (
 			save.sceneId === "PROLOGUE_SC01" ||
@@ -235,15 +231,31 @@ export const useDirectorStore = defineStore("director", () => {
 	}
 
 	function enterScene(key: string, sceneId: SceneId): void {
-		SaveManager.autosave(sceneId);
+		gameSave.autosave(sceneId);
 		game.value!.scene.start(key);
 	}
 
+	/** 章末结算后返回标题画面（第二章尚未开发，先回标题，后续接入第二章时改路由） */
+	function goToTitle(): void {
+		const g = game.value;
+		if (!g) return;
+		clearStoryUi();
+		ambience.stopRoom();
+		stopPrologueBgm();
+		(window as any).hideTitleCard?.();
+		g.scene.stop("Ch01Sc01Scene");
+		g.scene.stop("Ch01Sc02Scene");
+		g.scene.stop("Ch01Sc03Scene");
+		g.scene.stop("PrologueScene02");
+		g.scene.stop("Scene01");
+		g.scene.start("TitleScene");
+	}
+
 	function rollbackToCheckpoint(): boolean {
-		const save = SaveManager.loadFixed();
+		const save = gameSave.loadFixed();
 		if (!save) return false;
 		stopPrologueBgm();
-		SaveManager.applyToState(save);
+		gameSave.applyToState(save);
 		game.value!.scene.stop("Scene01");
 		game.value!.scene.stop("PrologueScene02");
 		game.value!.scene.stop("Ch01Sc01Scene");
@@ -303,6 +315,7 @@ export const useDirectorStore = defineStore("director", () => {
 		init,
 		startFromSave,
 		enterScene,
+		goToTitle,
 		finishPrologue,
 	};
 });

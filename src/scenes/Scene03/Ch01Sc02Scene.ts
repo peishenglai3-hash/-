@@ -281,9 +281,10 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 	}
 
 	buildCollision() {
-		this.collisionRects = this.manifest.collision.map((item) => {
-			const [x, y, width, height] = item.rect;
-			return { id: item.id, x, y, width, height };
+		// 正式碰撞：读取 manifest 中已配置的碰撞矩形（墙、家具、门窗）
+		this.collisionRects = (this.manifest.collision ?? []).map((entry) => {
+			const [x, y, w, h] = entry.rect;
+			return { id: entry.id, x, y, width: w, height: h };
 		});
 	}
 

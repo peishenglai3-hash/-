@@ -230,9 +230,9 @@
       "id": "desk_body",
       "shape": "rect",
       "rect": [
-        27.125,
+        26.5,
         9.775,
-        20.25,
+        20.875,
         10.95
       ],
       "kind": "furniture",
