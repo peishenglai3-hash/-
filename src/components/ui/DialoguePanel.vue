@@ -35,9 +35,9 @@ const assetBase = import.meta.env.BASE_URL || "/";
 .dialogue-panel {
 	position: absolute;
 	left: 50%;
-	bottom: 12px;
+	bottom: 20px;
 	transform: translateX(-50%);
-	width: 520px;
+	width: 400px;
 	aspect-ratio: 2629 / 1398;
 	pointer-events: auto;
 	background: url("/assets/ui/keyed/dialogue.png") center / 100% 100%
