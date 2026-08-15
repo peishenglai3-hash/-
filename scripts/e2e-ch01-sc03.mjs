@@ -1,7 +1,9 @@
 import { chromium } from 'playwright';
 import { mkdirSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 
-const out = 'C:/Users/35636/AppData/Local/Temp/honghu_e2e/';
+const out = join(tmpdir(), 'honghu_e2e') + '/';
 mkdirSync(out, { recursive: true });
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const PORT = process.env.E2E_PORT || '5176';
@@ -14,8 +16,9 @@ page.on('requestfailed', (r) => console.log('[requestfailed]', r.url(), r.failur
 
 await page.goto('http://127.0.0.1:' + PORT + '/');
 
-await page.waitForFunction(() => window.titleScene, null, { timeout: 15000 });
-console.log('0 titleScene ready');
+await page.waitForFunction(() => window.gameDirector, null, { timeout: 15000 });
+await sleep(1500);
+console.log('0 title ready');
 await page.mouse.click(301, 641);
 await page.waitForSelector('.intro-panel button');
 await sleep(800);

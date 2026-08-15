@@ -84,6 +84,8 @@ export class CollisionEditor {
     this.config = config;
     this.enabled = false;
     this.kind = 'collision';
+    this.dirty = false;
+    this.minimized = false;
 	this.tileSize = config.tileSize ?? 32;
     this.selected = null;
     this.drag = null;
@@ -156,7 +158,7 @@ export class CollisionEditor {
     const root = document.createElement('aside');
     root.className = 'dev-zone-editor hidden';
     root.innerHTML = `
-      <header><strong>ZONE FORGE</strong><button data-action="close" title="关闭">×</button></header>
+      <header><strong>ZONE FORGE</strong><span class="dev-zone-header-btns"><button data-action="minimize" title="缩小">–</button><button data-action="close" title="关闭">×</button></span></header>
       <div class="dev-zone-tabs">
         <button data-kind="collision" class="active">碰撞箱</button>
         <button data-kind="interaction">交互区</button>
@@ -212,6 +214,7 @@ export class CollisionEditor {
 
     root.addEventListener('pointerdown', (event) => event.stopPropagation());
     root.querySelector('[data-action="close"]').onclick = () => this.setEnabled(false);
+    root.querySelector('[data-action="minimize"]').onclick = () => this.setMinimized(!this.minimized);
     root.querySelectorAll('[data-kind]').forEach((button) => {
       button.onclick = () => {
         this.kind = button.dataset.kind;
@@ -574,7 +577,16 @@ export class CollisionEditor {
 
   toggle() { this.setEnabled(!this.enabled); }
 
+  setMinimized(minimized) {
+    this.minimized = minimized;
+    this.panel.classList.toggle('minimized', minimized);
+    const button = this.panel.querySelector('[data-action="minimize"]');
+    button.textContent = minimized ? '□' : '–';
+    button.title = minimized ? '展开' : '缩小';
+  }
+
   select(item) {
+    if (item !== this.selected && this.dirty) this.save();
     this.selected = item;
     this.updatePanelMode();
     this.refreshList();
@@ -628,12 +640,14 @@ export class CollisionEditor {
     if (kind === 'movement') setPlayerMovementMultiplier(value);
     else setPlayerAnimationMultiplier(value);
     this.refreshMotionInputs();
+    this.dirty = true;
     this.status.textContent = '角色运动参数有未保存的修改';
   }
 
   resetMotion() {
     resetDevPlayerTuning();
     this.refreshMotionInputs();
+    this.dirty = true;
     this.status.textContent = '已恢复默认 100%，点击保存 JSON 写入';
   }
 
@@ -765,10 +779,12 @@ export class CollisionEditor {
     this.config.onChange();
     this.updatePanelMode();
     this.select(this.items[0] ?? null);
+    this.dirty = false;
     this.status.textContent = '已恢复为打开页面时的数据';
   }
 
   changed(message = '有未保存修改') {
+    this.dirty = true;
     this.config.onChange(this.kind);
     this.refreshInputs();
     this.render();
@@ -900,6 +916,7 @@ export class CollisionEditor {
         if (!response.ok) throw new Error(await response.text());
       }
       this.original = clone(documents);
+      this.dirty = false;
       this.status.textContent = '已写回项目 JSON';
     } catch {
       for (const [file, data] of Object.entries(documents)) {

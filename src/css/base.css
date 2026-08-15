@@ -120,3 +120,15 @@ body.dev-editor-active .dev-zone-editor,
 body.dev-editor-active .dev-zone-editor * {
 	pointer-events: auto;
 }
+
+/* 区域编辑器缩小模式：只保留标题栏与操作按钮 */
+.dev-zone-header-btns { display: flex; gap: 4px; }
+
+.dev-zone-editor.minimized .dev-zone-tabs,
+.dev-zone-editor.minimized > label,
+.dev-zone-editor.minimized > .dev-zone-grid,
+.dev-zone-editor.minimized > section,
+.dev-zone-editor.minimized > p,
+.dev-zone-editor.minimized > output {
+	display: none;
+}
