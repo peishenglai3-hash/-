@@ -1,0 +1,173 @@
+{
+  "map_id": "MAP_CH2_ANCESTRAL_HALL_MAINHALL_CLOSE",
+  "canvas": {
+    "width": 1664,
+    "height": 936
+  },
+  "tile_size": 48,
+  "coordinate_origin": "top_left",
+  "objects": [
+    {
+      "id": "COL_BACK_WALL",
+      "type": "collision",
+      "rect": [
+        0,
+        0,
+        1664,
+        220
+      ]
+    },
+    {
+      "id": "COL_COLUMN_LEFT",
+      "type": "collision",
+      "rect": [
+        430,
+        115,
+        120,
+        665
+      ]
+    },
+    {
+      "id": "COL_COLUMN_RIGHT",
+      "type": "collision",
+      "rect": [
+        1110,
+        115,
+        120,
+        665
+      ]
+    },
+    {
+      "id": "COL_TABLE",
+      "type": "collision",
+      "rect": [
+        725,
+        295,
+        235,
+        455
+      ]
+    },
+    {
+      "id": "COL_CHAIRS_LEFT",
+      "type": "collision",
+      "rect": [
+        585,
+        340,
+        130,
+        390
+      ]
+    },
+    {
+      "id": "COL_CHAIRS_RIGHT",
+      "type": "collision",
+      "rect": [
+        975,
+        340,
+        130,
+        390
+      ]
+    },
+    {
+      "id": "COL_ALTAR",
+      "type": "collision",
+      "rect": [
+        620,
+        175,
+        455,
+        210
+      ]
+    },
+    {
+      "id": "COL_LEFT_FURNITURE",
+      "type": "collision",
+      "rect": [
+        220,
+        245,
+        250,
+        300
+      ]
+    },
+    {
+      "id": "COL_RIGHT_FURNITURE",
+      "type": "collision",
+      "rect": [
+        1180,
+        180,
+        350,
+        470
+      ]
+    },
+    {
+      "id": "TRG_DEPLOYMENT_MAP",
+      "type": "interaction",
+      "prompt": "正厅矮桌",
+      "rect": [
+        680,
+        260,
+        380,
+        550
+      ]
+    },
+    {
+      "id": "TRG_GROUP_LEADER",
+      "type": "interaction",
+      "prompt": "找小组负责人",
+      "rect": [
+        520,
+        700,
+        180,
+        150
+      ]
+    },
+    {
+      "id": "TRG_ANCESTRAL_TABLET",
+      "type": "interaction",
+      "rect": [
+        715,
+        105,
+        260,
+        245
+      ]
+    },
+    {
+      "id": "TRG_HALL_THRESHOLD",
+      "type": "interaction",
+      "rect": [
+        500,
+        735,
+        670,
+        145
+      ]
+    },
+    {
+      "id": "SPAWN_PLAYER",
+      "type": "spawn",
+      "rect": [
+        810,
+        790,
+        48,
+        48
+      ]
+    },
+    {
+      "id": "CAM_MAINHALL_CLOSE",
+      "type": "camera",
+      "rect": [
+        0,
+        0,
+        1664,
+        936
+      ]
+    },
+    {
+      "id": "EXIT_TO_COURTYARD",
+      "type": "exit",
+      "rect": [
+        500,
+        840,
+        670,
+        96
+      ]
+    }
+  ]
+}

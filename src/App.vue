@@ -19,6 +19,7 @@ import TaskCard from "@/components/ui/TaskCard.vue";
 import InteractionPrompt from "@/components/ui/InteractionPrompt.vue";
 import DialoguePanel from "@/components/ui/DialoguePanel.vue";
 import ItemPanel from "@/components/ui/ItemPanel.vue";
+import InfoPanel from "@/components/ui/InfoPanel.vue";
 import ChoicePanel from "@/components/ui/ChoicePanel.vue";
 import ResultPanel from "@/components/ui/ResultPanel.vue";
 import SceneFade from "@/components/ui/SceneFade.vue";
@@ -76,6 +77,7 @@ function onDone() {
 	<InteractionPrompt />
 	<DialoguePanel />
 	<ItemPanel />
+	<InfoPanel />
 	<ChoicePanel />
 	<ResultPanel />
 	<SceneFade />

@@ -17,6 +17,26 @@ const {
 const { TRANSITION_A, TRANSITION_B } = await import(
 	"../src/scenes/transitionData.ts"
 );
+const {
+	CH02_FLASHBACK_CHOICES,
+	CH02_FLASHBACK_INTRO_THOUGHTS,
+	CH02_FLASHBACK_KNOWN_INFO,
+} = await import("../src/scenes/Scene04/ch02Flashback.content.ts");
+const {
+	CH02_DISCIPLINE_NARRATIVE,
+	CH02_GROUP_ASSIGNMENT_INFO,
+	CH02_GROUP_CHOICES,
+	CH02_GROUP_LEADER_INTRO,
+} = await import("../src/scenes/Scene04/ch02Discipline.content.ts");
+const {
+	CH02_MATERIALS_CHOICES,
+	CH02_MATERIALS_INFO,
+	CH02_MATERIALS_NARRATIVE,
+} = await import("../src/scenes/Scene04/ch02Materials.content.ts");
+const {
+	CH02_DEPARTURE_EPILOGUE,
+	CH02_DEPARTURE_VIDEO_SCRIPT,
+} = await import("../src/scenes/Scene04/ch02Departure.content.ts");
 const fs = await import("node:fs/promises");
 const flavorZones = JSON.parse(await fs.readFile(
 	new URL("../public/data/PRO02_interactions.json", import.meta.url),
@@ -42,6 +62,43 @@ assert(flavorZones.length === 6, "scene02 flavor zones");
 assert(flavorZones.every((zone) => zone.type === "flavor" && Array.isArray(zone.rect) && zone.rect.length === 4 && zone.line), "scene02 flavor zone shape");
 assert(TRANSITION_A.entries.length === 5, "transition A entries");
 assert(TRANSITION_B.entries.length === 21, "transition B entries");
+assert(CH02_FLASHBACK_KNOWN_INFO.length === 4, "chapter 2 flashback known information");
+assert(CH02_FLASHBACK_INTRO_THOUGHTS.length === 2, "chapter 2 flashback intro thoughts");
+assert(
+	CH02_FLASHBACK_CHOICES.length === 4 &&
+	CH02_FLASHBACK_CHOICES.map((choice) => choice.id).join(",") === "A,B,C,D",
+	"chapter 2 flashback choice order",
+);
+assert(
+	CH02_FLASHBACK_CHOICES.every((choice) => choice.thoughts.length >= 2),
+	"chapter 2 flashback choice thoughts",
+);
+assert(CH02_DISCIPLINE_NARRATIVE.length === 17, "chapter 2 discipline narrative lock");
+assert(CH02_GROUP_LEADER_INTRO.length === 1, "chapter 2 group leader intro lock");
+assert(CH02_GROUP_ASSIGNMENT_INFO.length === 12, "chapter 2 group assignment info lock");
+assert(
+	CH02_GROUP_CHOICES.length === 4 &&
+	CH02_GROUP_CHOICES.map((choice) => choice.id).join(",") === "A,B,C,D",
+	"chapter 2 group choice order",
+);
+assert(CH02_GROUP_CHOICES.every((choice) => choice.feedback.length >= 5), "chapter 2 group feedback lock");
+assert(CH02_MATERIALS_NARRATIVE.length === 7, "chapter 2 materials narrative lock");
+assert(CH02_MATERIALS_INFO.length === 8, "chapter 2 materials info lock");
+assert(
+	CH02_MATERIALS_CHOICES.length === 4 &&
+	CH02_MATERIALS_CHOICES.map((choice) => choice.id).join(",") === "A,B,C,D",
+	"chapter 2 materials choice order",
+);
+assert(CH02_MATERIALS_CHOICES.every((choice) => choice.feedback.length >= 5), "chapter 2 materials feedback lock");
+assert(
+	[CH02_FLASHBACK_CHOICES, CH02_GROUP_CHOICES, CH02_MATERIALS_CHOICES].length === 3 &&
+	[CH02_FLASHBACK_CHOICES, CH02_GROUP_CHOICES, CH02_MATERIALS_CHOICES].every((choices) => choices.length === 4),
+	"chapter 2 formal choice node count",
+);
+assert(CH02_DEPARTURE_VIDEO_SCRIPT.length === 8, "chapter 2 departure video script lock");
+assert(CH02_DEPARTURE_EPILOGUE.length === 2, "chapter 2 departure epilogue lock");
+assert(CH02_DEPARTURE_EPILOGUE[0].text.includes("余家大院外围"), "chapter 2 departure location subtitle lock");
+assert(CH02_DEPARTURE_EPILOGUE[1].text.includes("正在靠近下一处地点"), "chapter 2 departure approach narration lock");
 
 const styles = new Set(["narration", "thought", "dialogue", "cue", "date"]);
 const lists = [
@@ -53,6 +110,14 @@ const lists = [
 	FALL_ASLEEP,
 	TRANSITION_A.entries,
 	TRANSITION_B.entries,
+	CH02_FLASHBACK_INTRO_THOUGHTS,
+	...CH02_FLASHBACK_CHOICES.map((choice) => choice.thoughts),
+	CH02_DISCIPLINE_NARRATIVE,
+	CH02_GROUP_LEADER_INTRO,
+	...CH02_GROUP_CHOICES.map((choice) => choice.feedback),
+	CH02_MATERIALS_NARRATIVE,
+	...CH02_MATERIALS_CHOICES.map((choice) => choice.feedback),
+	CH02_DEPARTURE_EPILOGUE,
 ];
 for (const list of lists) {
 	for (const entry of list) {

@@ -85,6 +85,7 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 	camera!: Phaser.Cameras.Scene2D.Camera;
 	collisionRects!: { id: string; rect: [number, number, number, number]; rotation: number }[];
 	observationMarks: Phaser.GameObjects.Text[] = [];
+	bgm?: Phaser.Sound.BaseSound;
 
 	get state() {
 		return useGameStateStore().state;
@@ -117,6 +118,7 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 
 	create() {
 		this.resetHud();
+		this.sound.stopAll();
 		this.manifest = this.cache.json.get("ch01_sc02_manifest");
 		applyDevPlayerMotionFromJson((this.manifest as any).player_motion);
 		this.setupActorCollider();
@@ -168,7 +170,8 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 		onAction(this, "PAUSE", () => togglePause());
 		(window as any).ch01Sc02Game = this;
 
-		this.sound.add("ch01_sc02_bgm", { loop: true, volume: 0.35 }).play();
+		this.bgm = this.sound.add("ch01_sc02_bgm", { loop: true, volume: 0.35 });
+		this.bgm.play();
 
 		// 开场：到场叙述 + 渔民对话连播（玩家锁定在书桌旁）
 		this.state.mode = "narrative";
@@ -546,5 +549,11 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 				this.game.events.emit("ch01:sc02-complete");
 			}
 		});
+	}
+
+	shutdown() {
+		this.bgm?.stop();
+		this.bgm?.destroy();
+		this.bgm = undefined;
 	}
 }

@@ -188,6 +188,7 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 
 	create() {
 		this.resetHud();
+		this.sound.stopAll();
 		this.manifest = this.cache.json.get("ch01_sc01_manifest");
 		applyDevPlayerMotionFromJson((this.manifest as any).player_motion);
 		this.setupActorCollider();
@@ -239,21 +240,17 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 		onAction(this, "PAUSE", () => togglePause());
 		(window as any).ch01Sc01Game = this;
 
-		this.bgm = this.sound.add("ch01_sc01_bgm", {
-			loop: true,
-			volume: 0.35,
-		});
-		this.bgm.play();
-
 		if (!this.state.flags.has(FLAGS.VIDEO_SEEN)) {
 			this.playIntroVideo();
 		} else {
+			this.startBgm();
 			this.beginExplore();
 		}
 		this.updateObservationMarks();
 	}
 
 	playIntroVideo() {
+		this.stopBgm();
 		this.state.mode = "intro";
 		this.state.playerLocked = true;
 		this.videoOverlay = this.add
@@ -273,6 +270,7 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 			this.state.flags.add(FLAGS.VIDEO_SEEN);
 			this.videoOverlay?.destroy();
 			this.videoOverlay = undefined;
+			this.startBgm();
 			this.startIntroNarrative();
 		});
 		// Fallback: allow skip with interact after 1s
@@ -283,6 +281,7 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 					this.videoOverlay.destroy();
 					this.videoOverlay = undefined;
 					this.state.flags.add(FLAGS.VIDEO_SEEN);
+					this.startBgm();
 					this.startIntroNarrative();
 				}
 			});
@@ -914,6 +913,8 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	}
 
 	playFinaleVideo() {
+		this.stopBgm();
+		this.sound.stopAll();
 		const video = this.add
 			.video(WORLD_W / 2, WORLD_H / 2, "ch01_finale")
 			.setDepth(3000);
@@ -949,6 +950,7 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 		this.videoOverlay.destroy();
 		this.videoOverlay = undefined;
 		this.videoSkipCleanup?.();
+		this.startBgm();
 		this.finishChapter();
 	}
 
@@ -971,9 +973,9 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 				risk: this.state.risk,
 			}, {
 				title: "第一章·陈继南家中醒来｜完成",
-				hint: "第二章 尚在制作中，敬请期待",
-				buttonLabel: "返回标题画面",
-				next: "title",
+				hint: "第二章·陈家祠堂｜场景衔接",
+				buttonLabel: "进入第二章",
+				next: "chapter2",
 			});
 			this.time.delayedCall(300, () => {
 				(window as any).showTitleCard?.(END_SUBTITLE);
@@ -984,5 +986,25 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 
 	saveProgress() {
 		useGameSaveStore().autosave("CH01_SC01");
+	}
+
+	startBgm() {
+		if (!this.bgm)
+			this.bgm = this.sound.add("ch01_sc01_bgm", { loop: true, volume: 0.35 });
+		if (!this.bgm.isPlaying) this.bgm.play();
+	}
+
+	stopBgm() {
+		this.bgm?.stop();
+	}
+
+	shutdown() {
+		this.videoSkipCleanup?.();
+		this.videoOverlay?.stop();
+		this.videoOverlay?.destroy();
+		this.videoOverlay = undefined;
+		this.bgm?.stop();
+		this.bgm?.destroy();
+		this.bgm = undefined;
 	}
 }

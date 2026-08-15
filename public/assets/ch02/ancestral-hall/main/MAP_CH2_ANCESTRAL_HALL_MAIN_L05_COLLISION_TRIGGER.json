@@ -1,0 +1,171 @@
+{
+  "map_id": "MAP_CH2_ANCESTRAL_HALL_MAIN",
+  "canvas": {
+    "width": 1664,
+    "height": 936
+  },
+  "tile_size": 48,
+  "coordinate_origin": "top_left",
+  "objects": [
+    {
+      "id": "COL_OUTER_LEFT",
+      "type": "collision",
+      "rect": [
+        120,
+        0,
+        190,
+        936
+      ]
+    },
+    {
+      "id": "COL_OUTER_RIGHT",
+      "type": "collision",
+      "rect": [
+        1360,
+        0,
+        185,
+        936
+      ]
+    },
+    {
+      "id": "COL_OUTER_BOTTOM",
+      "type": "collision",
+      "rect": [
+        120,
+        790,
+        1425,
+        146
+      ]
+    },
+    {
+      "id": "COL_HALL_BACK",
+      "type": "collision",
+      "rect": [
+        315,
+        0,
+        1030,
+        130
+      ]
+    },
+    {
+      "id": "COL_TABLE",
+      "type": "collision",
+      "rect": [
+        745,
+        175,
+        215,
+        245
+      ]
+    },
+    {
+      "id": "COL_CHAIRS_LEFT",
+      "type": "collision",
+      "rect": [
+        650,
+        175,
+        92,
+        250
+      ]
+    },
+    {
+      "id": "COL_CHAIRS_RIGHT",
+      "type": "collision",
+      "rect": [
+        965,
+        175,
+        92,
+        250
+      ]
+    },
+    {
+      "id": "COL_TREE",
+      "type": "collision",
+      "rect": [
+        300,
+        430,
+        185,
+        260
+      ]
+    },
+    {
+      "id": "COL_SUPPLY",
+      "type": "collision",
+      "rect": [
+        1250,
+        365,
+        270,
+        220
+      ]
+    },
+    {
+      "id": "TRG_ENTRY",
+      "type": "interaction",
+      "rect": [
+        760,
+        790,
+        150,
+        146
+      ]
+    },
+    {
+      "id": "TRG_HALL_OBSERVE",
+      "type": "interaction",
+      "rect": [
+        675,
+        420,
+        330,
+        96
+      ]
+    },
+    {
+      "id": "TRG_DEPLOYMENT_TABLE",
+      "type": "interaction",
+      "rect": [
+        720,
+        145,
+        280,
+        300
+      ]
+    },
+    {
+      "id": "TRG_SUPPLY_ZONE",
+      "type": "interaction",
+      "rect": [
+        1215,
+        340,
+        330,
+        270
+      ]
+    },
+    {
+      "id": "SPAWN_PLAYER",
+      "type": "spawn",
+      "rect": [
+        790,
+        680,
+        48,
+        48
+      ]
+    },
+    {
+      "id": "CAM_MAIN",
+      "type": "camera",
+      "rect": [
+        120,
+        0,
+        1425,
+        936
+      ]
+    },
+    {
+      "id": "EXIT_GATE",
+      "type": "exit",
+      "rect": [
+        765,
+        850,
+        145,
+        86
+      ]
+    }
+  ]
+}

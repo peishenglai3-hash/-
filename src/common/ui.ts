@@ -31,6 +31,9 @@ export function showItemPassive(item: { icon: string; title: string; text: strin
 export function closeItem() { store().closeItem(); }
 export function hideItem() { store().hideItem(); }
 export function itemPanelOpen() { return store().itemPanelOpen(); }
+export function showInfoPanel(panel: { title: string; items: string[]; continueLabel?: string; onContinue?: () => void }) { store().showInfoPanel(panel); }
+export function closeInfoPanel() { store().closeInfoPanel(); }
+export function hideInfoPanel() { store().hideInfoPanel(); }
 export function showChoices(items: any[], onChoose: (id: string) => void, title?: string) { store().showChoices(items as any, onChoose, title); }
 export function hideChoices() { store().hideChoices(); }
 export function showResult(choice: { image: string; result: [string, string] }) { store().showResult(choice); }

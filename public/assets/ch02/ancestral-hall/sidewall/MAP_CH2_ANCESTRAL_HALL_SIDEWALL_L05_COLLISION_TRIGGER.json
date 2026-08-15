@@ -1,0 +1,161 @@
+{
+  "map_id": "MAP_CH2_ANCESTRAL_HALL_SIDEWALL",
+  "canvas": {
+    "width": 1664,
+    "height": 936
+  },
+  "tile_size": 48,
+  "coordinate_origin": "top_left",
+  "objects": [
+    {
+      "id": "COL_SIDE_WALL",
+      "type": "collision",
+      "rect": [
+        0,
+        0,
+        1664,
+        330
+      ]
+    },
+    {
+      "id": "COL_COLUMN_1",
+      "type": "collision",
+      "rect": [
+        190,
+        75,
+        90,
+        410
+      ]
+    },
+    {
+      "id": "COL_COLUMN_2",
+      "type": "collision",
+      "rect": [
+        610,
+        75,
+        90,
+        410
+      ]
+    },
+    {
+      "id": "COL_COLUMN_3",
+      "type": "collision",
+      "rect": [
+        1060,
+        75,
+        90,
+        410
+      ]
+    },
+    {
+      "id": "COL_COLUMN_4",
+      "type": "collision",
+      "rect": [
+        1500,
+        75,
+        100,
+        450
+      ]
+    },
+    {
+      "id": "COL_PARCELS_A",
+      "type": "collision",
+      "rect": [
+        285,
+        260,
+        290,
+        220
+      ]
+    },
+    {
+      "id": "COL_PARCELS_B",
+      "type": "collision",
+      "rect": [
+        700,
+        265,
+        370,
+        220
+      ]
+    },
+    {
+      "id": "COL_WEAPON_BENCH",
+      "type": "collision",
+      "rect": [
+        1160,
+        250,
+        435,
+        285
+      ]
+    },
+    {
+      "id": "TRG_SORT_BY_TAG",
+      "type": "interaction",
+      "rect": [
+        245,
+        235,
+        365,
+        285
+      ]
+    },
+    {
+      "id": "TRG_RETYING_PARCEL",
+      "type": "interaction",
+      "rect": [
+        660,
+        235,
+        450,
+        285
+      ]
+    },
+    {
+      "id": "TRG_BUCKET_TRANSFER",
+      "type": "interaction",
+      "rect": [
+        260,
+        555,
+        310,
+        330
+      ]
+    },
+    {
+      "id": "TRG_WEAPON_STACK",
+      "type": "interaction",
+      "rect": [
+        1120,
+        225,
+        500,
+        340
+      ]
+    },
+    {
+      "id": "SPAWN_PLAYER",
+      "type": "spawn",
+      "rect": [
+        760,
+        680,
+        48,
+        48
+      ]
+    },
+    {
+      "id": "CAM_SIDEWALL",
+      "type": "camera",
+      "rect": [
+        0,
+        0,
+        1664,
+        936
+      ]
+    },
+    {
+      "id": "EXIT_TO_COURTYARD",
+      "type": "exit",
+      "rect": [
+        0,
+        760,
+        145,
+        176
+      ]
+    }
+  ]
+}

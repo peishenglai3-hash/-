@@ -19,6 +19,9 @@ const writableFiles = new Set([
 	"public/data/ch01_sc01_chen_home_wake_manifest.json",
 	"public/data/ch01_sc02_flashback_petition_manifest.json",
 	"public/data/ch01_sc03_yard_manifest.json",
+	"public/data/ch02_ancestral_hall_main_objects.json",
+	"public/data/ch02_ancestral_hall_mainhall_close_objects.json",
+	"public/data/ch02_ancestral_hall_sidewall_objects.json",
 ]);
 
 function zoneEditorApi(): Plugin {
@@ -65,6 +68,7 @@ export default defineConfig(({ mode }) => {
 	return {
 		plugins: [vue(), zoneEditorApi()],
 		base: env.VITE_BASE || "/",
+		cacheDir: ".vite-cache",
 		resolve: {
 			alias: {
 				"@": resolve(__dirname, "src"),

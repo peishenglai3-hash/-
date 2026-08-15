@@ -1,0 +1,57 @@
+{
+  "map_id": "MAP_CH2_ANCESTRAL_HALL_MAINHALL_CLOSE",
+  "canvas": {
+    "width": 1664,
+    "height": 936
+  },
+  "tile_size": 48,
+  "render_order": [
+    "L01_GROUND",
+    "L02_GROUND_DETAIL",
+    "L03_STRUCTURE_LOW",
+    "L04_PROP_INTERACT",
+    "L05_COLLISION_TRIGGER",
+    "L06_OCCLUSION_HIGH",
+    "L07_LIGHT_FX"
+  ],
+  "layers": {
+    "L01_GROUND": {
+      "file": "MAP_CH2_ANCESTRAL_HALL_MAINHALL_CLOSE_L01_GROUND.png",
+      "visible_at_runtime": true,
+      "editor_only": false
+    },
+    "L02_GROUND_DETAIL": {
+      "file": "MAP_CH2_ANCESTRAL_HALL_MAINHALL_CLOSE_L02_GROUND_DETAIL.png",
+      "visible_at_runtime": true,
+      "editor_only": false
+    },
+    "L03_STRUCTURE_LOW": {
+      "file": "MAP_CH2_ANCESTRAL_HALL_MAINHALL_CLOSE_L03_STRUCTURE_LOW.png",
+      "visible_at_runtime": true,
+      "editor_only": false
+    },
+    "L04_PROP_INTERACT": {
+      "file": "MAP_CH2_ANCESTRAL_HALL_MAINHALL_CLOSE_L04_PROP_INTERACT.png",
+      "visible_at_runtime": true,
+      "editor_only": false
+    },
+    "L06_OCCLUSION_HIGH": {
+      "file": "MAP_CH2_ANCESTRAL_HALL_MAINHALL_CLOSE_L06_OCCLUSION_HIGH.png",
+      "visible_at_runtime": true,
+      "editor_only": false
+    },
+    "L07_LIGHT_FX": {
+      "file": "MAP_CH2_ANCESTRAL_HALL_MAINHALL_CLOSE_L07_LIGHT_FX.png",
+      "visible_at_runtime": true,
+      "editor_only": false
+    },
+    "L05_COLLISION_TRIGGER": {
+      "file": "MAP_CH2_ANCESTRAL_HALL_MAINHALL_CLOSE_L05_COLLISION_TRIGGER.png",
+      "visible_at_runtime": false,
+      "editor_only": true
+    }
+  },
+  "collision_objects": "MAP_CH2_ANCESTRAL_HALL_MAINHALL_CLOSE_L05_COLLISION_TRIGGER.json",
+  "preview": "MAP_CH2_ANCESTRAL_HALL_MAINHALL_CLOSE_PREVIEW_COMPOSITE.png",
+  "editor_preview": "MAP_CH2_ANCESTRAL_HALL_MAINHALL_CLOSE_PREVIEW_EDITOR.png"
+}

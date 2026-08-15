@@ -19,7 +19,8 @@ const assetBase = import.meta.env.BASE_URL || "/";
 				<img
 					v-if="hud.dialogue.avatarSrc"
 					:src="`${assetBase}assets/characters/${hud.dialogue.avatarSrc}/avatar.png`"
-					alt=""
+					:alt="hud.dialogue.speaker"
+					:class="{ 'dialogue-avatar-pixel': hud.dialogue.avatarSrc !== 'ch02-chen' }"
 				/>
 			</div>
 		</div>
@@ -83,9 +84,14 @@ const assetBase = import.meta.env.BASE_URL || "/";
 }
 
 .dialogue-left .dialogue-avatar-wrap img {
+	display: block;
 	max-width: 92%;
 	max-height: 92%;
 	object-fit: contain;
+}
+
+.dialogue-left .dialogue-avatar-wrap img.dialogue-avatar-pixel {
+	image-rendering: pixelated;
 }
 
 .dialogue-speaker {

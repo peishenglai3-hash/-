@@ -10,6 +10,11 @@ import { PrologueScene02 } from "@/scenes/Scene02/PrologueScene02";
 import { Ch01Sc01Scene } from "@/scenes/Scene03/Ch01Sc01Scene";
 import { Ch01Sc02Scene } from "@/scenes/Scene03/Ch01Sc02Scene";
 import { Ch01Sc03Scene } from "@/scenes/Scene03/Ch01Sc03Scene";
+import { Ch02TransitionScene } from "@/scenes/Scene04/Ch02TransitionScene";
+import { Ch02AncestralHallScene } from "@/scenes/Scene04/Ch02AncestralHallScene";
+import { Ch02FlashbackScene } from "@/scenes/Scene04/Ch02FlashbackScene";
+import { Ch02DepartureScene } from "@/scenes/Scene04/Ch02DepartureScene";
+import { isAncestralHallVariant } from "@/scenes/Scene04/ancestralHallMap";
 import {
 	CHOICES as CH01_SC01_CHOICES,
 	PROFILE_DELTAS as CH01_SC01_PROFILE_DELTAS,
@@ -20,6 +25,7 @@ import { assetPath } from "@/common/paths";
 import {
 	showEndPanel,
 	hideIntro,
+	hideEndPanel,
 	hideTask,
 	hideItem,
 	hideDialogue,
@@ -27,6 +33,7 @@ import {
 	hideResult,
 	showPrompt,
 	clearFade,
+	hideInfoPanel,
 } from "@/common/ui";
 import { useGameSaveStore, SCENE_KEY } from "@/stores";
 import { ambience } from "@/common/ambience";
@@ -50,7 +57,18 @@ function createGame(parent: HTMLElement): Phaser.Game {
 			height: 720,
 		},
 		loader: { baseURL: import.meta.env.BASE_URL },
-		scene: [TitleScene, Scene01, PrologueScene02, Ch01Sc01Scene, Ch01Sc02Scene, Ch01Sc03Scene],
+		scene: [
+			TitleScene,
+			Scene01,
+			PrologueScene02,
+			Ch01Sc01Scene,
+			Ch01Sc02Scene,
+			Ch01Sc03Scene,
+			Ch02TransitionScene,
+			Ch02AncestralHallScene,
+			Ch02FlashbackScene,
+			Ch02DepartureScene,
+		],
 	});
 }
 
@@ -68,10 +86,52 @@ export const useDirectorStore = defineStore("director", () => {
 		const g = createGame(parent);
 		game.value = g;
 		(window as any).game = g;
-		(window as any).gameDirector = { game: g, enterScene };
+		(window as any).gameDirector = {
+			game: g,
+			enterScene,
+			enterChapter2: startChapter2Opening,
+			enterChapter2Map: openChapter2Map,
+			enterChapter2Flashback: startChapter2Flashback,
+			enterChapter2Discipline: () => openChapter2Map("mainhall-close", "discipline"),
+			enterChapter2Materials: () => openChapter2Map("sidewall", "materials"),
+			enterChapter3Transition: startChapter2ToChapter3Transition,
+		};
+		const query = new URLSearchParams(window.location.search);
+		const requestedMap = query.get("ch2map");
+		if (isAncestralHallVariant(requestedMap)) {
+			window.setTimeout(() => openChapter2Map(requestedMap), 0);
+		} else if (query.get("chapter") === "2") {
+			// 仅第二章试玩入口：从第二章入口视频开始，不要求先完成第一章。
+			window.setTimeout(() => startChapter2Opening(), 0);
+		}
 
 		// 闪回流程路由（SC01 ↔ SC02 / SC01 ↔ SC03）
 		setupFlashbackFlow(g);
+		g.events.on("ch02:arrival-enter", () => {
+			g.scene.stop("Ch02TransitionScene");
+			openChapter2Map("main", "arrival");
+		});
+		g.events.on("ch02:deployment-enter", () => {
+			openChapter2Map("mainhall-close", "deployment");
+		});
+		g.events.on("ch02:flashback-enter", () => {
+			startChapter2Flashback();
+		});
+		g.events.on("ch02:discipline-enter", () => {
+			openChapter2Map("mainhall-close", "discipline");
+		});
+		g.events.on("ch02:materials-enter", () => {
+			openChapter2Map("sidewall", "materials");
+		});
+		g.events.on("ch02:chapter3-transition", () => {
+			g.scene.stop("Ch02AncestralHallScene");
+			clearStoryUi();
+			g.scene.start("Ch02DepartureScene");
+		});
+		g.events.on("ch02:departure-complete", () => {
+			g.scene.stop("Ch02DepartureScene");
+			finishChapter2();
+		});
 
 		// 结算 → 第一章
 		window.addEventListener("prologue:scene-exit", ((event: CustomEvent<SaveData>) => {
@@ -163,13 +223,115 @@ export const useDirectorStore = defineStore("director", () => {
 
 	function clearStoryUi(): void {
 		hideIntro();
+		hideEndPanel();
 		hideTask();
 		hideItem();
 		hideDialogue();
 		hideChoices();
 		hideResult();
+		hideInfoPanel();
 		showPrompt("");
 		clearFade();
+	}
+
+	function openChapter2Map(variant = "main", entry: "preview" | "arrival" | "deployment" | "discipline" | "materials" = "preview"): void {
+		const g = game.value;
+		if (!g) return;
+		const selectedVariant = isAncestralHallVariant(variant) ? variant : "main";
+		clearStoryUi();
+		stopManagedAudio();
+		for (const sceneKey of [
+			"TitleScene",
+			"Scene01",
+			"PrologueScene02",
+			"Ch01Sc01Scene",
+			"Ch01Sc02Scene",
+			"Ch01Sc03Scene",
+			"Ch02TransitionScene",
+			"Ch02AncestralHallScene",
+			"Ch02FlashbackScene",
+			"Ch02DepartureScene",
+		]) {
+			if (sceneKey !== "Ch02AncestralHallScene") g.scene.stop(sceneKey);
+		}
+		g.scene.start("Ch02AncestralHallScene", { variant: selectedVariant, entry });
+	}
+
+	function startChapter2Opening(): void {
+		const g = game.value;
+		if (!g) return;
+		clearStoryUi();
+		stopManagedAudio();
+		(window as any).hideTitleCard?.();
+		for (const sceneKey of [
+			"TitleScene",
+			"Scene01",
+			"PrologueScene02",
+			"Ch01Sc01Scene",
+			"Ch01Sc02Scene",
+			"Ch01Sc03Scene",
+			"Ch02AncestralHallScene",
+			"Ch02FlashbackScene",
+			"Ch02DepartureScene",
+		]) g.scene.stop(sceneKey);
+		transitionAudio.prime();
+		g.scene.start("Ch02TransitionScene");
+	}
+
+	function startChapter2Flashback(): void {
+		const g = game.value;
+		if (!g) return;
+		clearStoryUi();
+		stopManagedAudio();
+		for (const sceneKey of [
+			"TitleScene",
+			"Scene01",
+			"PrologueScene02",
+			"Ch01Sc01Scene",
+			"Ch01Sc02Scene",
+			"Ch01Sc03Scene",
+			"Ch02TransitionScene",
+			"Ch02AncestralHallScene",
+			"Ch02DepartureScene",
+		]) g.scene.stop(sceneKey);
+		g.scene.start("Ch02FlashbackScene");
+	}
+
+	function startChapter2ToChapter3Transition(): void {
+		const g = game.value;
+		if (!g) return;
+		clearStoryUi();
+		stopManagedAudio();
+		g.scene.stop("Ch02AncestralHallScene");
+		g.scene.start("Ch02DepartureScene");
+	}
+
+	function finishChapter2(): void {
+		const save = {
+			checkpoint: "CH02_END_PRE_OPERATION",
+			checkpointLabel: "第二章·陈家祠堂行动前的集结",
+			profile: { ...gameState.state.profile },
+			choiceTag: gameState.state.choice?.flag ?? null,
+			fixed: [...gameState.state.flags],
+			risk: { ...gameState.state.risk },
+		};
+		gameState.state.mode = "end";
+		gameState.state.playerLocked = true;
+		try {
+			window.localStorage.setItem(
+				"redcode.chapter2.save",
+				JSON.stringify({ chapter: 2, ...save, timestamp: Date.now() }),
+			);
+		} catch {
+			/* storage unavailable */
+		}
+		clearStoryUi();
+		showEndPanel(save, {
+			title: "第二章·陈家祠堂行动前的集结｜完成",
+			hint: "第三章·入口视频已播放；第三章场景待接入",
+			buttonLabel: "返回标题",
+			next: "title",
+		});
 	}
 
 	function handleDevNextChapter(sceneKey?: string): void {
@@ -239,17 +401,22 @@ export const useDirectorStore = defineStore("director", () => {
 		game.value!.scene.start(key);
 	}
 
-	/** 章末结算后返回标题画面（第二章尚未开发，先回标题，后续接入第二章时改路由） */
+	/** 章末结算后的标题路由；第二章入口由结算面板单独调用 startChapter2Opening。 */
 	function goToTitle(): void {
 		const g = game.value;
 		if (!g) return;
 		clearStoryUi();
+		stopManagedAudio();
 		ambience.stopRoom();
 		stopPrologueBgm();
 		(window as any).hideTitleCard?.();
 		g.scene.stop("Ch01Sc01Scene");
 		g.scene.stop("Ch01Sc02Scene");
 		g.scene.stop("Ch01Sc03Scene");
+		g.scene.stop("Ch02TransitionScene");
+		g.scene.stop("Ch02AncestralHallScene");
+		g.scene.stop("Ch02FlashbackScene");
+		g.scene.stop("Ch02DepartureScene");
 		g.scene.stop("PrologueScene02");
 		g.scene.stop("Scene01");
 		g.scene.start("TitleScene");
@@ -312,6 +479,18 @@ export const useDirectorStore = defineStore("director", () => {
 		}
 	}
 
+	function stopManagedAudio(): void {
+		const g = game.value;
+		if (!g) return;
+		// Phaser 音频是全局 SoundManager；只停旧场景的管理音轨，视频自身的
+		// HTMLMediaElement 音轨仍由各视频场景在销毁视频对象时结束。
+		g.sound.stopAll();
+		stopPrologueBgm();
+		transitionAudio.stop();
+		ambience.stopRoom();
+		ambience.stopTape();
+	}
+
 	return {
 		game,
 		transitionAudio,
@@ -319,6 +498,7 @@ export const useDirectorStore = defineStore("director", () => {
 		init,
 		startFromSave,
 		enterScene,
+		startChapter2Opening,
 		goToTitle,
 		finishPrologue,
 	};

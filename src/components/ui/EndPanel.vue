@@ -6,6 +6,10 @@ const hud = useHudStore();
 const director = useDirectorStore();
 
 const onClose = () => {
+	if (hud.endPanel?.next === "chapter2") {
+		director.startChapter2Opening();
+		return;
+	}
 	if (hud.endPanel?.next === "title") {
 		director.goToTitle();
 		return;

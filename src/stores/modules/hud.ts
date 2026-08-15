@@ -2,6 +2,7 @@ import { computed, ref, reactive } from "vue";
 import { defineStore } from "pinia";
 import { useGameStateStore } from "@/stores/modules/gameState";
 import { useGameSaveStore } from "@/stores";
+import { defaultAvatarForSpeaker } from "@/common/avatarCatalog";
 
 // ===== 类型定义 =====
 
@@ -34,6 +35,13 @@ export interface ItemPanel {
   closable: boolean;
 }
 
+export interface InfoPanel {
+  title: string;
+  items: string[];
+  continueLabel?: string;
+  onContinue?: () => void;
+}
+
 export interface ChoiceItem {
   id: string;
   label: string;
@@ -50,7 +58,7 @@ export interface EndPanel {
   title: string;
   hint: string;
   buttonLabel: string;
-  next: "title" | null;
+  next: "title" | "chapter2" | null;
   checkpoint: string;
   profile: string;
   tags: string;
@@ -135,6 +143,9 @@ export const useHudStore = defineStore("hud", () => {
   // --- item panel ---
   const itemPanel = ref<ItemPanel | null>(null);
 
+  // --- full-screen factual/context card ---
+  const infoPanel = ref<InfoPanel | null>(null);
+
   // --- choice panel ---
   const choicePanel = ref<ChoicePanel | null>(null);
 
@@ -200,7 +211,9 @@ export const useHudStore = defineStore("hud", () => {
     dialogue.visible = true;
     dialogue.style = entry.style || "narration";
     dialogue.speaker = entry.speaker_name || "";
-    dialogue.avatarSrc = entry.avatar_id || "";
+		// 内容可显式指定头像；第二章历史人物则按发言者回退到统一头像目录，
+		// 避免每一条对白漏填 avatar_id 后再次出现空相框。
+		dialogue.avatarSrc = entry.avatar_id || defaultAvatarForSpeaker(entry.speaker_name || "");
     dialogue.fullText = entry.text;
     dialogue.displayedText = "";
     dialogue.cps = cps;
@@ -299,6 +312,21 @@ export const useHudStore = defineStore("hud", () => {
 
   function hideItem() {
     itemPanel.value = null;
+  }
+
+  function showInfoPanel(panel: InfoPanel) {
+    infoPanel.value = panel;
+    gameState.state.playerLocked = true;
+  }
+
+  function closeInfoPanel() {
+    const onContinue = infoPanel.value?.onContinue;
+    infoPanel.value = null;
+    onContinue?.();
+  }
+
+  function hideInfoPanel() {
+    infoPanel.value = null;
   }
 
   function itemPanelOpen(): boolean {
@@ -442,7 +470,7 @@ export const useHudStore = defineStore("hud", () => {
       title?: string;
       hint?: string;
       buttonLabel?: string;
-      next?: "title" | null;
+      next?: "title" | "chapter2" | null;
     },
   ) {
     endPanel.value = {
@@ -474,6 +502,7 @@ export const useHudStore = defineStore("hud", () => {
     prompt,
     dialogue,
     itemPanel,
+    infoPanel,
     choicePanel,
     resultPanelVisible,
     resultPanel,
@@ -495,6 +524,9 @@ export const useHudStore = defineStore("hud", () => {
     showItemPassive,
     closeItem,
     hideItem,
+    showInfoPanel,
+    closeInfoPanel,
+    hideInfoPanel,
     itemPanelOpen,
     showChoices,
     hideChoices,

@@ -65,6 +65,7 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 	keyMap!: ReturnType<typeof createKeyMap>;
 	camera!: Phaser.Cameras.Scene2D.Camera;
 	collisionRects!: { id: string; x: number; y: number; width: number; height: number }[];
+	bgm?: Phaser.Sound.BaseSound;
 
 	get state() {
 		return useGameStateStore().state;
@@ -95,6 +96,7 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 
 	create() {
 		this.resetHud();
+		this.sound.stopAll();
 		this.manifest = this.cache.json.get("ch01_sc03_manifest");
 		applyDevPlayerMotionFromJson((this.manifest as any).player_motion);
 		this.setupActorCollider();
@@ -141,7 +143,8 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 		onAction(this, "PAUSE", () => togglePause());
 		(window as any).ch01Sc03Game = this;
 
-		this.sound.add("ch01_sc03_bgm", { loop: true, volume: 0.35 }).play();
+		this.bgm = this.sound.add("ch01_sc03_bgm", { loop: true, volume: 0.35 });
+		this.bgm.play();
 
 		// 开场：任务卡 → 自由探索（走近联络人按 E 触发剧情）
 		this.state.mode = "explore";
@@ -410,5 +413,11 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 		window.setTimeout(() => {
 			this.game.events.emit("ch01:sc03-complete");
 		}, 900);
+	}
+
+	shutdown() {
+		this.bgm?.stop();
+		this.bgm?.destroy();
+		this.bgm = undefined;
 	}
 }
