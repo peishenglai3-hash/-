@@ -174,12 +174,22 @@ export const useDirectorStore = defineStore("director", () => {
 
 	function handleDevNextChapter(sceneKey?: string): void {
 		const activeKey = sceneKey ?? ([...game.value!.scene.getScenes(true)].reverse().find((scene: any) => scene.zoneEditor) as any)?.scene.key;
-		if (activeKey === "Ch01Sc01Scene") {
+		if (activeKey === "Ch01Sc01Scene" || activeKey === "Ch01Sc02Scene") {
 			clearStoryUi();
 			completeCh01Sc01ForDev();
 			gameState.state.mode = "transition";
 			gameState.state.playerLocked = true;
-			game.value!.events.emit("ch01:sc02-enter");
+			game.value!.scene.stop("Ch01Sc02Scene");
+			game.value!.events.emit("ch01:sc03-enter");
+			return;
+		}
+
+		if (activeKey === "Ch01Sc03Scene") {
+			clearStoryUi();
+			gameState.state.flags.add("CH01_YARD_DONE");
+			gameState.state.mode = "transition";
+			gameState.state.playerLocked = true;
+			game.value!.events.emit("ch01:sc03-complete");
 			return;
 		}
 
