@@ -25,7 +25,10 @@ import { YARD_CHAIN } from "./ch01Return.content";
 // @ts-ignore Shared developer tools support both grid and pixel-coordinate scenes.
 import { CollisionEditor } from "../../zone-editor.js";
 // @ts-ignore Legacy actor collider helpers are shared by the editor.
-import { ensureActorColliderConfig, createActorColliderEntry, ensureActorVisualConfig, createActorVisualEntry } from "../../actor-collider.js";
+import { actorColliderBottomAt, ensureActorColliderConfig, createActorColliderEntry, ensureActorVisualConfig, createActorVisualEntry } from "../../actor-collider.js";
+// @ts-ignore Foreground occlusion renderer clips background copies above the player.
+import { ForegroundOcclusionRenderer, foregroundBottomPx } from "../../foreground-occlusion.js";
+import { actorDepth, foregroundDepth } from "@/common/displayDepth";
 import {
 	chenAnimKey,
 	chenDisplayWidth,
@@ -61,8 +64,9 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 	player!: Phaser.Physics.Arcade.Sprite;
 	playerVisual!: Phaser.GameObjects.Sprite;
 	liaison!: Phaser.GameObjects.Sprite;
-	playerDirection: ChenWalkDirection = "right";
-	keyMap!: ReturnType<typeof createKeyMap>;
+	background!: Phaser.GameObjects.Image;
+	foregroundRenderer: any;
+	playerDirection: ChenWalkDirection = "right";	keyMap!: ReturnType<typeof createKeyMap>;
 	camera!: Phaser.Cameras.Scene2D.Camera;
 	collisionRects!: { id: string; x: number; y: number; width: number; height: number }[];
 	bgm?: Phaser.Sound.BaseSound;
@@ -101,7 +105,8 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 		applyDevPlayerMotionFromJson((this.manifest as any).player_motion);
 		this.setupActorCollider();
 		this.physics.world.setBounds(0, 0, WORLD_W, WORLD_H);
-		this.add.image(WORLD_W / 2, WORLD_H / 2, "ch01_sc03_bg").setDepth(-20);
+		this.background = this.add.image(WORLD_W / 2, WORLD_H / 2, "ch01_sc03_bg").setDepth(-20);
+		this.setupForegroundOcclusion();
 		this.buildCollision();
 
 		// 玩家：偏左出场
@@ -109,7 +114,7 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 		this.player = this.physics.add
 			.sprite(playerSpawn.position[0], playerSpawn.position[1], chenFrameKey("right", 0))
 			.setOrigin(0.5, 1)
-			.setDepth(800);
+			.setDepth(actorDepth(actorColliderBottomAt(playerSpawn.position[0], playerSpawn.position[1], this.playerColliderProfile, 1)));
 		this.applyPlayerColliderBody();
 		this.player.setCollideWorldBounds(true);
 		this.player.setVisible(false);
@@ -125,7 +130,7 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 				Math.round((LIAISON_DISPLAY_HEIGHT * 1024) / 1536),
 				LIAISON_DISPLAY_HEIGHT,
 			)
-			.setDepth(799);
+			.setDepth(actorDepth(liaisonSpawn.position[1]));
 		this.applyActorVisualHeight("NPC_LIAISON", this.actorVisualProfiles.NPC_LIAISON.display_height);
 		this.applyActorVisualPosition("NPC_LIAISON");
 
@@ -263,6 +268,7 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 				this.applyActorVisualHeight("NPC_LIAISON", this.actorVisualProfiles.NPC_LIAISON.display_height);
 			},
 			onChange: (kind: string) => {
+				if (!kind || kind === "foreground") this.foregroundRenderer?.rebuild();
 				if (!kind || kind === "collision") {
 					this.buildCollision();
 					this.applyPlayerColliderBody();
@@ -273,6 +279,20 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 
 	/* ===== 玩家视觉 ===== */
 
+	// 前景遮罩：玩家走到院墙/树影后时被背景副本遮挡（与 SC01/SC02 同模式）
+	setupForegroundOcclusion() {
+		this.foregroundRenderer = new ForegroundOcclusionRenderer(this, {
+			background: this.background,
+			getObjects: () => (this.manifest as any).foreground_occlusion?.objects ?? [],
+			resolveDepth: (object: any) => foregroundDepth(foregroundBottomPx(object, 1) ?? 0),
+			tileSize: 1,
+		});
+	}
+
+	depthForPlayer(): number {
+		return actorDepth(actorColliderBottomAt(this.player.x, this.player.y, this.playerColliderProfile, 1));
+	}
+
 	setupPlayerVisual() {
 		createChenWalkAnimations(this);
 		this.playerVisual = this.add
@@ -282,7 +302,7 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 				chenDisplayWidth(this, "right", PLAYER_DISPLAY_HEIGHT),
 				PLAYER_DISPLAY_HEIGHT,
 			)
-			.setDepth(801);
+			.setDepth(this.depthForPlayer());
 	}
 
 	syncPlayerVisual(direction: ChenWalkDirection, moving: boolean) {
@@ -319,6 +339,11 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 
 	update() {
 		if (this.physics.world.debugGraphic) this.physics.world.debugGraphic.setVisible(false);
+		if (this.player) {
+			const depth = this.depthForPlayer();
+			this.player.setDepth(depth);
+			this.playerVisual?.setDepth(depth);
+		}
 		const canWalk = this.state.mode === "explore";
 		// 交互提示始终更新——即使玩家被任务卡锁定也要显示，否则玩家不知道可以按 E
 		this.updatePrompt();
