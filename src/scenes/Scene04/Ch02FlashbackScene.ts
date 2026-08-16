@@ -18,6 +18,7 @@ import {
 	togglePause,
 } from "@/common/ui";
 import { useGameStateStore } from "@/stores/modules/gameState";
+import { applyFormalChoice } from "@/common/actionProfileSystem";
 import {
 	CH02_FLASHBACK_CHOICES,
 	CH02_FLASHBACK_COMPLETE_TASK,
@@ -151,14 +152,16 @@ export class Ch02FlashbackScene extends Phaser.Scene {
 	choose(id: string) {
 		const choice = CH02_FLASHBACK_CHOICES.find((item) => item.id === id);
 		if (!choice) return;
-		for (const [axis, delta] of Object.entries(choice.profileDelta))
-			this.state.profile[axis] = (this.state.profile[axis] ?? 0) + delta;
-		this.state.choice = {
-			id: `CH02_FLASHBACK_${choice.id}`,
+		applyFormalChoice(this.state, {
+			choiceId: `CH02_FLASHBACK_${choice.id}`,
+			chapter: 2,
+			isFormalChoice: true,
+			portraitChange: choice.profileDelta,
+			riskChange: choice.riskDelta,
 			flag: choice.flag,
-			echo_summary: choice.label,
-		};
-		this.state.flags.add(choice.flag);
+			echoSummary: choice.label,
+			failureCheck: false,
+		});
 		hideChoices();
 		this.phase = "choice-thoughts";
 		this.state.mode = "narrative";

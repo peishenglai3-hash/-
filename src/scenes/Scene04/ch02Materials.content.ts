@@ -1,5 +1,5 @@
 import type { NarrativeEntry } from "@/stores/modules/hud";
-
+import type { ProfileDelta, RiskDelta } from "@/common/actionProfileSystem";
 export const CH02_MATERIALS_FLAGS = {
 	materialsComplete: "CH02_SUPPLY_PREPARATION_COMPLETE",
 	supplyHandled: "SUPPLY_HANDLED",
@@ -78,8 +78,8 @@ export interface Ch02MaterialsChoice {
 	label: string;
 	detail: string;
 	flag: string;
-	profileDelta: Record<string, number>;
-	riskDelta: Record<string, number>;
+	profileDelta: ProfileDelta;
+	riskDelta: RiskDelta;
 	feedback: NarrativeEntry[];
 }
 

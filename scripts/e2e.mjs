@@ -12,7 +12,7 @@ page.on('pageerror', (e) => console.log('[pageerror]', e.message));
 page.on('console', (m) => { if (m.type() === 'error') console.log('[console.error]', m.text()); });
 
 const mode = () => page.evaluate(() => window.prologueState.mode);
-async function advanceUntil(predicate, presses = 80, delay = 150) {
+async function advanceUntil(predicate, presses = 160, delay = 150) {
   for (let i = 0; i < presses; i += 1) {
     if (await predicate()) return true;
     await page.keyboard.press('Space');
@@ -35,7 +35,7 @@ console.log('1 intro skipped, mode =', await mode());
 await page.keyboard.press('e');
 await sleep(300);
 
-await page.evaluate(() => window.scene01Game.player.setPosition(24 * 32, 14.5 * 32));
+await page.evaluate(() => window.scene01Game.player.setPosition(24 * 32, 13.5 * 32));
 await sleep(400);
 await page.screenshot({ path: out + 'pl_01_scene01.png' });
 await page.keyboard.press('e');
@@ -43,24 +43,33 @@ await sleep(600);
 const reachedChoice = await advanceUntil(async () => (await mode()) === 'choice');
 console.log('2 monument sequence done, choice =', reachedChoice);
 await page.screenshot({ path: out + 'pl_02_choice.png' });
-await page.click('.choice-panel .choice'); // PRO_Q01_A 为首项
+await page.locator('.choice-panel .choice').first().click(); // PRO_Q01_A 为首项
+await page.waitForSelector('.result-panel');
 await sleep(500);
 await page.screenshot({ path: out + 'pl_03_result.png' });
 await page.keyboard.press('Space');
-await sleep(500);
+await page.waitForFunction(() => window.prologueState.mode === 'leave_walk', null, { timeout: 5000 });
+await sleep(300);
 await page.keyboard.press('e');
 await sleep(300);
 
 await page.evaluate(() => window.scene01Game.player.setPosition(26 * 32, 25 * 32));
 await sleep(400);
 await page.keyboard.press('e');
+await page.waitForFunction(() => window.prologueState.mode === 'leave_npc_a', null, { timeout: 5000 });
 await sleep(500);
 await advanceUntil(async () => (await mode()) === 'leave_walk', 8);
 await page.evaluate(() => window.scene01Game.player.setPosition(22 * 32, 25 * 32));
 await sleep(400);
 await page.keyboard.press('e');
+await page.waitForFunction(() => window.prologueState.mode === 'leave_npc_b', null, { timeout: 5000 });
 await sleep(500);
-await advanceUntil(async () => (await mode()) === 'transition', 12);
+await advanceUntil(async () => (await mode()) === 'leave_narrative', 70, 220);
+for (let i = 0; i < 40 && (await page.evaluate(() => window.prologueState.inNarrative)); i += 1) {
+  await page.keyboard.press('Space');
+  await sleep(250);
+}
+await advanceUntil(async () => (await mode()) === 'transition', 20, 220);
 console.log('3 leave dialogues done, entering transition A');
 await sleep(8600);
 await page.screenshot({ path: out + 'pl_04_transitionA.png' });

@@ -71,6 +71,7 @@ import {
 	CH02_MATERIALS_TASK,
 	type Ch02MaterialsChoice,
 } from "./ch02Materials.content";
+import { applyFormalChoice } from "@/common/actionProfileSystem";
 
 const WORLD_W = 1664;
 const WORLD_H = 936;
@@ -395,18 +396,16 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 	}
 
 	applyGroupChoice(choice: Ch02GroupChoice) {
-		for (const [axis, delta] of Object.entries(choice.profileDelta))
-			this.state.profile[axis] = (this.state.profile[axis] ?? 0) + delta;
-		for (const [axis, delta] of Object.entries(choice.riskDelta)) {
-			const riskKey = axis as keyof typeof this.state.risk;
-			this.state.risk[riskKey] += delta;
-		}
-		this.state.choice = {
-			id: `CH02_GROUP_${choice.id}`,
+		applyFormalChoice(this.state, {
+			choiceId: `CH02_GROUP_${choice.id}`,
+			chapter: 2,
+			isFormalChoice: true,
+			portraitChange: choice.profileDelta,
+			riskChange: choice.riskDelta,
 			flag: choice.flag,
-			echo_summary: choice.label,
-		};
-		this.state.flags.add(choice.flag);
+			echoSummary: choice.label,
+			failureCheck: false,
+		});
 	}
 
 	completeGroupChoice() {
@@ -475,19 +474,17 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 	}
 
 	applyMaterialsChoice(choice: Ch02MaterialsChoice) {
-		for (const [axis, delta] of Object.entries(choice.profileDelta))
-			this.state.profile[axis] = (this.state.profile[axis] ?? 0) + delta;
-		for (const [axis, delta] of Object.entries(choice.riskDelta)) {
-			const riskKey = axis as keyof typeof this.state.risk;
-			this.state.risk[riskKey] += delta;
-		}
-		this.state.choice = {
-			id: `CH02_MATERIALS_${choice.id}`,
+		applyFormalChoice(this.state, {
+			choiceId: `CH02_MATERIALS_${choice.id}`,
+			chapter: 2,
+			isFormalChoice: true,
+			portraitChange: choice.profileDelta,
+			riskChange: choice.riskDelta,
 			flag: choice.flag,
-			echo_summary: choice.label,
-		};
-		this.state.flags.add(choice.flag);
-		if (choice.id === "D") this.state.flags.add(CH02_MATERIALS_FLAGS.contactCaution);
+			tags: choice.id === "D" ? [CH02_MATERIALS_FLAGS.contactCaution] : [],
+			echoSummary: choice.label,
+			failureCheck: false,
+		});
 	}
 
 	completeMaterialsChoice() {

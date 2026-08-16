@@ -28,6 +28,13 @@ export class TitleScene extends Phaser.Scene {
 	}
 
 	create() {
+		// 保留浏览器回归测试与调试工具需要的当前标题场景引用。
+		(window as Window & { titleScene?: TitleScene }).titleScene = this;
+		this.events.once("shutdown", () => {
+			const browserWindow = window as Window & { titleScene?: TitleScene };
+			if (browserWindow.titleScene === this) delete browserWindow.titleScene;
+		});
+
 		// 设计图为 2000×1125，等比缩放铺满 1280×720 画布（热区坐标按此比例标定）
 		this.add.image(640, 360, "title_bg").setDisplaySize(1280, 720);
 
@@ -51,7 +58,7 @@ export class TitleScene extends Phaser.Scene {
 		}
 
 		// 场景关闭时停止标题 BGM
-		this.events.on("shutdown", () => this.stopTitleBgm());
+		this.events.once("shutdown", () => this.stopTitleBgm());
 
 		// 标题 BGM 自动播放（浏览器限制下于首次交互起播）
 		this.ensureTitleBgm();

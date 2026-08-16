@@ -3,7 +3,7 @@ import { defineStore } from "pinia";
 import Phaser from "phaser";
 import type { GameSettings, RunSave, SaveData, SceneId } from "@/types/common";
 import { TransitionAudioController } from "@/common/transitionAudio";
-import { CHOICES, PROFILE_DELTAS, SCENE_EXIT } from "@/scenes/Scene01/content";
+import { CHOICES, SCENE_EXIT } from "@/scenes/Scene01/content";
 import { TitleScene } from "@/scenes/Title/TitleScene";
 import { Scene01 } from "@/scenes/Scene01/Scene01";
 import { PrologueScene02 } from "@/scenes/Scene02/PrologueScene02";
@@ -17,10 +17,10 @@ import { Ch02DepartureScene } from "@/scenes/Scene04/Ch02DepartureScene";
 import { isAncestralHallVariant } from "@/scenes/Scene04/ancestralHallMap";
 import {
 	CHOICES as CH01_SC01_CHOICES,
-	PROFILE_DELTAS as CH01_SC01_PROFILE_DELTAS,
 } from "@/scenes/Scene03/ch01Sc01.content";
 import { FLAGS as CH01_SC01_FLAGS } from "@/scenes/Scene03/ch01Sc01.flags";
 import { useGameStateStore } from "@/stores/modules/gameState";
+import { applyFormalChoice, getChapter3Access, PROFILE_AXES } from "@/common/actionProfileSystem";
 import { assetPath } from "@/common/paths";
 import {
 	showEndPanel,
@@ -95,6 +95,7 @@ export const useDirectorStore = defineStore("director", () => {
 			enterChapter2Discipline: () => openChapter2Map("mainhall-close", "discipline"),
 			enterChapter2Materials: () => openChapter2Map("sidewall", "materials"),
 			enterChapter3Transition: startChapter2ToChapter3Transition,
+			getChapter3Access: readChapter3Access,
 		};
 		const query = new URLSearchParams(window.location.search);
 		const requestedMap = query.get("ch2map");
@@ -137,8 +138,8 @@ export const useDirectorStore = defineStore("director", () => {
 		window.addEventListener("prologue:scene-exit", ((event: CustomEvent<SaveData>) => {
 			const save = event.detail;
 			if (save?.profile) {
-				for (const [axis, value] of Object.entries(save.profile))
-					gameState.state.profile[axis] = value;
+				for (const axis of PROFILE_AXES)
+					gameState.state.profile[axis] = save.profile[axis] ?? 0;
 			}
 			if (save?.tags) {
 				for (const tag of save.tags) gameState.state.flags.add(tag);
@@ -196,20 +197,35 @@ export const useDirectorStore = defineStore("director", () => {
 
 	function randomizePrologueChoice(): void {
 		const choice = CHOICES[Math.floor(Math.random() * CHOICES.length)];
-		gameState.state.choice = choice;
-		for (const axis of Object.keys(gameState.state.profile)) gameState.state.profile[axis] = 0;
-		for (const [axis, delta] of Object.entries(PROFILE_DELTAS[choice.id] ?? {}))
-			gameState.state.profile[axis] = delta;
+		for (const axis of PROFILE_AXES) gameState.state.profile[axis] = 0;
+		gameState.state.risk = { identity: 0, execution: 0, coordination: 0 };
 		for (const candidate of CHOICES) gameState.state.flags.delete(candidate.flag);
-		gameState.state.flags.add(choice.flag);
+		applyFormalChoice(gameState.state, {
+			choiceId: choice.id,
+			chapter: 0,
+			isFormalChoice: true,
+			portraitChange: choice.profileDelta,
+			riskChange: choice.riskDelta,
+			flag: choice.flag,
+			echoSummary: choice.echo_summary,
+			failureCheck: false,
+		});
 	}
 
 	function completeCh01Sc01ForDev(): void {
 		const choice = CH01_SC01_CHOICES[Math.floor(Math.random() * CH01_SC01_CHOICES.length)];
-		gameState.state.choice = choice;
 		for (const candidate of CH01_SC01_CHOICES) gameState.state.flags.delete(candidate.flag);
-		for (const [axis, delta] of Object.entries(CH01_SC01_PROFILE_DELTAS[choice.id] ?? {}))
-			gameState.state.profile[axis] += delta;
+		applyFormalChoice(gameState.state, {
+			choiceId: choice.id,
+			chapter: 1,
+			isFormalChoice: true,
+			portraitChange: choice.profileDelta,
+			riskChange: choice.riskDelta,
+			flag: choice.flag,
+			tags: choice.tags,
+			echoSummary: choice.echo_summary,
+			failureCheck: false,
+		});
 		for (const flag of [
 			CH01_SC01_FLAGS.VIDEO_SEEN,
 			CH01_SC01_FLAGS.OBS_BASIN,
@@ -238,6 +254,7 @@ export const useDirectorStore = defineStore("director", () => {
 		const g = game.value;
 		if (!g) return;
 		const selectedVariant = isAncestralHallVariant(variant) ? variant : "main";
+		gameSave.autosave("CH02_HALL");
 		clearStoryUi();
 		stopManagedAudio();
 		for (const sceneKey of [
@@ -260,6 +277,7 @@ export const useDirectorStore = defineStore("director", () => {
 	function startChapter2Opening(): void {
 		const g = game.value;
 		if (!g) return;
+		gameSave.autosave("CH02_TRANSITION");
 		clearStoryUi();
 		stopManagedAudio();
 		(window as any).hideTitleCard?.();
@@ -281,6 +299,7 @@ export const useDirectorStore = defineStore("director", () => {
 	function startChapter2Flashback(): void {
 		const g = game.value;
 		if (!g) return;
+		gameSave.autosave("CH02_FLASHBACK");
 		clearStoryUi();
 		stopManagedAudio();
 		for (const sceneKey of [
@@ -300,6 +319,7 @@ export const useDirectorStore = defineStore("director", () => {
 	function startChapter2ToChapter3Transition(): void {
 		const g = game.value;
 		if (!g) return;
+		gameSave.autosave("CH02_DEPARTURE");
 		clearStoryUi();
 		stopManagedAudio();
 		g.scene.stop("Ch02AncestralHallScene");
@@ -307,6 +327,8 @@ export const useDirectorStore = defineStore("director", () => {
 	}
 
 	function finishChapter2(): void {
+		const runSave = gameSave.autosave("CH02_DEPARTURE");
+		const chapter3Access = readChapter3Access();
 		const save = {
 			checkpoint: "CH02_END_PRE_OPERATION",
 			checkpointLabel: "第二章·陈家祠堂行动前的集结",
@@ -320,7 +342,7 @@ export const useDirectorStore = defineStore("director", () => {
 		try {
 			window.localStorage.setItem(
 				"redcode.chapter2.save",
-				JSON.stringify({ chapter: 2, ...save, timestamp: Date.now() }),
+				JSON.stringify({ chapter: 2, runSave, chapter3Access, ...save, timestamp: Date.now() }),
 			);
 		} catch {
 			/* storage unavailable */
@@ -398,12 +420,23 @@ export const useDirectorStore = defineStore("director", () => {
 	function startFromSave(save: RunSave): void {
 		gameSave.applyToState(save);
 		game.value!.scene.stop("TitleScene");
+		if (save.sceneId === "CH02_TRANSITION") return startChapter2Opening();
+		if (save.sceneId === "CH02_HALL") return openChapter2Map("main", "arrival");
+		if (save.sceneId === "CH02_FLASHBACK") return startChapter2Flashback();
+		if (save.sceneId === "CH02_DEPARTURE") return startChapter2ToChapter3Transition();
 		if (
 			save.sceneId === "PROLOGUE_SC01" ||
 			save.sceneId === "PROLOGUE_SC02"
 		)
 			bgm.play().catch(() => {});
 		game.value!.scene.start(SCENE_KEY[save.sceneId]);
+	}
+
+	function readChapter3Access() {
+		const access = getChapter3Access(gameState.state.risk);
+		gameState.state.chapter3Access = access;
+		(window as any).chapter3Access = access;
+		return access;
 	}
 
 	function enterScene(key: string, sceneId: SceneId): void {

@@ -1,5 +1,5 @@
 import type { NarrativeEntry } from "@/stores/modules/hud";
-
+import type { ProfileDelta, RiskDelta } from "@/common/actionProfileSystem";
 export const CH02_DISCIPLINE_FLAGS = {
 	disciplineComplete: "CH02_DISCIPLINE_COMPLETE",
 	groupConfirmed: "GROUP_CONFIRMED",
@@ -170,8 +170,8 @@ export interface Ch02GroupChoice {
 	label: string;
 	detail: string;
 	flag: string;
-	profileDelta: Record<string, number>;
-	riskDelta: Record<string, number>;
+	profileDelta: ProfileDelta;
+	riskDelta: RiskDelta;
 	feedback: NarrativeEntry[];
 }
 

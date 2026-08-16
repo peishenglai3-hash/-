@@ -1,4 +1,5 @@
 import type { NarrativeEntry } from "@/stores/modules/hud";
+import type { ProfileDelta, RiskDelta } from "@/common/actionProfileSystem";
 
 export const CH02_FLASHBACK_FLAGS = {
 	started: "FLASHBACK_CONSCRIPTION",
@@ -42,7 +43,8 @@ export interface Ch02FlashbackChoice {
 	label: string;
 	detail: string;
 	flag: string;
-	profileDelta: Record<string, number>;
+	profileDelta: ProfileDelta;
+	riskDelta: RiskDelta;
 	thoughts: NarrativeEntry[];
 }
 
@@ -53,6 +55,7 @@ export const CH02_FLASHBACK_CHOICES: Ch02FlashbackChoice[] = [
 		detail: "个人担当 +2，原则坚持 +1",
 		flag: CH02_FLASHBACK_FLAGS.choiceA,
 		profileDelta: { I: 2, P: 1 },
+		riskDelta: {},
 		thoughts: [
 			{
 				entry_id: "CH02_FLASHBACK_CHOICE_A_01",
@@ -78,6 +81,7 @@ export const CH02_FLASHBACK_CHOICES: Ch02FlashbackChoice[] = [
 		detail: "原则坚持 +2，情境调适 +1",
 		flag: CH02_FLASHBACK_FLAGS.choiceB,
 		profileDelta: { P: 2, A: 1 },
+		riskDelta: {},
 		thoughts: [
 			{
 				entry_id: "CH02_FLASHBACK_CHOICE_B_01",
@@ -103,6 +107,7 @@ export const CH02_FLASHBACK_CHOICES: Ch02FlashbackChoice[] = [
 		detail: "组织协同 +2，情境调适 +1",
 		flag: CH02_FLASHBACK_FLAGS.choiceC,
 		profileDelta: { G: 2, A: 1 },
+		riskDelta: {},
 		thoughts: [
 			{
 				entry_id: "CH02_FLASHBACK_CHOICE_C_01",
@@ -128,6 +133,7 @@ export const CH02_FLASHBACK_CHOICES: Ch02FlashbackChoice[] = [
 		detail: "审慎判断 +2，组织协同 +1",
 		flag: CH02_FLASHBACK_FLAGS.choiceD,
 		profileDelta: { C: 2, G: 1 },
+		riskDelta: {},
 		thoughts: [
 			{
 				entry_id: "CH02_FLASHBACK_CHOICE_D_01",

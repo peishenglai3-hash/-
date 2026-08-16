@@ -35,13 +35,13 @@ import {
 	OBS_DOOR_NARRATIVE,
 	CHOICE1_INTRO,
 	CHOICES,
-	PROFILE_DELTAS,
 	INK_NARRATIVE,
 	TASKS_CH01_SC01,
 	PROP_PATHS,
 	PROP_ICON_FILES,
 } from "./ch01Sc01.content";
 import type { Choice } from "./ch01Sc01.content";
+import { applyFormalChoice } from "@/common/actionProfileSystem";
 import { FLAGS } from "./ch01Sc01.flags";
 import { FLAGS2 } from "./ch01Sc02.flags";
 import { assetPath } from "@/common/paths";
@@ -766,12 +766,17 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	choose(id: string) {
 		const choice = CHOICES.find((item) => item.id === id);
 		if (!choice) return;
-		this.state.choice = choice;
-		for (const [axis, delta] of Object.entries(
-			PROFILE_DELTAS[choice.id] ?? {},
-		))
-			this.state.profile[axis] += delta;
-		this.state.flags.add(choice.flag);
+		applyFormalChoice(this.state, {
+			choiceId: choice.id,
+			chapter: 1,
+			isFormalChoice: true,
+			portraitChange: choice.profileDelta,
+			riskChange: choice.riskDelta,
+			flag: choice.flag,
+			tags: choice.tags,
+			echoSummary: choice.echo_summary,
+			failureCheck: false,
+		});
 		hideChoices();
 		showResult(choice);
 		this.state.mode = "result";
@@ -846,14 +851,17 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	chooseQ3(id: string) {
 		const choice = Q3_CHOICES.find((item) => item.id === id);
 		if (!choice) return;
-		for (const [axis, delta] of Object.entries(choice.profile))
-			this.state.profile[axis] += delta;
-		for (const [axis, delta] of Object.entries(choice.risk)) {
-			const key = axis as keyof typeof this.state.risk;
-			this.state.risk[key] += delta;
-		}
-		this.state.flags.add(choice.flag);
-		for (const tag of choice.tags) this.state.flags.add(tag);
+		applyFormalChoice(this.state, {
+			choiceId: choice.id,
+			chapter: 1,
+			isFormalChoice: true,
+			portraitChange: choice.profile,
+			riskChange: choice.risk,
+			flag: choice.flag,
+			tags: choice.tags,
+			echoSummary: choice.label,
+			failureCheck: false,
+		});
 		hideChoices();
 		this.state.mode = "narrative";
 		this.state.playerLocked = true;
@@ -884,14 +892,17 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	chooseQ4(id: string) {
 		const choice = Q4_CHOICES.find((item) => item.id === id);
 		if (!choice) return;
-		for (const [axis, delta] of Object.entries(choice.profile))
-			this.state.profile[axis] += delta;
-		for (const [axis, delta] of Object.entries(choice.risk)) {
-			const key = axis as keyof typeof this.state.risk;
-			this.state.risk[key] += delta;
-		}
-		this.state.flags.add(choice.flag);
-		for (const tag of choice.tags) this.state.flags.add(tag);
+		applyFormalChoice(this.state, {
+			choiceId: choice.id,
+			chapter: 1,
+			isFormalChoice: true,
+			portraitChange: choice.profile,
+			riskChange: choice.risk,
+			flag: choice.flag,
+			tags: choice.tags,
+			echoSummary: choice.label,
+			failureCheck: false,
+		});
 		hideChoices();
 		this.state.mode = "narrative";
 		this.state.playerLocked = true;
