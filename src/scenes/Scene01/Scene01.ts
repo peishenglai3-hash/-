@@ -31,9 +31,9 @@ import {
 	CHOICES,
 	TASKS01,
 	LEAVE_NARRATIVE,
-	PROFILE_DELTAS,
 } from "./content";
 import type { Choice } from "./content";
+import { applyFormalChoice } from "@/common/actionProfileSystem";
 import { assetPath } from "@/common/paths";
 import {
 	createModernPlayerWalkAnimations,
@@ -103,6 +103,7 @@ export class Scene01 extends Phaser.Scene {
 	studentB!: Phaser.GameObjects.Sprite | Phaser.GameObjects.DOMElement;
 	studentBExit: Phaser.GameObjects.Sprite | null = null;
 	leaveNpcArrived: { A: boolean; B: boolean } | null = null;
+	monumentChoiceTimer: number | null = null;
 
 	get state() {
 		return useGameStateStore().state;
@@ -722,6 +723,10 @@ export class Scene01 extends Phaser.Scene {
 	}
 
 	startMonument() {
+		if (this.state.flags.has("FLAG_PRO_Q01_COMPLETED")) {
+			if (this.state.taskOpen) closeTask();
+			return;
+		}
 		if (this.state.monumentSeen) return this.openChoices();
 		this.state.mode = "narrative";
 		const sequence = REQUIRED_NARRATIVE.filter((entry) =>
@@ -752,7 +757,13 @@ export class Scene01 extends Phaser.Scene {
 			this.state.monumentSeen = true;
 			this.state.flags.add("FLAG_INT_MONUMENT_COMPLETED");
 			showTask(TASKS01.afterMonument);
-			window.setTimeout(() => this.openChoices(), 500);
+			this.cancelMonumentChoiceTimer();
+			this.monumentChoiceTimer = window.setTimeout(() => {
+				this.monumentChoiceTimer = null;
+				// 选择提交或离开流程开始后，旧的延迟回调不得重开选择面板。
+				if (this.state.flags.has("FLAG_PRO_Q01_COMPLETED")) return;
+				this.openChoices();
+			}, 500);
 		});
 	}
 
@@ -765,12 +776,17 @@ export class Scene01 extends Phaser.Scene {
 	choose(id: string) {
 		const choice = CHOICES.find((item) => item.id === id);
 		if (!choice) return;
-		this.state.choice = choice;
-		for (const [axis, delta] of Object.entries(
-			PROFILE_DELTAS[choice.id] ?? {},
-		))
-			this.state.profile[axis] += delta;
-		this.state.flags.add(choice.flag);
+		this.cancelMonumentChoiceTimer();
+		applyFormalChoice(this.state, {
+			choiceId: choice.id,
+			chapter: 0,
+			isFormalChoice: true,
+			portraitChange: choice.profileDelta,
+			riskChange: choice.riskDelta,
+			flag: choice.flag,
+			echoSummary: choice.echo_summary,
+			failureCheck: false,
+		});
 		this.state.flags.add("FLAG_PRO_Q01_COMPLETED");
 		hideChoices();
 		showResult(choice);
@@ -820,6 +836,7 @@ export class Scene01 extends Phaser.Scene {
 	}
 
 	finishLeave() {
+		this.cancelMonumentChoiceTimer();
 		this.state.mode = "transition";
 		this.state.leavePhase = "blackout";
 		this.state.playerLocked = true;
@@ -830,5 +847,15 @@ export class Scene01 extends Phaser.Scene {
 		hideDialogue();
 		fadeToBlack();
 		useHudStore().showOverlay("Scene2Overlay");
+	}
+
+	cancelMonumentChoiceTimer() {
+		if (this.monumentChoiceTimer === null) return;
+		window.clearTimeout(this.monumentChoiceTimer);
+		this.monumentChoiceTimer = null;
+	}
+
+	shutdown() {
+		this.cancelMonumentChoiceTimer();
 	}
 }

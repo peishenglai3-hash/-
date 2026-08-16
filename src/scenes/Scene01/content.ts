@@ -271,6 +271,8 @@ export const REQUIRED_NARRATIVE: NarrativeEntry[] = [
 	},
 ];
 
+import type { ProfileDelta, RiskDelta } from "@/common/actionProfileSystem";
+
 export interface Choice {
 	id: string;
 	label: string;
@@ -279,6 +281,8 @@ export interface Choice {
 	flag: string;
 	echo_summary: string;
 	result: [string, string];
+	profileDelta: ProfileDelta;
+	riskDelta: RiskDelta;
 }
 
 import { assetPath } from "@/common/paths";
@@ -295,6 +299,8 @@ export const CHOICES: Choice[] = [
 			"就是他。",
 			"现在，我站在纪念他的石碑前，念叨着他的名字，但好像仍然对他一无所知。",
 		],
+		profileDelta: { C: 2, I: 1 },
+		riskDelta: {},
 	},
 	{
 		id: "PRO_Q01_B",
@@ -307,6 +313,8 @@ export const CHOICES: Choice[] = [
 			"刘绍南，刘绍南……",
 			"十八岁的你，二十五岁的你，会是什么模样？",
 		],
+		profileDelta: { C: 1, A: 2 },
+		riskDelta: {},
 	},
 	{
 		id: "PRO_Q01_C",
@@ -319,6 +327,8 @@ export const CHOICES: Choice[] = [
 			"石碑上、登记表上，录音里、陌生人的记忆里，",
 			"好像处处都有你，但好像处处又都没有你。",
 		],
+		profileDelta: { I: 1, G: 2 },
+		riskDelta: {},
 	},
 	{
 		id: "PRO_Q01_D",
@@ -328,15 +338,14 @@ export const CHOICES: Choice[] = [
 		flag: "FLAG_PRO_NAME_WRITTEN",
 		echo_summary: "那页纸还摊着，笔也还在。",
 		result: ["我想继续写下去，", "我发现自己无话可说。"],
+		profileDelta: { D: 1, I: 2 },
+		riskDelta: {},
 	},
 ];
 
-export const PROFILE_DELTAS: Record<string, Record<string, number>> = {
-	PRO_Q01_A: { C: 2, I: 1 },
-	PRO_Q01_B: { C: 1, A: 2 },
-	PRO_Q01_C: { I: 1, G: 2 },
-	PRO_Q01_D: { D: 1, I: 2 },
-};
+export const PROFILE_DELTAS: Record<string, ProfileDelta> = Object.fromEntries(
+	CHOICES.map((choice) => [choice.id, choice.profileDelta]),
+);
 
 export const TASKS01 = {
 	intro: {

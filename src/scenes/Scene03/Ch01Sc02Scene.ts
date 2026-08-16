@@ -30,9 +30,9 @@ import {
 	HANDOFF_CHAIN,
 	FISH_CHAIN,
 	CHOICES2,
-	PROFILE_DELTAS2,
 	EXIT_NARRATIVE,
 } from "./ch01Sc02.content";
+import { applyFormalChoice } from "@/common/actionProfileSystem";
 import type { NarrativeEntry } from "@/types/common";
 import { FLAGS2 } from "./ch01Sc02.flags";
 // @ts-ignore Shared developer tools support both grid and pixel-coordinate scenes.
@@ -508,9 +508,16 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 	choose(id: string) {
 		const choice = CHOICES2.find((item) => item.id === id);
 		if (!choice) return;
-		for (const [axis, delta] of Object.entries(PROFILE_DELTAS2[choice.id] ?? {}))
-			this.state.profile[axis] += delta;
-		this.state.flags.add(choice.flag);
+		applyFormalChoice(this.state, {
+			choiceId: choice.id,
+			chapter: 1,
+			isFormalChoice: true,
+			portraitChange: choice.profileDelta,
+			riskChange: choice.riskDelta,
+			flag: choice.flag,
+			echoSummary: choice.label,
+			failureCheck: false,
+		});
 		hideChoices();
 		this.state.mode = "narrative";
 		const thoughts: NarrativeEntry[] = choice.thoughts.map((text, index) => ({

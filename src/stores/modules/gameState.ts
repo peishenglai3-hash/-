@@ -9,17 +9,21 @@
 import { markRaw, shallowRef } from "vue";
 import { defineStore } from "pinia";
 import type { NarrativeEntry } from "@/types/common";
+import type {
+	Chapter3Access,
+	ChoiceSnapshot,
+	ProfileValues,
+	RiskValues,
+} from "@/common/actionProfileSystem";
+import { createProfile, createRisk } from "@/common/actionProfileSystem";
 
 export class GameState {
 	mode: string = "intro";
 	flags: Set<string> = new Set();
-	profile: Record<string, number> = { D: 0, C: 0, I: 0, G: 0, P: 0, A: 0 };
-	choice: { id: string; flag: string; echo_summary: string } | null = null;
-	risk: { identity: number; execution: number; coordination: number } = {
-		identity: 0,
-		execution: 0,
-		coordination: 0,
-	};
+	profile: ProfileValues = createProfile();
+	choice: ChoiceSnapshot | null = null;
+	risk: RiskValues = createRisk();
+	chapter3Access: Chapter3Access | null = null;
 	propStates: Record<string, string> = {
 		notebook: "default",
 		phone: "default",
@@ -75,10 +79,15 @@ export const useGameStateStore = defineStore("gameState", () => {
 		state.value.npcDialogue = new Set();
 		state.value.leavePhase = null;
 		state.value.leaveNpcArrived = null;
+		state.value.chapter3Access = null;
 	}
 
 	function resetRunState() {
 		state.value = markRaw(new GameState());
+		if (typeof window !== "undefined") {
+			// 新游戏会替换整个状态对象，保持浏览器调试/回归入口指向当前实例。
+			(window as any).prologueState = state.value;
+		}
 	}
 
 	if (typeof window !== "undefined") {

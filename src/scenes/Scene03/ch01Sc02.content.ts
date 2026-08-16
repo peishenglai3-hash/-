@@ -1,5 +1,6 @@
 import type { NarrativeEntry } from "@/types/common";
 import { FLAGS2 } from "./ch01Sc02.flags";
+import type { ProfileDelta, RiskDelta } from "@/common/actionProfileSystem";
 
 // 第一章场景2（闪回一·状纸）内容数据 —— 文本逐字来自《详细剧情3.1-第一章1.0》
 
@@ -192,6 +193,8 @@ export interface Choice2 {
 	label: string;
 	detail: string;
 	flag: string;
+	profileDelta: ProfileDelta;
+	riskDelta: RiskDelta;
 	thoughts: string[];
 }
 
@@ -202,6 +205,8 @@ export const CHOICES2: Choice2[] = [
 		label: "有人愿意把话写下来，事情才可能被别人听见。",
 		detail: "个人担当 +2，原则坚持 +1",
 		flag: FLAGS2.CHOICE2_A,
+		profileDelta: { I: 2, P: 1 },
+		riskDelta: {},
 		thoughts: [
 			"能不能改变结果，并不只在写字的人手里。但如果没人替他把事讲清，连被听见的机会也没有。",
 		],
@@ -211,6 +216,8 @@ export const CHOICES2: Choice2[] = [
 		label: "一个人的出身，不能替他决定该站在哪一边。",
 		detail: "原则坚持 +2，情境调适 +1",
 		flag: FLAGS2.CHOICE2_B,
+		profileDelta: { P: 2, A: 1 },
+		riskDelta: {},
 		thoughts: [
 			"读过书、住在有书案的屋子里，并不等于必然看不见门外的人。真正让人站到哪一边的，是他如何对待自己已经看见的事。",
 		],
@@ -220,6 +227,8 @@ export const CHOICES2: Choice2[] = [
 		label: "读书若只为自己谋路，手里的笔就太轻了。",
 		detail: "个人担当 +2，行动决断 +1",
 		flag: FLAGS2.CHOICE2_C,
+		profileDelta: { I: 2, D: 1 },
+		riskDelta: {},
 		thoughts: [
 			"笔不能替人下湖，也不能替人挨饿。但它可以让一个原本有苦无处诉的人，暂时不必独自承担。",
 		],
@@ -229,6 +238,8 @@ export const CHOICES2: Choice2[] = [
 		label: "一张状纸能救一时，却救不了所有靠湖吃饭的人。",
 		detail: "组织协同 +2，审慎判断 +1",
 		flag: FLAGS2.CHOICE2_D,
+		profileDelta: { G: 2, C: 1 },
+		riskDelta: {},
 		thoughts: [
 			"这次有人得了帮助。可如果规矩仍由欺压人的人定，下一张状纸还会出现。",
 			"一个人能做的事有限，很多人的处境却不会等。",
@@ -236,12 +247,9 @@ export const CHOICES2: Choice2[] = [
 	},
 ];
 
-export const PROFILE_DELTAS2: Record<string, Record<string, number>> = {
-	CH01_Q02_A: { I: 2, P: 1 },
-	CH01_Q02_B: { P: 2, A: 1 },
-	CH01_Q02_C: { I: 2, D: 1 },
-	CH01_Q02_D: { G: 2, C: 1 },
-};
+export const PROFILE_DELTAS2: Record<string, ProfileDelta> = Object.fromEntries(
+	CHOICES2.map((choice) => [choice.id, choice.profileDelta]),
+);
 
 // 离场：墨迹漫开，回到今夜
 export const EXIT_NARRATIVE: NarrativeEntry[] = [

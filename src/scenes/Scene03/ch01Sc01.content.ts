@@ -1,5 +1,6 @@
 import type { NarrativeEntry } from "@/types/common";
 import { assetPath } from "@/common/paths";
+import type { ProfileDelta, RiskDelta } from "@/common/actionProfileSystem";
 import { FLAGS } from "./ch01Sc01.flags";
 
 export interface Choice {
@@ -10,6 +11,9 @@ export interface Choice {
 	flag: string;
 	echo_summary: string;
 	result: [string, string];
+	profileDelta: ProfileDelta;
+	riskDelta: RiskDelta;
+	tags: string[];
 }
 
 export const PROP_PATHS = {
@@ -305,6 +309,9 @@ export const CHOICES: Choice[] = [
 			"女人没有马上追问梦见了什么，只把水递得更近。",
 			"“这几日你总是睡不安稳。外头的事再急，也不能把人熬坏了。”",
 		],
+		profileDelta: { D: 1, A: 1 },
+		riskDelta: { identity: 0 },
+		tags: [],
 	},
 	{
 		id: "CH01_Q01_B",
@@ -317,6 +324,9 @@ export const CHOICES: Choice[] = [
 			"女人顺着你的目光朝门外看了一眼。",
 			"“风声吧。哪家的门响一下，都像有人来了。”",
 		],
+		profileDelta: { C: 2, A: 1 },
+		riskDelta: { identity: 0, execution: 0 },
+		tags: [],
 	},
 	{
 		id: "CH01_Q01_C",
@@ -329,6 +339,9 @@ export const CHOICES: Choice[] = [
 			"屋里安静了一瞬。女人的手停在半空，碗沿轻轻磕到桌面。",
 			"“你发什么热？你就是陈继南。”",
 		],
+		profileDelta: { P: 1, C: 1 },
+		riskDelta: { identity: 2 },
+		tags: ["FAMILY_DOUBT"],
 	},
 	{
 		id: "CH01_Q01_D",
@@ -341,15 +354,15 @@ export const CHOICES: Choice[] = [
 			"女人起身去拿布巾，临走前将油灯拨亮了一点。",
 			"“你先坐稳。外头要是真有人来，我再叫你。”",
 		],
+		profileDelta: { C: 2, I: 1 },
+		riskDelta: { identity: 0 },
+		tags: [],
 	},
 ];
 
-export const PROFILE_DELTAS: Record<string, Record<string, number>> = {
-	CH01_Q01_A: { D: 1, I: 1 },
-	CH01_Q01_B: { C: 2, I: 1 },
-	CH01_Q01_C: { G: 1, C: 1 },
-	CH01_Q01_D: { C: 2, P: 1 },
-};
+export const PROFILE_DELTAS: Record<string, ProfileDelta> = Object.fromEntries(
+	CHOICES.map((choice) => [choice.id, choice.profileDelta]),
+);
 
 export const INK_NARRATIVE: NarrativeEntry[] = [
 	{

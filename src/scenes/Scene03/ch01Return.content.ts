@@ -1,6 +1,7 @@
 import type { NarrativeEntry } from "@/types/common";
 
 // 返回陈家链内容 —— 文本逐字来自《详细剧情3.1-第一章1.0》
+import type { ProfileDelta, RiskDelta } from "@/common/actionProfileSystem";
 
 // 敲门段（接 RETURN_NARRATIVE 之后）
 export const KNOCK_CHAIN: NarrativeEntry[] = [
@@ -23,8 +24,8 @@ export interface ReturnChoice {
 	label: string;
 	detail: string;
 	flag: string;
-	profile: Record<string, number>;
-	risk: { identity?: number; execution?: number; coordination?: number };
+	profile: ProfileDelta;
+	risk: RiskDelta;
 	tags: string[];
 	feedback: NarrativeEntry[];
 }

@@ -6,7 +6,18 @@
  * @FilePath: /honghu_game/src/types/common.d.ts
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
-export type SceneId = "PROLOGUE_SC01" | "PROLOGUE_SC02" | "CH01_SC01" | "CH01_SC02" | "CH01_SC03";
+import type { ProfileValues, RiskValues } from "@/common/actionProfileSystem";
+
+export type SceneId =
+	| "PROLOGUE_SC01"
+	| "PROLOGUE_SC02"
+	| "CH01_SC01"
+	| "CH01_SC02"
+	| "CH01_SC03"
+	| "CH02_TRANSITION"
+	| "CH02_HALL"
+	| "CH02_FLASHBACK"
+	| "CH02_DEPARTURE";
 
 export interface RunSave {
 	version: number;
@@ -15,11 +26,11 @@ export interface RunSave {
 	sceneLabel: string;
 	checkpoint: string;
 	timestamp: number;
-	profile: Record<string, number>;
+	profile: ProfileValues;
 	choice: { id: string; flag: string; echo_summary: string } | null;
 	tags: string[];
 	fixed: string[];
-	risk: { identity: number; execution: number; coordination: number };
+	risk: RiskValues;
 	propStates: Record<string, string>;
 	checksum: string;
 }
@@ -33,13 +44,13 @@ export interface GameSettings {
 export interface SaveData {
 	checkpoint: string;
 	checkpointLabel: string;
-	profile: Record<string, number>;
+	profile: ProfileValues;
 	choice: string | null;
 	choiceTag: string | null;
 	echo: string | null;
 	tags: string[];
 	fixed: string[];
-	risk: { identity: number; execution: number; coordination: number };
+	risk: RiskValues;
 	exit: { nextSceneCanonical: string };
 }
 

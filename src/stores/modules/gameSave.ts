@@ -6,6 +6,7 @@
 import { ref } from "vue";
 import { defineStore } from "pinia";
 import { useGameStateStore } from "@/stores/modules/gameState";
+import { PROFILE_AXES } from "@/common/actionProfileSystem";
 import type { GameSettings, RunSave, SceneId } from "@/types/common";
 import {
 	getRedcodeSettings,
@@ -26,6 +27,10 @@ export const SCENE_KEY: Record<SceneId, string> = {
 	CH01_SC01: "Ch01Sc01Scene",
 	CH01_SC02: "Ch01Sc02Scene",
 	CH01_SC03: "Ch01Sc03Scene",
+	CH02_TRANSITION: "Ch02TransitionScene",
+	CH02_HALL: "Ch02AncestralHallScene",
+	CH02_FLASHBACK: "Ch02FlashbackScene",
+	CH02_DEPARTURE: "Ch02DepartureScene",
 };
 
 export const SCENE_META: Record<
@@ -48,6 +53,22 @@ export const SCENE_META: Record<
 	CH01_SC03: {
 		label: "第一章·外景院墙",
 		checkpoint: "CH01_SC03_YARD",
+	},
+	CH02_TRANSITION: {
+		label: "第二章·场景衔接",
+		checkpoint: "CH02_TRANSITION",
+	},
+	CH02_HALL: {
+		label: "第二章·陈家祠堂",
+		checkpoint: "CH02_HALL",
+	},
+	CH02_FLASHBACK: {
+		label: "第二章·闪回·抓壮丁",
+		checkpoint: "CH02_FLASHBACK_CONSCRIPTION",
+	},
+	CH02_DEPARTURE: {
+		label: "第二章·出发前",
+		checkpoint: "CH02_END_PRE_OPERATION",
 	},
 };
 
@@ -170,9 +191,9 @@ export const useGameSaveStore = defineStore("gameSave", () => {
 	function applyToState(save: RunSave): void {
 		const { state, resetTransientState } = useGameStateStore();
 		state.flags = new Set([...save.tags, ...save.fixed]);
-		for (const axis of Object.keys(state.profile)) state.profile[axis] = 0;
-		for (const [axis, value] of Object.entries(save.profile))
-			state.profile[axis] = value;
+		for (const axis of PROFILE_AXES) state.profile[axis] = 0;
+		for (const axis of PROFILE_AXES)
+			state.profile[axis] = save.profile[axis] ?? 0;
 		state.choice = save.choice ? { ...save.choice } : null;
 		state.risk = { ...save.risk };
 		state.propStates = {

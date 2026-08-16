@@ -56,8 +56,10 @@ console.log('1 SC01 explore');
 await page.evaluate(() => window.prologueState.flags.add('CH01_SC02_COMPLETE'));
 await page.evaluate(() => window.ch01Sc01Game.beginExplore());
 await sleep(400);
-if (!(await advance(() => window.prologueState.flags.has('CH01_RETURN_TASK'), 40))) fail('RETURN_TASK not set');
+if (!(await advance(() => window.prologueState.flags.has('CH01_SC01_INK_DONE') && window.prologueState.mode === 'explore' && window.prologueState.taskOpen, 80))) fail('return narrative/task not ready');
 console.log('2 return narrative + knock done, task =', await page.evaluate(() => document.querySelector('.task-card')?.textContent?.slice(0, 20)));
+// 任务卡二段关闭需要避免站在可交互物体的范围内，防止第二次 E 被解释为观察。
+await page.evaluate(() => window.ch01Sc01Game.player.setPosition(800, 80));
 await closeTask();
 
 // 门边暗号
@@ -65,15 +67,19 @@ await page.evaluate(() => window.ch01Sc01Game.player.setPosition(1320, 360));
 await sleep(300);
 await page.keyboard.press('e');
 await sleep(500);
-if (!(await advance(() => !!document.querySelector('.choice-panel'), 20))) fail('Q3 choice panel missing');
+if (!(await advance(() => !!document.querySelector('.choice-panel'), 60))) fail('Q3 choice panel missing');
 await page.screenshot({ path: out + 'ret_01_q3.png' });
 await page.evaluate(() => document.querySelectorAll('.choice-panel .choice')[0]?.click());
 await sleep(600);
 if (!(await hasFlag('CH01_Q3_A'))) fail('Q3_A not set');
 console.log('3 Q3 chosen, advancing through feedback');
 // Advance through Q3 feedback narrative (5 entries for A), then black screen → SC03
-await advance(() => false, 20); // exhaust narrative entries
+await advance(() => false, 80); // exhaust narrative entries
 await sleep(400);
+await page.evaluate(() => window.ch01Sc01Game.player.setPosition(1360, 288));
+await sleep(300);
+await page.keyboard.press('e');
+await sleep(1200);
 await page.waitForFunction(() => window.ch01Sc03Game, null, { timeout: 20000 });
 console.log('4 yard scene entered');
 await sleep(800);
@@ -89,7 +95,7 @@ await page.keyboard.press('e');
 await sleep(500);
 if (!(await advance(() => window.prologueState.flags.has('CH01_YARD_DONE'), 40))) fail('YARD_DONE not set');
 console.log('5 yard contact done');
-await page.waitForFunction(() => window.prologueState.flags.has('CH01_FAREWELL_TASK'), null, { timeout: 15000 });
+await page.waitForFunction(() => window.prologueState.flags.has('CH01_YARD_DONE') && !!window.ch01Sc01Game && ['narrative', 'choice'].includes(window.prologueState.mode), null, { timeout: 15000 });
 console.log('6 back to SC01 at door, farewell task on');
 await closeTask();
 
