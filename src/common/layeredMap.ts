@@ -54,9 +54,10 @@ const LAYER_DEPTHS: Record<string, number> = {
 	L02_GROUND_DETAIL: -90,
 	L03_STRUCTURE_LOW: -80,
 	L04_PROP_INTERACT: 100,
-	// Actors are y-sorted below these two authored high layers.
-	L06_OCCLUSION_HIGH: 1600,
-	L07_LIGHT_FX: 1700,
+	// Keep every authored layer below the actor depth band (500 + foot Y).
+	// Selective foreground masks use that same foot-Y band with a small offset.
+	L06_OCCLUSION_HIGH: 200,
+	L07_LIGHT_FX: 300,
 };
 
 export function layeredMapLayerDepth(layerName: string, fallbackIndex = 0): number {

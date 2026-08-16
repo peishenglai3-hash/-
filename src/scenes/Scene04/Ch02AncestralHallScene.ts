@@ -568,8 +568,7 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 				x: 832,
 				y: 760,
 				alpha: 0.82,
-				// 站在低桌前沿，置于 L06 前景层之上、L07 灯光特效之下，
-				// 确保发言者不会被可复用的桌椅遮挡。
+				// 站在低桌前沿，保持在所有静态地图分层之上。
 				depth: 1650,
 			},
 			{
