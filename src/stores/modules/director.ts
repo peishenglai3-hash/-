@@ -15,7 +15,12 @@ import { Ch02AncestralHallScene } from "@/scenes/Scene04/Ch02AncestralHallScene"
 import { Ch02FlashbackScene } from "@/scenes/Scene04/Ch02FlashbackScene";
 import { Ch02DepartureScene } from "@/scenes/Scene04/Ch02DepartureScene";
 import { Ch03OpeningScene } from "@/scenes/Scene05/Ch03OpeningScene";
+import { Ch03Flashback3Scene } from "@/scenes/Scene05/Ch03Flashback3Scene";
 import { Ch03TuCompoundScene } from "@/scenes/Scene05/Ch03TuCompoundScene";
+import { Ch03GateBreachCombatScene } from "@/scenes/Scene05/Ch03GateBreachCombatScene";
+import { Ch03HistoricalNodeScene } from "@/scenes/Scene05/Ch03HistoricalNodeScene";
+import { Ch03ChapterEndScene } from "@/scenes/Scene05/Ch03ChapterEndScene";
+import { CH03_COMBAT_FLAGS } from "@/scenes/Scene05/ch03GateBreachCombat.content";
 import {
 	isTuCompoundState,
 	type TuCompoundState,
@@ -38,6 +43,7 @@ import {
 	hideChoices,
 	hideResult,
 	showPrompt,
+	hideCombatHud,
 	clearFade,
 	hideInfoPanel,
 } from "@/common/ui";
@@ -75,7 +81,11 @@ function createGame(parent: HTMLElement): Phaser.Game {
 			Ch02FlashbackScene,
 			Ch02DepartureScene,
 			Ch03OpeningScene,
+			Ch03Flashback3Scene,
 			Ch03TuCompoundScene,
+			Ch03GateBreachCombatScene,
+			Ch03HistoricalNodeScene,
+			Ch03ChapterEndScene,
 		],
 	});
 }
@@ -91,9 +101,14 @@ export const useDirectorStore = defineStore("director", () => {
 	/* ===== 初始化 ===== */
 
 	function init(parent: HTMLElement) {
+		if (game.value) return;
 		const g = createGame(parent);
 		game.value = g;
 		(window as any).game = g;
+		g.events.on("ch03:risk-failure", () => {
+			// 第三章本场只触发既有固定回退点，不在地图层复制一套存档逻辑。
+			rollbackToCheckpoint();
+		});
 		(window as any).gameDirector = {
 			game: g,
 			enterScene,
@@ -104,7 +119,10 @@ export const useDirectorStore = defineStore("director", () => {
 			enterChapter2Materials: () => openChapter2Map("sidewall", "materials"),
 			enterChapter3Transition: startChapter2ToChapter3Transition,
 			enterChapter3Opening: startChapter3Opening,
+			enterChapter3Flashback3: startChapter3Flashback3,
 			enterChapter3Map: openChapter3Map,
+			enterChapter3Combat: startChapter3Combat,
+			enterChapter3HistoricalNode: startChapter3HistoricalNode,
 			getChapter3Access: readChapter3Access,
 		};
 		const query = new URLSearchParams(window.location.search);
@@ -117,6 +135,9 @@ export const useDirectorStore = defineStore("director", () => {
 		} else if (query.get("chapter") === "2") {
 			// 仅第二章试玩入口：从第二章入口视频开始，不要求先完成第一章。
 			window.setTimeout(() => startChapter2Opening(), 0);
+		} else if (query.get("chapter") === "3" && query.get("combat") === "1") {
+			// 战斗切片试玩入口：直接进入大门撞开后的独立战斗场景。
+			window.setTimeout(() => startChapter3Combat(), 0);
 		} else if (query.get("chapter") === "3") {
 			// 第三章试玩入口：先播放章节衔接视频，再进入杜家大院外围底座。
 			window.setTimeout(() => startChapter3Opening(), 0);
@@ -152,6 +173,30 @@ export const useDirectorStore = defineStore("director", () => {
 		g.events.on("ch03:arrival-enter", () => {
 			g.scene.stop("Ch03OpeningScene");
 			openChapter3Map("STATE_WAITING");
+		});
+		g.events.on("ch03:flashback3-enter", () => {
+			g.scene.stop("Ch03TuCompoundScene");
+			startChapter3Flashback3();
+		});
+		g.events.on("ch03:flashback3-complete", () => {
+			g.scene.stop("Ch03Flashback3Scene");
+			openChapter3Map("STATE_WAITING");
+		});
+		g.events.on("ch03:gate-breach-combat-enter", () => {
+			startChapter3Combat();
+		});
+		g.events.on("ch03:historical-node-enter", () => {
+			startChapter3HistoricalNode();
+		});
+		g.events.on("ch03:historical-node-complete", () => {
+			// Complete is emitted from the video scene's input callback. Defer the
+			// scene-manager mutation by one tick so Phaser can finish that callback
+			// before stopping the video and starting the after-battle map.
+			window.setTimeout(() => openChapter3Map("STATE_AFTER_BATTLE"), 80);
+		});
+		g.events.on("ch03:chapter-end-enter", () => {
+			g.scene.stop("Ch03TuCompoundScene");
+			startChapter3End();
 		});
 
 		// 结算 → 第一章
@@ -266,6 +311,7 @@ export const useDirectorStore = defineStore("director", () => {
 		hideChoices();
 		hideResult();
 		hideInfoPanel();
+		hideCombatHud();
 		showPrompt("");
 		clearFade();
 	}
@@ -365,10 +411,41 @@ export const useDirectorStore = defineStore("director", () => {
 			"Ch02FlashbackScene",
 			"Ch02DepartureScene",
 			"Ch03OpeningScene",
+			"Ch03Flashback3Scene",
 			"Ch03TuCompoundScene",
+			"Ch03GateBreachCombatScene",
+			"Ch03HistoricalNodeScene",
+			"Ch03ChapterEndScene",
 		]) g.scene.stop(sceneKey);
 		transitionAudio.prime();
 		g.scene.start("Ch03OpeningScene");
+	}
+
+	function startChapter3Flashback3(): void {
+		const g = game.value;
+		if (!g) return;
+		gameSave.autosave("CH03_FLASHBACK3");
+		clearStoryUi();
+		stopManagedAudio();
+		for (const sceneKey of [
+			"TitleScene",
+			"Scene01",
+			"PrologueScene02",
+			"Ch01Sc01Scene",
+			"Ch01Sc02Scene",
+			"Ch01Sc03Scene",
+			"Ch02TransitionScene",
+			"Ch02AncestralHallScene",
+			"Ch02FlashbackScene",
+			"Ch02DepartureScene",
+			"Ch03OpeningScene",
+			"Ch03TuCompoundScene",
+			"Ch03Flashback3Scene",
+			"Ch03GateBreachCombatScene",
+			"Ch03HistoricalNodeScene",
+			"Ch03ChapterEndScene",
+		]) g.scene.stop(sceneKey);
+		g.scene.start("Ch03Flashback3Scene");
 	}
 
 	function openChapter3Map(state: TuCompoundState = "STATE_WAITING"): void {
@@ -389,8 +466,94 @@ export const useDirectorStore = defineStore("director", () => {
 			"Ch02FlashbackScene",
 			"Ch02DepartureScene",
 			"Ch03OpeningScene",
+			"Ch03Flashback3Scene",
+			"Ch03TuCompoundScene",
+			"Ch03GateBreachCombatScene",
+			"Ch03HistoricalNodeScene",
+			"Ch03ChapterEndScene",
 		]) g.scene.stop(sceneKey);
 		g.scene.start("Ch03TuCompoundScene", { state });
+	}
+
+	function startChapter3Combat(): void {
+		const g = game.value;
+		if (!g) return;
+		gameSave.autosave("CH03_COMPOUND");
+		clearStoryUi();
+		stopManagedAudio();
+		for (const sceneKey of [
+			"TitleScene",
+			"Scene01",
+			"PrologueScene02",
+			"Ch01Sc01Scene",
+			"Ch01Sc02Scene",
+			"Ch01Sc03Scene",
+			"Ch02TransitionScene",
+			"Ch02AncestralHallScene",
+			"Ch02FlashbackScene",
+			"Ch02DepartureScene",
+			"Ch03OpeningScene",
+			"Ch03Flashback3Scene",
+			"Ch03TuCompoundScene",
+			"Ch03GateBreachCombatScene",
+			"Ch03HistoricalNodeScene",
+			"Ch03ChapterEndScene",
+		]) g.scene.stop(sceneKey);
+		g.scene.start("Ch03GateBreachCombatScene");
+	}
+
+	function startChapter3HistoricalNode(): void {
+		const g = game.value;
+		if (!g) return;
+		gameSave.autosave("CH03_COMPOUND");
+		clearStoryUi();
+		stopManagedAudio();
+		for (const sceneKey of [
+			"TitleScene",
+			"Scene01",
+			"PrologueScene02",
+			"Ch01Sc01Scene",
+			"Ch01Sc02Scene",
+			"Ch01Sc03Scene",
+			"Ch02TransitionScene",
+			"Ch02AncestralHallScene",
+			"Ch02FlashbackScene",
+			"Ch02DepartureScene",
+			"Ch03OpeningScene",
+			"Ch03Flashback3Scene",
+			"Ch03TuCompoundScene",
+			"Ch03GateBreachCombatScene",
+			"Ch03HistoricalNodeScene",
+			"Ch03ChapterEndScene",
+		]) g.scene.stop(sceneKey);
+		g.scene.start("Ch03HistoricalNodeScene");
+	}
+
+	function startChapter3End(): void {
+		const g = game.value;
+		if (!g) return;
+		gameSave.autosave("CH03_END");
+		clearStoryUi();
+		stopManagedAudio();
+		for (const sceneKey of [
+			"TitleScene",
+			"Scene01",
+			"PrologueScene02",
+			"Ch01Sc01Scene",
+			"Ch01Sc02Scene",
+			"Ch01Sc03Scene",
+			"Ch02TransitionScene",
+			"Ch02AncestralHallScene",
+			"Ch02FlashbackScene",
+			"Ch02DepartureScene",
+			"Ch03OpeningScene",
+			"Ch03Flashback3Scene",
+			"Ch03TuCompoundScene",
+			"Ch03GateBreachCombatScene",
+			"Ch03HistoricalNodeScene",
+			"Ch03ChapterEndScene",
+		]) g.scene.stop(sceneKey);
+		g.scene.start("Ch03ChapterEndScene");
 	}
 
 	function finishChapter2(): void {
@@ -492,7 +655,13 @@ export const useDirectorStore = defineStore("director", () => {
 		if (save.sceneId === "CH02_FLASHBACK") return startChapter2Flashback();
 		if (save.sceneId === "CH02_DEPARTURE") return startChapter2ToChapter3Transition();
 		if (save.sceneId === "CH03_OPENING") return startChapter3Opening();
-		if (save.sceneId === "CH03_COMPOUND") return openChapter3Map("STATE_WAITING");
+		if (save.sceneId === "CH03_FLASHBACK3") return startChapter3Flashback3();
+		if (save.sceneId === "CH03_END") return startChapter3End();
+		if (save.sceneId === "CH03_COMPOUND") {
+			return openChapter3Map(
+				gameState.state.flags.has(CH03_COMBAT_FLAGS.historicalNodeSeen) ? "STATE_AFTER_BATTLE" : "STATE_WAITING",
+			);
+		}
 		if (
 			save.sceneId === "PROLOGUE_SC01" ||
 			save.sceneId === "PROLOGUE_SC02"
@@ -530,7 +699,11 @@ export const useDirectorStore = defineStore("director", () => {
 		g.scene.stop("Ch02FlashbackScene");
 		g.scene.stop("Ch02DepartureScene");
 		g.scene.stop("Ch03OpeningScene");
+		g.scene.stop("Ch03Flashback3Scene");
 		g.scene.stop("Ch03TuCompoundScene");
+		g.scene.stop("Ch03GateBreachCombatScene");
+		g.scene.stop("Ch03HistoricalNodeScene");
+		g.scene.stop("Ch03ChapterEndScene");
 		g.scene.stop("PrologueScene02");
 		g.scene.stop("Scene01");
 		g.scene.start("TitleScene");
@@ -544,6 +717,11 @@ export const useDirectorStore = defineStore("director", () => {
 		game.value!.scene.stop("Scene01");
 		game.value!.scene.stop("PrologueScene02");
 		game.value!.scene.stop("Ch01Sc01Scene");
+		game.value!.scene.stop("Ch03Flashback3Scene");
+		game.value!.scene.stop("Ch03TuCompoundScene");
+		game.value!.scene.stop("Ch03GateBreachCombatScene");
+		game.value!.scene.stop("Ch03HistoricalNodeScene");
+		game.value!.scene.stop("Ch03ChapterEndScene");
 		game.value!.scene.start("Ch01Sc01Scene");
 		return true;
 	}
@@ -614,6 +792,9 @@ export const useDirectorStore = defineStore("director", () => {
 		enterScene,
 		startChapter2Opening,
 		startChapter3Opening,
+		startChapter3Flashback3,
+		startChapter3Combat,
+		startChapter3End,
 		goToTitle,
 		finishPrologue,
 	};

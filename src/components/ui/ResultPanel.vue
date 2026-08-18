@@ -9,7 +9,7 @@ const hud = useHudStore();
 		<div class="result-copy">
 			<span>…{{ hud.resultPanel.result[0] }}</span>
 			<span>{{ hud.resultPanel.result[1] }}</span>
-			<small>Space 继续</small>
+			<small>{{ hud.resultPanel.hint || "Space 继续" }}</small>
 		</div>
 	</div>
 </template>
@@ -28,7 +28,8 @@ const hud = useHudStore();
 .result-panel > img {
 	width: min(100vw, 177.7778vh);
 	height: min(56.25vw, 100vh);
-	object-fit: cover;
+	/* 分支图比例不统一，完整显示并以面板底色承接黑边，避免上下内容被裁切。 */
+	object-fit: contain;
 	opacity: 0.92;
 }
 

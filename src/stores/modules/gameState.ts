@@ -16,6 +16,7 @@ import type {
 	RiskValues,
 } from "@/common/actionProfileSystem";
 import { createProfile, createRisk } from "@/common/actionProfileSystem";
+import type { Chapter3TaskPermission } from "@/scenes/Scene05/ch03RiskPrecheck";
 
 export class GameState {
 	mode: string = "intro";
@@ -24,10 +25,12 @@ export class GameState {
 	choice: ChoiceSnapshot | null = null;
 	risk: RiskValues = createRisk();
 	chapter3Access: Chapter3Access | null = null;
+	chapter3TaskPermission: Chapter3TaskPermission | null = null;
 	propStates: Record<string, string> = {
 		notebook: "default",
 		phone: "default",
 		recorder: "default",
+		mooncake: "default",
 	};
 	playerLocked: boolean = true;
 	audioReviewed: boolean = false;
@@ -80,6 +83,7 @@ export const useGameStateStore = defineStore("gameState", () => {
 		state.value.leavePhase = null;
 		state.value.leaveNpcArrived = null;
 		state.value.chapter3Access = null;
+		state.value.chapter3TaskPermission = null;
 	}
 
 	function resetRunState() {

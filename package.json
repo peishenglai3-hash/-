@@ -1,29 +1,36 @@
 {
-  "name": "honghu-prologue-playtest",
-  "private": true,
-  "version": "0.1.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "test:content": "tsx scripts/validate-content.mjs",
-    "test:systems": "tsx scripts/validate-systems.mjs",
-    "e2e": "node scripts/e2e.mjs",
-    "e2e:ch03": "node scripts/e2e-ch03-opening.mjs",
-    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,vue,css,scss,less}\""
-  },
-  "dependencies": {
-    "phaser": "3.90.0",
-    "pinia": "^4.0.2",
-    "vue": "^3.5.41"
-  },
-  "devDependencies": {
-    "@types/node": "^26.2.0",
-    "@vitejs/plugin-vue": "^5.2.4",
-    "playwright": "^1.62.1",
-    "prettier": "^3.9.6",
-    "tsx": "^4.23.12",
-    "typescript": "^7.0.2",
-    "vite": "5.4.14"
-  }
+	"name": "honghu-prologue-playtest",
+	"private": true,
+	"version": "0.1.0",
+	"type": "module",
+	"scripts": {
+		"dev": "vite",
+		"build": "vite build",
+		"test:content": "tsx scripts/validate-content.mjs",
+		"test:systems": "tsx scripts/validate-systems.mjs",
+		"test:ch03:contract": "tsx scripts/validate-ch03-contract.mjs",
+		"e2e": "node scripts/e2e.mjs",
+		"e2e:ch03": "node scripts/e2e-ch03-opening.mjs",
+		"e2e:ch03:risk": "node scripts/e2e-ch03-risk-branches.mjs",
+		"e2e:ch03:observation": "node scripts/e2e-ch03-observation.mjs",
+		"e2e:ch03:flashback3": "node scripts/e2e-ch03-flashback3.mjs",
+		"e2e:ch03:action": "node scripts/e2e-ch03-action-start.mjs",
+		"e2e:ch03:combat": "node scripts/e2e-ch03-combat.mjs",
+		"e2e:ch03:after-battle": "node scripts/e2e-ch03-after-battle.mjs",
+		"format": "prettier --write \"**/*.{js,jsx,ts,tsx,vue,css,scss,less}\""
+	},
+	"dependencies": {
+		"phaser": "3.90.0",
+		"pinia": "^4.0.2",
+		"vue": "^3.5.41"
+	},
+	"devDependencies": {
+		"@types/node": "^26.2.0",
+		"@vitejs/plugin-vue": "^5.2.4",
+		"playwright": "^1.62.1",
+		"prettier": "^3.9.6",
+		"tsx": "^4.23.12",
+		"typescript": "^7.0.2",
+		"vite": "5.4.14"
+	}
 }

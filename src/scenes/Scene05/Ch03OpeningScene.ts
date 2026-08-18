@@ -31,6 +31,12 @@ export class Ch03OpeningScene extends Phaser.Scene {
 		super("Ch03OpeningScene");
 	}
 
+	init() {
+		this.videoOverlay = undefined;
+		this.videoFinished = false;
+		this.ended = false;
+	}
+
 	preload() {
 		this.load.video(VIDEO_KEY, "assets/ch03/cinematics/ch03_arrival.mp4");
 	}
@@ -59,10 +65,9 @@ export class Ch03OpeningScene extends Phaser.Scene {
 		video.play(false);
 
 		// 正常流程完整播放；E/Space 只作为试玩和自动化测试跳过入口。
-		this.time.delayedCall(700, () => {
-			onAction(this, "INTERACT", () => this.handleAdvance());
-			onAction(this, "ADVANCE", () => this.handleAdvance());
-		});
+		// 监听在场景创建时立即注册，避免视频刚就绪时玩家的第一次输入被吞掉。
+		onAction(this, "INTERACT", () => this.handleAdvance());
+		onAction(this, "ADVANCE", () => this.handleAdvance());
 		(window as any).ch03OpeningGame = this;
 	}
 

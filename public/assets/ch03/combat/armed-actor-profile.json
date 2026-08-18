@@ -1,0 +1,37 @@
+{
+  "asset_id": "CH03_COMBAT_ARMED_ACTOR_PROFILE_V01",
+  "runtime": "phaser-layered-2d",
+  "source_policy": "角色底图、武器、枪口火光、命中反馈分层，不把武器烘焙进角色底图",
+  "pixel_scale": "角色保持原始像素簇；武器按战斗场景统一缩放",
+  "actors": {
+    "陈继南": {
+      "body": "characters/player/modern",
+      "weapon": "ch03/combat/pistol.png|long-gun.png",
+      "socket": "player_center + aim * 28",
+      "origin": [0.12, 0.5],
+      "display": { "pistol": [56, 28], "longgun": [78, 22] }
+    },
+    "董云庭": {
+      "body": "characters/ch03-dong-yunting/idle.png",
+      "weapon": "ch03/combat/long-gun.png",
+      "socket": "body_center + aim * 18",
+      "origin": [0.12, 0.5],
+      "display": [78, 22],
+      "combat_role": "ally_suppression_fire"
+    },
+    "团丁": {
+      "body": "characters/ch03-militia/idle-a.png|idle-b.png",
+      "weapon": "ch03/combat/pistol.png",
+      "socket": "body_center + aim * 18",
+      "origin": [0.12, 0.5],
+      "display": [52, 22],
+      "combat_role": "enemy_projectile"
+    }
+  },
+  "effects": {
+    "muzzle_flash": "runtime-procedural",
+    "hit_feedback": "runtime-procedural",
+    "projectile": "runtime-procedural",
+    "next_art_pass": "replace individual weapon layers without changing actor or combat interfaces"
+  }
+}
