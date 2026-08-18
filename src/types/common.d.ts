@@ -17,7 +17,9 @@ export type SceneId =
 	| "CH02_TRANSITION"
 	| "CH02_HALL"
 	| "CH02_FLASHBACK"
-	| "CH02_DEPARTURE";
+	| "CH02_DEPARTURE"
+	| "CH03_OPENING"
+	| "CH03_COMPOUND";
 
 export interface RunSave {
 	version: number;

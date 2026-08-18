@@ -5,7 +5,7 @@ import type { NarrativeEntry } from "@/stores/modules/hud";
  *
  * 画面、脚步和分批出发由二向三.mp4承担；这里保留剧本锚点，避免视频
  * 资源替换时丢失对白、史实口径和玩家视角。视频结束后只把剧本指定的
- * 黑幕字幕与余家大院外围旁白交给运行时 UI 呈现。
+ * 黑幕字幕与杜家大院外围旁白交给运行时 UI 呈现。
  */
 export const CH02_DEPARTURE_VIDEO_SCRIPT = [
 	"物资重新归拢。",
@@ -22,7 +22,7 @@ export const CH02_DEPARTURE_EPILOGUE: NarrativeEntry[] = [
 	{
 		entry_id: "CH02_DEPARTURE_OUTER_HALL_DATE",
 		kind: "date",
-		text: "1927年9月10日，中秋夜\n余家大院外围",
+		text: "1927年9月10日，中秋夜\n杜家大院外围",
 		style: "date",
 		cps: 12,
 	},

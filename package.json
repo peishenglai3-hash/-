@@ -9,6 +9,7 @@
     "test:content": "tsx scripts/validate-content.mjs",
     "test:systems": "tsx scripts/validate-systems.mjs",
     "e2e": "node scripts/e2e.mjs",
+    "e2e:ch03": "node scripts/e2e-ch03-opening.mjs",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,vue,css,scss,less}\""
   },
   "dependencies": {

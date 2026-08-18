@@ -14,6 +14,12 @@ import { Ch02TransitionScene } from "@/scenes/Scene04/Ch02TransitionScene";
 import { Ch02AncestralHallScene } from "@/scenes/Scene04/Ch02AncestralHallScene";
 import { Ch02FlashbackScene } from "@/scenes/Scene04/Ch02FlashbackScene";
 import { Ch02DepartureScene } from "@/scenes/Scene04/Ch02DepartureScene";
+import { Ch03OpeningScene } from "@/scenes/Scene05/Ch03OpeningScene";
+import { Ch03TuCompoundScene } from "@/scenes/Scene05/Ch03TuCompoundScene";
+import {
+	isTuCompoundState,
+	type TuCompoundState,
+} from "@/scenes/Scene05/tuCompoundMap";
 import { isAncestralHallVariant } from "@/scenes/Scene04/ancestralHallMap";
 import {
 	CHOICES as CH01_SC01_CHOICES,
@@ -68,6 +74,8 @@ function createGame(parent: HTMLElement): Phaser.Game {
 			Ch02AncestralHallScene,
 			Ch02FlashbackScene,
 			Ch02DepartureScene,
+			Ch03OpeningScene,
+			Ch03TuCompoundScene,
 		],
 	});
 }
@@ -95,15 +103,23 @@ export const useDirectorStore = defineStore("director", () => {
 			enterChapter2Discipline: () => openChapter2Map("mainhall-close", "discipline"),
 			enterChapter2Materials: () => openChapter2Map("sidewall", "materials"),
 			enterChapter3Transition: startChapter2ToChapter3Transition,
+			enterChapter3Opening: startChapter3Opening,
+			enterChapter3Map: openChapter3Map,
 			getChapter3Access: readChapter3Access,
 		};
 		const query = new URLSearchParams(window.location.search);
 		const requestedMap = query.get("ch2map");
+		const requestedChapter3State = query.get("ch3state");
 		if (isAncestralHallVariant(requestedMap)) {
 			window.setTimeout(() => openChapter2Map(requestedMap), 0);
+		} else if (isTuCompoundState(requestedChapter3State)) {
+			window.setTimeout(() => openChapter3Map(requestedChapter3State), 0);
 		} else if (query.get("chapter") === "2") {
 			// 仅第二章试玩入口：从第二章入口视频开始，不要求先完成第一章。
 			window.setTimeout(() => startChapter2Opening(), 0);
+		} else if (query.get("chapter") === "3") {
+			// 第三章试玩入口：先播放章节衔接视频，再进入杜家大院外围底座。
+			window.setTimeout(() => startChapter3Opening(), 0);
 		}
 
 		// 闪回流程路由（SC01 ↔ SC02 / SC01 ↔ SC03）
@@ -132,6 +148,10 @@ export const useDirectorStore = defineStore("director", () => {
 		g.events.on("ch02:departure-complete", () => {
 			g.scene.stop("Ch02DepartureScene");
 			finishChapter2();
+		});
+		g.events.on("ch03:arrival-enter", () => {
+			g.scene.stop("Ch03OpeningScene");
+			openChapter3Map("STATE_WAITING");
 		});
 
 		// 结算 → 第一章
@@ -326,6 +346,53 @@ export const useDirectorStore = defineStore("director", () => {
 		g.scene.start("Ch02DepartureScene");
 	}
 
+	function startChapter3Opening(): void {
+		const g = game.value;
+		if (!g) return;
+		gameSave.autosave("CH03_OPENING");
+		clearStoryUi();
+		stopManagedAudio();
+		(window as any).hideTitleCard?.();
+		for (const sceneKey of [
+			"TitleScene",
+			"Scene01",
+			"PrologueScene02",
+			"Ch01Sc01Scene",
+			"Ch01Sc02Scene",
+			"Ch01Sc03Scene",
+			"Ch02TransitionScene",
+			"Ch02AncestralHallScene",
+			"Ch02FlashbackScene",
+			"Ch02DepartureScene",
+			"Ch03OpeningScene",
+			"Ch03TuCompoundScene",
+		]) g.scene.stop(sceneKey);
+		transitionAudio.prime();
+		g.scene.start("Ch03OpeningScene");
+	}
+
+	function openChapter3Map(state: TuCompoundState = "STATE_WAITING"): void {
+		const g = game.value;
+		if (!g) return;
+		gameSave.autosave("CH03_COMPOUND");
+		clearStoryUi();
+		stopManagedAudio();
+		for (const sceneKey of [
+			"TitleScene",
+			"Scene01",
+			"PrologueScene02",
+			"Ch01Sc01Scene",
+			"Ch01Sc02Scene",
+			"Ch01Sc03Scene",
+			"Ch02TransitionScene",
+			"Ch02AncestralHallScene",
+			"Ch02FlashbackScene",
+			"Ch02DepartureScene",
+			"Ch03OpeningScene",
+		]) g.scene.stop(sceneKey);
+		g.scene.start("Ch03TuCompoundScene", { state });
+	}
+
 	function finishChapter2(): void {
 		const runSave = gameSave.autosave("CH02_DEPARTURE");
 		const chapter3Access = readChapter3Access();
@@ -350,9 +417,9 @@ export const useDirectorStore = defineStore("director", () => {
 		clearStoryUi();
 		showEndPanel(save, {
 			title: "第二章·陈家祠堂行动前的集结｜完成",
-			hint: "第三章·入口视频已播放；第三章场景待接入",
-			buttonLabel: "返回标题",
-			next: "title",
+			hint: "第三章·抵达杜家大院外围",
+			buttonLabel: "进入第三章",
+			next: "chapter3",
 		});
 	}
 
@@ -424,6 +491,8 @@ export const useDirectorStore = defineStore("director", () => {
 		if (save.sceneId === "CH02_HALL") return openChapter2Map("main", "arrival");
 		if (save.sceneId === "CH02_FLASHBACK") return startChapter2Flashback();
 		if (save.sceneId === "CH02_DEPARTURE") return startChapter2ToChapter3Transition();
+		if (save.sceneId === "CH03_OPENING") return startChapter3Opening();
+		if (save.sceneId === "CH03_COMPOUND") return openChapter3Map("STATE_WAITING");
 		if (
 			save.sceneId === "PROLOGUE_SC01" ||
 			save.sceneId === "PROLOGUE_SC02"
@@ -460,6 +529,8 @@ export const useDirectorStore = defineStore("director", () => {
 		g.scene.stop("Ch02AncestralHallScene");
 		g.scene.stop("Ch02FlashbackScene");
 		g.scene.stop("Ch02DepartureScene");
+		g.scene.stop("Ch03OpeningScene");
+		g.scene.stop("Ch03TuCompoundScene");
 		g.scene.stop("PrologueScene02");
 		g.scene.stop("Scene01");
 		g.scene.start("TitleScene");
@@ -542,6 +613,7 @@ export const useDirectorStore = defineStore("director", () => {
 		startFromSave,
 		enterScene,
 		startChapter2Opening,
+		startChapter3Opening,
 		goToTitle,
 		finishPrologue,
 	};

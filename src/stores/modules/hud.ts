@@ -58,7 +58,7 @@ export interface EndPanel {
   title: string;
   hint: string;
   buttonLabel: string;
-  next: "title" | "chapter2" | null;
+	next: "title" | "chapter2" | "chapter3" | null;
   checkpoint: string;
   profile: string;
   tags: string;
@@ -470,7 +470,7 @@ export const useHudStore = defineStore("hud", () => {
       title?: string;
       hint?: string;
       buttonLabel?: string;
-      next?: "title" | "chapter2" | null;
+		next?: "title" | "chapter2" | "chapter3" | null;
     },
   ) {
     endPanel.value = {
