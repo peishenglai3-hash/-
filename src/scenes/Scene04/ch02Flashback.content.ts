@@ -14,7 +14,7 @@ export const CH02_FLASHBACK_KNOWN_INFO = [
 	"你看到的是一名青壮年被团丁带走；",
 	"妇人试图阻拦，却被以“上头有令”为由推开；",
 	"周围有人看见，却没有人单独上前；",
-	"这场抓捕与“涂老五”的势力和名号有关。",
+	"这场抓捕与“杜老三”的势力和名号有关。",
 ];
 
 export const CH02_FLASHBACK_INTRO_THOUGHTS: NarrativeEntry[] = [
@@ -129,7 +129,7 @@ export const CH02_FLASHBACK_CHOICES: Ch02FlashbackChoice[] = [
 	},
 	{
 		id: "D",
-		label: "涂老五也许只是眼前的施暴者，后面还有更大的征发和团防势力。",
+		label: "杜老三也许只是眼前的施暴者，后面还有更大的征发和团防势力。",
 		detail: "审慎判断 +2，组织协同 +1",
 		flag: CH02_FLASHBACK_FLAGS.choiceD,
 		profileDelta: { C: 2, G: 1 },
@@ -147,7 +147,7 @@ export const CH02_FLASHBACK_CHOICES: Ch02FlashbackChoice[] = [
 				entry_id: "CH02_FLASHBACK_CHOICE_D_02",
 				kind: "narration",
 				speaker_name: "旁白",
-				text: "涂老五是眼前可见的对象，但抓壮丁、摊派和团防所形成的压力，不会随着一个人的倒下自动消失。",
+				text: "杜老三是眼前可见的对象，但抓壮丁、摊派和团防所形成的压力，不会随着一个人的倒下自动消失。",
 				style: "narration",
 				cps: 11,
 			},

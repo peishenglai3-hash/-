@@ -46,6 +46,7 @@ export interface ChoiceItem {
   id: string;
   label: string;
   detail: string;
+  disabled?: boolean;
 }
 
 export interface ChoicePanel {
@@ -54,15 +55,36 @@ export interface ChoicePanel {
   onChoose: (id: string) => void;
 }
 
+export interface ResultPanelData {
+  image: string;
+  result: [string, string];
+  hint?: string;
+}
+
 export interface EndPanel {
   title: string;
   hint: string;
   buttonLabel: string;
-  next: "title" | "chapter2" | null;
+	next: "title" | "chapter2" | "chapter3" | null;
   checkpoint: string;
   profile: string;
   tags: string;
   risk: string;
+}
+
+export interface CombatHudData {
+  visible: boolean;
+  hp: number;
+  maxHp: number;
+  ammo: number;
+  reserve: number;
+  weapon: "pistol" | "longgun";
+  weaponLabel: string;
+  objective: string;
+  captured: number;
+  captureTotal: number;
+  pursuitProgress: number;
+  status: string;
 }
 
 export interface DevPlayerMotionConfig {
@@ -151,7 +173,7 @@ export const useHudStore = defineStore("hud", () => {
 
   // --- result panel ---
   const resultPanelVisible = ref(false);
-  const resultPanel = ref<{ image: string; result: [string, string] } | null>(null);
+  const resultPanel = ref<ResultPanelData | null>(null);
 
   // --- scene fade ---
   const sceneFade = ref(false);
@@ -177,6 +199,22 @@ export const useHudStore = defineStore("hud", () => {
     revealShown: false,
     revealFadeIn: false,
     revealSrc: "",
+  });
+
+  // --- 第三章突入战斗 HUD（只展示场景事件，不持有战斗规则） ---
+  const combatHud = reactive<CombatHudData>({
+    visible: false,
+    hp: 100,
+    maxHp: 100,
+    ammo: 12,
+    reserve: 48,
+    weapon: "pistol",
+    weaponLabel: "短枪",
+    objective: "",
+    captured: 0,
+    captureTotal: 3,
+    pursuitProgress: 0,
+    status: "",
   });
 
   // --- global lock ---
@@ -211,9 +249,13 @@ export const useHudStore = defineStore("hud", () => {
     dialogue.visible = true;
     dialogue.style = entry.style || "narration";
     dialogue.speaker = entry.speaker_name || "";
-		// 内容可显式指定头像；第二章历史人物则按发言者回退到统一头像目录，
-		// 避免每一条对白漏填 avatar_id 后再次出现空相框。
-		dialogue.avatarSrc = entry.avatar_id || defaultAvatarForSpeaker(entry.speaker_name || "");
+		// 内容可显式指定头像；叙述/音效提示不伪装成角色头像，
+		// 对白和心理描写则按发言者回退到统一头像目录。
+		dialogue.avatarSrc =
+			entry.avatar_id ||
+			(entry.kind === "dialogue" || entry.kind === "thought"
+				? defaultAvatarForSpeaker(entry.speaker_name || "")
+				: "");
     dialogue.fullText = entry.text;
     dialogue.displayedText = "";
     dialogue.cps = cps;
@@ -347,7 +389,7 @@ export const useHudStore = defineStore("hud", () => {
   }
 
   // --- 结果面板 ---
-  function showResult(choice: { image: string; result: [string, string] }) {
+  function showResult(choice: ResultPanelData) {
     resultPanel.value = choice;
     resultPanelVisible.value = true;
   }
@@ -470,7 +512,7 @@ export const useHudStore = defineStore("hud", () => {
       title?: string;
       hint?: string;
       buttonLabel?: string;
-      next?: "title" | "chapter2" | null;
+		next?: "title" | "chapter2" | "chapter3" | null;
     },
   ) {
     endPanel.value = {
@@ -487,6 +529,18 @@ export const useHudStore = defineStore("hud", () => {
 
   function hideEndPanel() {
     endPanel.value = null;
+  }
+
+  function showCombatHud(data: Partial<CombatHudData> = {}) {
+    Object.assign(combatHud, data, { visible: true });
+  }
+
+  function updateCombatHud(data: Partial<CombatHudData>) {
+    Object.assign(combatHud, data);
+  }
+
+  function hideCombatHud() {
+    combatHud.visible = false;
   }
 
   return {
@@ -511,6 +565,7 @@ export const useHudStore = defineStore("hud", () => {
     flavorToast,
     endPanel,
     transition,
+    combatHud,
     playerLocked,
     // actions
     showFlavor,
@@ -548,6 +603,9 @@ export const useHudStore = defineStore("hud", () => {
     hideOverlay,
     hideIntro,
     showEndPanel,
-    hideEndPanel
+    hideEndPanel,
+    showCombatHud,
+    updateCombatHud,
+    hideCombatHud,
   };
 });

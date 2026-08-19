@@ -1,0 +1,67 @@
+{
+  "asset_id": "MAP_CH3_TU_COMPOUND_STATE_DEPARTURE",
+  "map_id": "MAP_CH3_TU_COMPOUND",
+  "state_id": "STATE_DEPARTURE",
+  "state_summary_zh": "物资捆扎待运；伤员区收拢；榨房余烬；离场通道清空。",
+  "canvas": {
+    "width": 1664,
+    "height": 936
+  },
+  "tile_size": 48,
+  "camera": "orthographic_top_down_three_quarter",
+  "render_order": [
+    "L01_GROUND",
+    "L02_GROUND_DETAIL",
+    "L03_STRUCTURE_LOW",
+    "L04_PROP_INTERACT",
+    "L05_COLLISION_TRIGGER",
+    "L06_OCCLUSION_HIGH",
+    "L07_LIGHT_FX"
+  ],
+  "layers": {
+    "L01_GROUND": {
+      "file": "MAP_CH3_TU_COMPOUND_STATE_DEPARTURE_L01_GROUND.png",
+      "visible_at_runtime": true,
+      "editor_only": false
+    },
+    "L02_GROUND_DETAIL": {
+      "file": "MAP_CH3_TU_COMPOUND_STATE_DEPARTURE_L02_GROUND_DETAIL.png",
+      "visible_at_runtime": true,
+      "editor_only": false
+    },
+    "L03_STRUCTURE_LOW": {
+      "file": "MAP_CH3_TU_COMPOUND_STATE_DEPARTURE_L03_STRUCTURE_LOW.png",
+      "visible_at_runtime": true,
+      "editor_only": false
+    },
+    "L04_PROP_INTERACT": {
+      "file": "MAP_CH3_TU_COMPOUND_STATE_DEPARTURE_L04_PROP_INTERACT.png",
+      "visible_at_runtime": true,
+      "editor_only": false
+    },
+    "L05_COLLISION_TRIGGER": {
+      "file": "MAP_CH3_TU_COMPOUND_STATE_DEPARTURE_L05_COLLISION_TRIGGER.png",
+      "visible_at_runtime": false,
+      "editor_only": true
+    },
+    "L06_OCCLUSION_HIGH": {
+      "file": "MAP_CH3_TU_COMPOUND_STATE_DEPARTURE_L06_OCCLUSION_HIGH.png",
+      "visible_at_runtime": true,
+      "editor_only": false
+    },
+    "L07_LIGHT_FX": {
+      "file": "MAP_CH3_TU_COMPOUND_STATE_DEPARTURE_L07_LIGHT_FX.png",
+      "visible_at_runtime": true,
+      "editor_only": false
+    }
+  },
+  "collision_objects": "MAP_CH3_TU_COMPOUND_STATE_DEPARTURE_L05_COLLISION_TRIGGER.json",
+  "preview": "MAP_CH3_TU_COMPOUND_STATE_DEPARTURE_PREVIEW_COMPOSITE.png",
+  "editor_preview": "MAP_CH3_TU_COMPOUND_STATE_DEPARTURE_PREVIEW_EDITOR.png",
+  "source_mother": "MAP_CH3_TU_COMPOUND_STATE_DEPARTURE_Mother_v05.png",
+  "notes": [
+    "Characters and temporary crowds are spawned at runtime, not baked into the map.",
+    "The oil-press building is enclosed in-world; its roof/eaves are assigned to L06 for cutaway visibility.",
+    "Gate roof and tiles remain structurally intact through gate-attack and gate-broken states."
+  ]
+}

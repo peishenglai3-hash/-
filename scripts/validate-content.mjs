@@ -97,7 +97,7 @@ assert(
 );
 assert(CH02_DEPARTURE_VIDEO_SCRIPT.length === 8, "chapter 2 departure video script lock");
 assert(CH02_DEPARTURE_EPILOGUE.length === 2, "chapter 2 departure epilogue lock");
-assert(CH02_DEPARTURE_EPILOGUE[0].text.includes("余家大院外围"), "chapter 2 departure location subtitle lock");
+assert(CH02_DEPARTURE_EPILOGUE[0].text.includes("杜家大院外围"), "chapter 2 departure location subtitle lock");
 assert(CH02_DEPARTURE_EPILOGUE[1].text.includes("正在靠近下一处地点"), "chapter 2 departure approach narration lock");
 
 const styles = new Set(["narration", "thought", "dialogue", "cue", "date"]);

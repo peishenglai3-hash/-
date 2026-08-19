@@ -31,6 +31,10 @@ export const SCENE_KEY: Record<SceneId, string> = {
 	CH02_HALL: "Ch02AncestralHallScene",
 	CH02_FLASHBACK: "Ch02FlashbackScene",
 	CH02_DEPARTURE: "Ch02DepartureScene",
+	CH03_OPENING: "Ch03OpeningScene",
+	CH03_FLASHBACK3: "Ch03Flashback3Scene",
+	CH03_COMPOUND: "Ch03TuCompoundScene",
+	CH03_END: "Ch03ChapterEndScene",
 };
 
 export const SCENE_META: Record<
@@ -69,6 +73,22 @@ export const SCENE_META: Record<
 	CH02_DEPARTURE: {
 		label: "第二章·出发前",
 		checkpoint: "CH02_END_PRE_OPERATION",
+	},
+	CH03_OPENING: {
+		label: "第三章·抵达杜家大院外围",
+		checkpoint: "CH03_OPENING_ARRIVAL",
+	},
+	CH03_FLASHBACK3: {
+		label: "第三章·闪回三·站在门外",
+		checkpoint: "CH03_FLASHBACK3_DOORWAY",
+	},
+	CH03_COMPOUND: {
+		label: "第三章·杜家大院外围",
+		checkpoint: "CH03_TU_COMPOUND_WAITING",
+	},
+	CH03_END: {
+		label: "第三章·行动结束：三路结果汇合",
+		checkpoint: "CH03_ACTION_END",
 	},
 };
 
@@ -200,6 +220,7 @@ export const useGameSaveStore = defineStore("gameSave", () => {
 			notebook: "default",
 			phone: "default",
 			recorder: "default",
+			mooncake: "default",
 			...save.propStates,
 		};
 		resetTransientState();

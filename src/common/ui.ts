@@ -36,7 +36,7 @@ export function closeInfoPanel() { store().closeInfoPanel(); }
 export function hideInfoPanel() { store().hideInfoPanel(); }
 export function showChoices(items: any[], onChoose: (id: string) => void, title?: string) { store().showChoices(items as any, onChoose, title); }
 export function hideChoices() { store().hideChoices(); }
-export function showResult(choice: { image: string; result: [string, string] }) { store().showResult(choice); }
+export function showResult(choice: { image: string; result: [string, string]; hint?: string }) { store().showResult(choice); }
 export function hideResult() { store().hideResult(); }
 export function showTask(task: any) { store().showTask(task); }
 export function closeTask() { store().closeTask(); }
@@ -57,3 +57,6 @@ export function togglePause() { store().togglePause(); }
 export function hideIntro() { store().hideIntro(); }
 export function showEndPanel(save: any, endMeta?: any) { store().showEndPanel(save, endMeta); }
 export function hideEndPanel() { store().hideEndPanel(); }
+export function showCombatHud(data: any = {}) { store().showCombatHud(data); }
+export function updateCombatHud(data: any) { store().updateCombatHud(data); }
+export function hideCombatHud() { store().hideCombatHud(); }
