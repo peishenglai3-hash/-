@@ -108,6 +108,8 @@ export class ForegroundOcclusionRenderer {
     const objects = this.getObjects();
     for (const object of Array.isArray(objects) ? objects : []) {
       if (!object || object.enabled === false) continue;
+      // Character layers participate in actor sorting; they are not map-image masks.
+      if (object.actor_id) continue;
       const depth = Number(this.resolveDepth(object));
       if (!Number.isFinite(depth)) continue;
       const points = toWorldPoints(object.points ?? object.polygon, object.units, this.tileSize);

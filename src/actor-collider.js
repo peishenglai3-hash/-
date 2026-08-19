@@ -34,6 +34,16 @@ export function createActorVisualEntry({ id, label, getActor, getProfile, getAnc
     label,
     shape: 'visual',
     actorVisual: true,
+    get enabled() {
+      return getProfile()?.enabled !== false;
+    },
+    getActor,
+    remove() {
+      if (id === 'PLAYER') return;
+      const profile = getProfile();
+      if (profile) profile.enabled = false;
+      getActor()?.setVisible?.(false);
+    },
     get displayHeight() {
       return getProfile()?.display_height ?? '';
     },
@@ -47,6 +57,9 @@ export function createActorVisualEntry({ id, label, getActor, getProfile, getAnc
     },
     get textureKey() {
       return getActor()?.texture?.key ?? '';
+    },
+    getContour() {
+      return actorAlphaContour(getActor(), tileSize);
     },
     get bounds() {
       const bounds = getActor()?.getBounds?.();
@@ -74,6 +87,83 @@ export function createActorVisualEntry({ id, label, getActor, getProfile, getAnc
         && point.y >= bounds.y && point.y <= bounds.y + bounds.height;
     }
   };
+}
+
+export function actorAlphaContour(actor, tileSize = DEFAULT_TILE_SIZE) {
+  const source = actor?.texture?.getSourceImage?.();
+  if (!source) return null;
+  const frame = actor.frame;
+  const sourceWidth = Number(frame?.cutWidth ?? source.width);
+  const sourceHeight = Number(frame?.cutHeight ?? source.height);
+  if (!(sourceWidth > 0 && sourceHeight > 0)) return null;
+
+  const maxDimension = 128;
+  const scale = Math.min(1, maxDimension / Math.max(sourceWidth, sourceHeight));
+  const width = Math.max(2, Math.round(sourceWidth * scale));
+  const height = Math.max(2, Math.round(sourceHeight * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  if (!context) return null;
+  context.clearRect(0, 0, width, height);
+  context.drawImage(
+    source,
+    Number(frame?.cutX ?? 0), Number(frame?.cutY ?? 0), sourceWidth, sourceHeight,
+    0, 0, width, height,
+  );
+  const pixels = context.getImageData(0, 0, width, height).data;
+  const opaque = (x, y) => x >= 0 && y >= 0 && x < width && y < height && pixels[(y * width + x) * 4 + 3] >= 12;
+  const edges = new Map();
+  const addEdge = (start, end) => {
+    const key = `${start[0]},${start[1]}`;
+    const list = edges.get(key) ?? [];
+    list.push(end);
+    edges.set(key, list);
+  };
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (!opaque(x, y)) continue;
+      if (!opaque(x, y - 1)) addEdge([x, y], [x + 1, y]);
+      if (!opaque(x + 1, y)) addEdge([x + 1, y], [x + 1, y + 1]);
+      if (!opaque(x, y + 1)) addEdge([x + 1, y + 1], [x, y + 1]);
+      if (!opaque(x - 1, y)) addEdge([x, y + 1], [x, y]);
+    }
+  }
+  const loops = [];
+  while (edges.size) {
+    const [startKey, startEnds] = edges.entries().next().value;
+    let start = startKey.split(',').map(Number);
+    let current = [...start];
+    const loop = [current];
+    for (let guard = 0; guard < width * height * 2; guard += 1) {
+      const key = `${current[0]},${current[1]}`;
+      const ends = edges.get(key);
+      if (!ends?.length) break;
+      const next = ends.pop();
+      if (!ends.length) edges.delete(key);
+      current = next;
+      if (current[0] === start[0] && current[1] === start[1]) break;
+      loop.push(current);
+    }
+    if (loop.length >= 3) loops.push(loop);
+  }
+  const area = (points) => Math.abs(points.reduce((sum, point, index) => {
+    const next = points[(index + 1) % points.length];
+    return sum + point[0] * next[1] - next[0] * point[1];
+  }, 0) / 2);
+  const contour = loops.sort((a, b) => area(b) - area(a))[0];
+  const bounds = actor.getBounds?.();
+  if (!contour?.length || !bounds) return null;
+  const points = contour.map(([x, y]) => {
+    const nx = x / width;
+    const ny = y / height;
+    const mappedX = actor.flipX ? 1 - nx : nx;
+    const mappedY = actor.flipY ? 1 - ny : ny;
+    return [bounds.x / tileSize + mappedX * bounds.width / tileSize, bounds.y / tileSize + mappedY * bounds.height / tileSize];
+  });
+  const stride = Math.max(1, Math.ceil(points.length / 256));
+  return points.filter((_, index) => index % stride === 0);
 }
 
 export function actorColliderRectAt(x, y, profile, tileSize = DEFAULT_TILE_SIZE) {

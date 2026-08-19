@@ -117,7 +117,7 @@ export class CollisionEditor {
 
   get sourceItems() {
     if (this.kind === 'motion') return [];
-    if (this.kind === 'visual') return this.config.getActorVisuals?.() ?? [];
+    if (this.kind === 'visual') return (this.config.getActorVisuals?.() ?? []).filter((item) => item?.enabled !== false);
     if (this.kind === 'collision') return this.config.getCollisions();
     if (this.kind === 'interaction') return this.config.getInteractions();
     if (this.kind === 'flavor') return this.config.getFlavorZones?.() ?? [];
@@ -184,7 +184,7 @@ export class CollisionEditor {
       </section>
       <p data-field="help">拖动矩形移动；拖动四边或四角缩放；拖动顶部圆点旋转。</p>
       <div class="dev-zone-actions">
-        <button data-action="add">新增</button><button data-action="duplicate">复制</button><button data-action="mirror">水平镜像</button><button data-action="delete">删除</button>
+        <button data-action="add">新增</button><button data-action="add-layer">加入层级</button><button data-action="auto-actor">人物外轮廓</button><button data-action="duplicate">复制</button><button data-action="mirror">水平镜像</button><button data-action="delete">删除</button>
         <button data-action="reset">重载</button><button data-action="save" class="primary">保存 JSON</button>
         <button data-action="test-task" class="dev-test-task">增加测试任务</button>
         <button data-action="next-chapter" class="dev-next-chapter">随机属性并跳到下一章</button>
@@ -206,6 +206,8 @@ export class CollisionEditor {
     this.motionAnimationOutput = root.querySelector('[data-motion-output="animation"]');
     this.help = root.querySelector('[data-field="help"]');
     this.addButton = root.querySelector('[data-action="add"]');
+    this.addLayerButton = root.querySelector('[data-action="add-layer"]');
+    this.autoActorButton = root.querySelector('[data-action="auto-actor"]');
     this.duplicateButton = root.querySelector('[data-action="duplicate"]');
     this.mirrorButton = root.querySelector('[data-action="mirror"]');
     this.deleteButton = root.querySelector('[data-action="delete"]');
@@ -234,6 +236,8 @@ export class CollisionEditor {
     root.querySelector('[data-field="snap"]').onchange = (event) => { this.snapStep = Number(event.target.value); };
     for (const key of ['x', 'y', 'w', 'h']) root.querySelector(`[data-field="${key}"]`).onchange = () => this.applyInputs();
     this.addButton.onclick = () => this.add();
+    this.addLayerButton.onclick = () => this.addActorLayer();
+    this.autoActorButton.onclick = () => this.addActorLayer();
     this.duplicateButton.onclick = () => this.duplicate();
     this.mirrorButton.onclick = () => this.mirror();
     this.deleteButton.onclick = () => this.remove();
@@ -414,6 +418,9 @@ export class CollisionEditor {
     const dx = point.x - this.drag.start.x;
     const dy = point.y - this.drag.start.y;
     this.selected.position = { x: this.drag.position.x + dx, y: this.drag.position.y + dy };
+    this.syncActorLayer(this.selected.id, dx - (this.drag.lastDx ?? 0), dy - (this.drag.lastDy ?? 0));
+    this.drag.lastDx = dx;
+    this.drag.lastDy = dy;
   }
 
   resizeVisual(point) {
@@ -429,6 +436,12 @@ export class CollisionEditor {
     this.selected.displayHeight = height * this.tileSize;
     this.selected.position = { x: x + width / 2, y: y + height };
     this.config.onActorVisualChange?.(this.selected.id, this.selected.displayHeight);
+    const contour = this.selected.getContour?.();
+    const layer = (this.config.getForegrounds?.() ?? []).find((item) => item.actor_id === this.selected.id);
+    if (contour?.length >= 3 && layer) {
+      layer.points = contour;
+      layer.sort_y = Math.max(...contour.map(([, y]) => y));
+    }
   }
 
   moveRect(point) {
@@ -540,6 +553,8 @@ export class CollisionEditor {
     const foreground = this.kind === 'foreground';
     const flavor = this.kind === 'flavor';
     const visual = this.kind === 'visual';
+    const hasActorLayer = visual && this.selected?.actorVisual
+      && (this.config.getForegrounds?.() ?? []).some((item) => item.actor_id === this.selected.id && item.enabled !== false);
     const motion = this.kind === 'motion';
     const collision = this.kind === 'collision';
     const actorCollider = Boolean(this.selected?.actorCollider);
@@ -547,17 +562,20 @@ export class CollisionEditor {
     this.panel.querySelector('[data-section="id"]').classList.toggle('hidden', motion);
     this.panel.querySelector('[data-section="rect"]').classList.toggle('hidden', foreground || visual || motion);
     this.panel.querySelector('[data-section="rotation"]').classList.toggle('hidden', !collision || actorCollider);
-    this.panel.querySelector('[data-section="depth"]').classList.toggle('hidden', !foreground);
+    this.panel.querySelector('[data-section="depth"]').classList.toggle('hidden', !(foreground || hasActorLayer));
     this.panel.querySelector('[data-section="visual-size"]').classList.toggle('hidden', !visual);
     this.panel.querySelector('[data-section="snap"]').classList.toggle('hidden', visual || motion);
     this.panel.querySelector('[data-section="motion"]').classList.toggle('hidden', !motion);
+    this.autoActorButton.classList.add('hidden');
+    this.addLayerButton.classList.toggle('hidden', !visual);
+    this.autoActorButton.classList.toggle('armed', Boolean(this.lasso?.actorContourArmed));
     if (motion) {
       this.help.textContent = '滑块实时作用于当前人物；保存 JSON 写入当前场景，恢复默认回到 100%。';
       this.refreshMotionInputs();
     } else if (visual) {
-      this.help.textContent = '拖动人物调整贴图位置；拖动四角圆点等比缩放。玩家红色十字表示真实移动点。仅影响当前章节，点击保存 JSON 写入。';
+      this.help.textContent = '拖动人物调整贴图位置；拖动四角圆点等比缩放。选中人物后点击“加入层级”，即可像前景套索一样遮挡主角；删除按钮可移除人物。玩家红色十字表示真实移动点。';
     } else if (foreground) {
-      this.help.textContent = '左键：添加锚点并磁吸图像边缘\n右键：撤销上一步 · 双击：自动闭合完成 · Esc：取消\n拖动黄色水平线或输入 Y 值调整判定线；判定线比人物脚底更靠下时，前景显示在人物上方。';
+      this.help.textContent = '手动套索：左键添加锚点并磁吸图像边缘\n右键：撤销上一步 · 双击：自动闭合完成 · Esc：取消\n拖动黄色水平线或输入 Y 值调整判定线；判定线比人物脚底更靠下时，前景显示在人物上方。人物遮挡请切换到“角色贴图”后选中人物并点击“加入层级”。';
     } else if (flavor) {
       this.help.textContent = '拖动内部：移动 · 拖动边/角：调整方形风味区\n玩家进入区域时自动显示风味提示；文案在 JSON 的 line 字段中修改。';
     } else if (actorCollider) {
@@ -568,10 +586,12 @@ export class CollisionEditor {
       this.help.textContent = '拖动内部：移动 · 拖动边/角：缩放。';
     }
     this.addButton.textContent = foreground ? (this.lasso?.armed || this.lasso?.drawing ? '正在套索…' : '开始套索') : '新增';
-    for (const button of [this.addButton, this.duplicateButton, this.mirrorButton, this.deleteButton, this.resetButton]) {
+    for (const button of [this.addButton, this.autoActorButton, this.addLayerButton, this.duplicateButton, this.mirrorButton, this.deleteButton, this.resetButton]) {
       button.classList.toggle('hidden', motion);
     }
     this.addButton.disabled = visual || motion;
+    this.addLayerButton.disabled = !visual || !this.selected?.actorVisual;
+    this.deleteButton.disabled = !this.selected || this.selected.id === 'PLAYER' || (this.kind === 'collision' && this.selected.actorCollider) || this.kind === 'motion';
     this.addButton.classList.toggle('armed', Boolean(this.lasso?.armed || this.lasso?.drawing));
   }
 
@@ -608,8 +628,13 @@ export class CollisionEditor {
     const rect = this.selected?.rect ?? ['', '', '', ''];
     this.idInput.value = this.selected?.id ?? '';
     this.idInput.disabled = !this.selected || actorCollider || this.kind === 'visual';
-    this.depthInput.value = this.selected && this.kind === 'foreground' ? this.foregroundSortY(this.selected) : '';
-    this.depthInput.disabled = this.kind !== 'foreground' || !this.selected;
+    const actorLayer = this.kind === 'visual' && this.selected?.actorVisual
+      ? (this.config.getForegrounds?.() ?? []).find((item) => item.actor_id === this.selected.id)
+      : null;
+    this.depthInput.value = this.kind === 'foreground'
+      ? this.foregroundSortY(this.selected)
+      : actorLayer ? this.foregroundSortY(actorLayer) : '';
+    this.depthInput.disabled = !(this.kind === 'foreground' || actorLayer);
     this.visualHeightInput.value = this.kind === 'visual' ? this.actorVisualHeight(this.selected) : '';
     this.visualHeightInput.disabled = this.kind !== 'visual' || !this.selected;
     this.rotationInput.value = this.selected && this.kind === 'collision' && !actorCollider ? this.rotationOf(this.selected) : '';
@@ -621,7 +646,7 @@ export class CollisionEditor {
     });
     this.duplicateButton.disabled = !this.selected || actorCollider || this.kind === 'visual';
     this.mirrorButton.disabled = !this.selected || actorCollider || this.kind === 'visual';
-    this.deleteButton.disabled = !this.selected || actorCollider || this.kind === 'visual';
+    this.deleteButton.disabled = !this.selected || this.selected.id === 'PLAYER' || (actorCollider && this.kind === 'collision') || this.kind === 'motion';
   }
 
   refreshMotionInputs() {
@@ -765,6 +790,19 @@ export class CollisionEditor {
 
   remove() {
     if (!this.selected) return;
+    if (this.selected.id === 'PLAYER') {
+      this.status.textContent = '主角贴图不可删除';
+      return;
+    }
+    if (this.kind === 'visual' && this.selected.actorVisual) {
+      const id = this.selected.id;
+      this.selected.remove?.();
+      this.config.onActorVisualDelete?.(id);
+      const foregrounds = this.config.getForegrounds?.() ?? [];
+      for (let index = foregrounds.length - 1; index >= 0; index -= 1) {
+        if (foregrounds[index].actor_id === id) foregrounds.splice(index, 1);
+      }
+    }
     const visibleIndex = this.items.indexOf(this.selected);
     const sourceIndex = this.sourceItems.indexOf(this.selected);
     if (sourceIndex >= 0) this.sourceItems.splice(sourceIndex, 1);
@@ -845,6 +883,40 @@ export class CollisionEditor {
           graphics.fillStyle(COLORS.selected, 1).fillRect(point.x * this.tileSize - 6, point.y * this.tileSize - 6, 12, 12);
         }
       }
+    }
+  }
+
+  addActorLayer() {
+    if (this.kind !== 'visual' || !this.selected?.actorVisual) return;
+    const points = this.selected.getContour?.();
+    if (!points || points.length < 3) {
+      this.status.textContent = '该人物没有可用贴图轮廓';
+      return;
+    }
+    const foregrounds = this.config.getForegrounds?.();
+    if (!foregrounds) return;
+    const existing = foregrounds.find((item) => item.actor_id === this.selected.id);
+    if (existing) {
+      this.selected.actorLayer = true;
+      this.status.textContent = '该人物已加入遮挡层级';
+      return;
+    }
+    foregrounds.push({
+      id: this.createId('foreground'), shape: 'polygon', points,
+      sort_y: Math.max(...points.map(([, y]) => y)), units: 'tiles', layer: 'foreground',
+      enabled: true, depth: this.config.getDefaultForegroundDepth?.() ?? 100,
+      actor_id: this.selected.id
+    });
+    this.selected.actorLayer = true;
+    this.changed('已将人物加入遮挡层级，点击保存 JSON 写入');
+  }
+
+  syncActorLayer(actorId, dx = 0, dy = 0) {
+    const foregrounds = this.config.getForegrounds?.() ?? [];
+    for (const item of foregrounds) {
+      if (item.actor_id !== actorId || !item.points?.length) continue;
+      item.points = item.points.map(([x, y]) => [x + dx, y + dy]);
+      item.sort_y = Math.max(...item.points.map(([, y]) => y));
     }
   }
 
