@@ -9,135 +9,144 @@
   "objects": [
     {
       "id": "COL_BACK_WALL",
-      "type": "collision",
       "rect": [
         0,
         0,
         1664,
-        220
-      ]
-    },
-    {
-      "id": "COL_COLUMN_LEFT",
-      "type": "collision",
-      "rect": [
-        430,
-        115,
-        120,
-        665
-      ]
-    },
-    {
-      "id": "COL_COLUMN_RIGHT",
-      "type": "collision",
-      "rect": [
-        1110,
-        115,
-        120,
-        665
-      ]
-    },
-    {
-      "id": "COL_TABLE",
-      "type": "collision",
-      "rect": [
-        725,
-        295,
-        235,
-        455
-      ]
-    },
-    {
-      "id": "COL_CHAIRS_LEFT",
-      "type": "collision",
-      "rect": [
-        585,
-        340,
-        130,
-        390
-      ]
-    },
-    {
-      "id": "COL_CHAIRS_RIGHT",
-      "type": "collision",
-      "rect": [
-        975,
-        340,
-        130,
-        390
-      ]
-    },
-    {
-      "id": "COL_ALTAR",
-      "type": "collision",
-      "rect": [
-        620,
-        175,
-        455,
-        210
-      ]
+        659
+      ],
+      "rotation": 0,
+      "type": "collision"
     },
     {
       "id": "COL_LEFT_FURNITURE",
-      "type": "collision",
       "rect": [
-        220,
-        245,
-        250,
-        300
-      ]
+        0,
+        181.5,
+        65,
+        582
+      ],
+      "rotation": 0,
+      "type": "collision"
     },
     {
       "id": "COL_RIGHT_FURNITURE",
-      "type": "collision",
       "rect": [
-        1180,
-        180,
+        1596,
+        149,
+        68,
+        600
+      ],
+      "rotation": 0,
+      "type": "collision"
+    },
+    {
+      "id": "collision_msvhcrvb",
+      "rect": [
+        741.765625,
         350,
-        470
-      ]
+        191.296875,
+        350
+      ],
+      "rotation": 0,
+      "type": "collision"
+    },
+    {
+      "id": "collision_msvheljl",
+      "rect": [
+        1401.436209620743,
+        315.29162264468914,
+        192,
+        337.75
+      ],
+      "rotation": -19,
+      "type": "collision"
+    },
+    {
+      "id": "collision_msvhex4m",
+      "rect": [
+        1209,
+        343,
+        190.5,
+        64
+      ],
+      "rotation": 0,
+      "type": "collision"
+    },
+    {
+      "id": "collision_msvhfvwd",
+      "rect": [
+        0,
+        444,
+        302,
+        64
+      ],
+      "rotation": -54,
+      "type": "collision"
     },
     {
       "id": "TRG_DEPLOYMENT_MAP",
-      "type": "interaction",
-      "prompt": "正厅矮桌",
       "rect": [
-        680,
-        260,
-        380,
-        550
-      ]
+        515.25,
+        350,
+        657.25,
+        383.25
+      ],
+      "prompt": "正厅矮桌",
+      "type": "interaction"
     },
     {
       "id": "TRG_GROUP_LEADER",
-      "type": "interaction",
-      "prompt": "找小组负责人",
       "rect": [
-        520,
-        700,
+        446,
+        700.5,
         180,
-        150
-      ]
+        150.5
+      ],
+      "prompt": "找小组负责人",
+      "type": "interaction"
+    },
+    {
+      "id": "TRG_DAI_ANNAN",
+      "rect": [
+        633,
+        640,
+        180,
+        180
+      ],
+      "prompt": "听取戴安南传达纪律",
+      "type": "interaction"
     },
     {
       "id": "TRG_ANCESTRAL_TABLET",
-      "type": "interaction",
       "rect": [
-        715,
-        105,
+        138,
+        691,
         260,
         245
-      ]
+      ],
+      "type": "interaction"
     },
     {
       "id": "TRG_HALL_THRESHOLD",
-      "type": "interaction",
       "rect": [
-        500,
-        735,
+        502.5,
+        850,
         670,
-        145
-      ]
+        86
+      ],
+      "type": "interaction"
+    },
+    {
+      "id": "interaction_msyzdn4u",
+      "rect": [
+        1001,
+        691.75,
+        180,
+        150.5
+      ],
+      "prompt": "找小组负责人",
+      "type": "interaction"
     },
     {
       "id": "SPAWN_PLAYER",
@@ -150,7 +159,7 @@
       ]
     },
     {
-      "id": "CAM_MAINHALL_CLOSE",
+      "id": "CAM_MAIN",
       "type": "camera",
       "rect": [
         0,
@@ -160,14 +169,302 @@
       ]
     },
     {
-      "id": "EXIT_TO_COURTYARD",
-      "type": "exit",
-      "rect": [
-        500,
-        840,
-        670,
-        96
+      "id": "foreground_msyfrsz8",
+      "shape": "polygon",
+      "points": [
+        [
+          1156,
+          300
+        ],
+        [
+          1156,
+          687
+        ],
+        [
+          1146,
+          695
+        ],
+        [
+          1145,
+          713
+        ],
+        [
+          1137,
+          721
+        ],
+        [
+          1139,
+          738
+        ],
+        [
+          1169,
+          755
+        ],
+        [
+          1217,
+          755
+        ],
+        [
+          1228,
+          739
+        ],
+        [
+          1213,
+          706
+        ],
+        [
+          1199,
+          694
+        ],
+        [
+          1200,
+          629
+        ],
+        [
+          1203,
+          627
+        ],
+        [
+          1202,
+          622
+        ],
+        [
+          1204,
+          441
+        ],
+        [
+          1201,
+          434
+        ],
+        [
+          1200,
+          366
+        ],
+        [
+          1200,
+          344
+        ],
+        [
+          1204,
+          342
+        ],
+        [
+          1204,
+          294
+        ],
+        [
+          1183,
+          295
+        ],
+        [
+          1179,
+          302
+        ],
+        [
+          1174,
+          296
+        ],
+        [
+          1155,
+          299
+        ]
+      ],
+      "sort_y": 755,
+      "units": "tiles",
+      "layer": "foreground",
+      "enabled": true,
+      "depth": 1600,
+      "type": "foreground"
+    },
+    {
+      "id": "foreground_msyfs4gm",
+      "shape": "polygon",
+      "points": [
+        [
+          455,
+          284
+        ],
+        [
+          454,
+          516
+        ],
+        [
+          455,
+          521
+        ],
+        [
+          459,
+          522
+        ],
+        [
+          463,
+          696
+        ],
+        [
+          454,
+          702
+        ],
+        [
+          454,
+          732
+        ],
+        [
+          478,
+          755
+        ],
+        [
+          520,
+          745
+        ],
+        [
+          529,
+          705
+        ],
+        [
+          515,
+          692
+        ],
+        [
+          510,
+          294
+        ]
+      ],
+      "sort_y": 755,
+      "units": "tiles",
+      "layer": "foreground",
+      "enabled": true,
+      "depth": 1600,
+      "type": "foreground"
+    }
+  ],
+  "actor_colliders": {
+    "PLAYER": {
+      "offset": [
+        -28,
+        -36
+      ],
+      "size": [
+        56,
+        36
       ]
     }
-  ]
+  },
+  "actor_visuals": {
+    "PLAYER": {
+      "display_height": 314.6773361172968,
+      "offset": [
+        6.873543408964224,
+        0
+      ]
+    },
+    "GROUP_LEADER": {
+      "display_height": 280,
+      "offset": [
+        -122.75483887689245,
+        4.091892523735851
+      ]
+    },
+    "YOUNG_MEMBER": {
+      "display_height": 280,
+      "offset": [
+        14.321418941243337,
+        -58.30931919971772
+      ]
+    },
+    "DAI_ANNAN": {
+      "display_height": 295.57238903008005,
+      "offset": [
+        -99.41135470447193,
+        -30.68907100512172
+      ]
+    },
+    "DISCIPLINE_CROWD_0": {
+      "display_height": 261.097084767593,
+      "offset": [
+        -287.2695278673504,
+        35.803892758756774
+      ]
+    },
+    "DISCIPLINE_CROWD_1": {
+      "display_height": 269.69074799095256,
+      "offset": [
+        -266.81298303445067,
+        95.49460562888157
+      ]
+    },
+    "DISCIPLINE_CROWD_2": {
+      "display_height": 240.23357484073057,
+      "offset": [
+        -269.5759353706665,
+        -13.298606801106871
+      ]
+    },
+    "DISCIPLINE_CROWD_3": {
+      "display_height": 261.17970177547943,
+      "offset": [
+        -666.7308367397374,
+        75.69964292042175
+      ]
+    },
+    "DISCIPLINE_CROWD_4": {
+      "display_height": 238.60454331189885,
+      "offset": [
+        -444.023390551071,
+        81.83749926643907
+      ]
+    },
+    "DISCIPLINE_CROWD_5": {
+      "display_height": 236.83503215148352,
+      "offset": [
+        132.1578350026798,
+        260.85678745608425
+      ]
+    },
+    "DISCIPLINE_CROWD_6": {
+      "display_height": 256.30889156755075,
+      "offset": [
+        143.12829634236095,
+        -4.839501572938957
+      ]
+    },
+    "DISCIPLINE_CROWD_7": {
+      "display_height": 284.4718720775276,
+      "offset": [
+        77.1047187306765,
+        95.0797324171483
+      ]
+    },
+    "DISCIPLINE_CROWD_8": {
+      "display_height": 210,
+      "offset": [
+        93.08915287717377,
+        -49.102499559863645
+      ]
+    },
+    "DISCIPLINE_CROWD_9": {
+      "display_height": 210,
+      "offset": [
+        55.239558085056615,
+        92.06714277370963
+      ]
+    },
+    "DISCIPLINE_CROWD_10": {
+      "display_height": 274.38772211279553,
+      "offset": [
+        28.42539616595127,
+        40.91874963321959
+      ]
+    },
+    "DISCIPLINE_CROWD_11": {
+      "display_height": 279.645883804626,
+      "offset": [
+        83.15864720330683,
+        77.8296688520976
+      ]
+    }
+  },
+  "player_motion": {
+    "movement_multiplier": 1.2,
+    "animation_multiplier": 1.2
+  }
 }

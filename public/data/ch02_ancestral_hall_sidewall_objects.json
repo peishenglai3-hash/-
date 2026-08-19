@@ -9,134 +9,36 @@
   "objects": [
     {
       "id": "COL_SIDE_WALL",
-      "type": "collision",
       "rect": [
         0,
         0,
         1664,
-        330
-      ]
-    },
-    {
-      "id": "COL_COLUMN_1",
-      "type": "collision",
-      "rect": [
-        190,
-        75,
-        90,
-        410
-      ]
-    },
-    {
-      "id": "COL_COLUMN_2",
-      "type": "collision",
-      "rect": [
-        610,
-        75,
-        90,
-        410
-      ]
-    },
-    {
-      "id": "COL_COLUMN_3",
-      "type": "collision",
-      "rect": [
-        1060,
-        75,
-        90,
-        410
-      ]
+        440
+      ],
+      "rotation": 0,
+      "type": "collision"
     },
     {
       "id": "COL_COLUMN_4",
-      "type": "collision",
       "rect": [
-        1500,
-        75,
+        1564,
+        179,
         100,
         450
-      ]
-    },
-    {
-      "id": "COL_PARCELS_A",
-      "type": "collision",
-      "rect": [
-        285,
-        260,
-        290,
-        220
-      ]
-    },
-    {
-      "id": "COL_PARCELS_B",
-      "type": "collision",
-      "rect": [
-        700,
-        265,
-        370,
-        220
-      ]
-    },
-    {
-      "id": "COL_WEAPON_BENCH",
-      "type": "collision",
-      "rect": [
-        1160,
-        250,
-        435,
-        285
-      ]
-    },
-    {
-      "id": "TRG_SORT_BY_TAG",
-      "type": "interaction",
-      "rect": [
-        245,
-        235,
-        365,
-        285
-      ]
-    },
-    {
-      "id": "TRG_RETYING_PARCEL",
-      "type": "interaction",
-      "rect": [
-        660,
-        235,
-        450,
-        285
-      ]
+      ],
+      "rotation": -21,
+      "type": "collision"
     },
     {
       "id": "TRG_MATERIALS_NPC",
-      "type": "interaction",
-      "prompt": "组长：物资准备",
       "rect": [
         500,
         500,
         280,
         180
-      ]
-    },
-    {
-      "id": "TRG_BUCKET_TRANSFER",
-      "type": "interaction",
-      "rect": [
-        260,
-        555,
-        310,
-        330
-      ]
-    },
-    {
-      "id": "TRG_WEAPON_STACK",
-      "type": "interaction",
-      "rect": [
-        1120,
-        225,
-        500,
-        340
-      ]
+      ],
+      "prompt": "组长：物资准备",
+      "type": "interaction"
     },
     {
       "id": "SPAWN_PLAYER",
@@ -149,7 +51,7 @@
       ]
     },
     {
-      "id": "CAM_SIDEWALL",
+      "id": "CAM_MAIN",
       "type": "camera",
       "rect": [
         0,
@@ -159,14 +61,306 @@
       ]
     },
     {
-      "id": "EXIT_TO_COURTYARD",
-      "type": "exit",
-      "rect": [
-        0,
-        760,
-        145,
-        176
+      "id": "foreground_msyfzj2y",
+      "shape": "polygon",
+      "points": [
+        [
+          1634,
+          497
+        ],
+        [
+          1620,
+          501
+        ],
+        [
+          1622,
+          529
+        ],
+        [
+          1603,
+          532
+        ],
+        [
+          1549,
+          547
+        ],
+        [
+          1566,
+          533
+        ],
+        [
+          1534,
+          531
+        ],
+        [
+          1524,
+          535
+        ],
+        [
+          1518,
+          546
+        ],
+        [
+          1526,
+          573
+        ],
+        [
+          1509,
+          569
+        ],
+        [
+          1494,
+          571
+        ],
+        [
+          1492,
+          591
+        ],
+        [
+          1506,
+          605
+        ],
+        [
+          1492,
+          617
+        ],
+        [
+          1474,
+          621
+        ],
+        [
+          1473,
+          633
+        ],
+        [
+          1460,
+          644
+        ],
+        [
+          1415,
+          649
+        ],
+        [
+          1404,
+          667
+        ],
+        [
+          1402,
+          684
+        ],
+        [
+          1404,
+          692
+        ],
+        [
+          1392,
+          702
+        ],
+        [
+          1375,
+          703
+        ],
+        [
+          1364,
+          714
+        ],
+        [
+          1381,
+          739
+        ],
+        [
+          1397,
+          749
+        ],
+        [
+          1423,
+          759
+        ],
+        [
+          1442,
+          746
+        ],
+        [
+          1463,
+          750
+        ],
+        [
+          1468,
+          766
+        ],
+        [
+          1453,
+          776
+        ],
+        [
+          1438,
+          777
+        ],
+        [
+          1422,
+          787
+        ],
+        [
+          1415,
+          811
+        ],
+        [
+          1433,
+          832
+        ],
+        [
+          1425,
+          838
+        ],
+        [
+          1400,
+          844
+        ],
+        [
+          1384,
+          839
+        ],
+        [
+          1382,
+          815
+        ],
+        [
+          1356,
+          804
+        ],
+        [
+          1342,
+          823
+        ],
+        [
+          1345,
+          834
+        ],
+        [
+          1313,
+          816
+        ],
+        [
+          1313,
+          827
+        ],
+        [
+          1323,
+          851
+        ],
+        [
+          1317,
+          866
+        ],
+        [
+          1304,
+          874
+        ],
+        [
+          1281,
+          855
+        ],
+        [
+          1272,
+          840
+        ],
+        [
+          1261,
+          838
+        ],
+        [
+          1241,
+          846
+        ],
+        [
+          1217,
+          862
+        ],
+        [
+          1213,
+          875
+        ],
+        [
+          1218,
+          893
+        ],
+        [
+          1194,
+          895
+        ],
+        [
+          1201,
+          912
+        ],
+        [
+          1217,
+          934
+        ],
+        [
+          1658,
+          933
+        ],
+        [
+          1662,
+          493
+        ],
+        [
+          1633,
+          498
+        ]
+      ],
+      "sort_y": 934,
+      "units": "tiles",
+      "layer": "foreground",
+      "enabled": true,
+      "depth": 1600,
+      "type": "foreground"
+    }
+  ],
+  "actor_colliders": {
+    "PLAYER": {
+      "offset": [
+        -28,
+        -36
+      ],
+      "size": [
+        56,
+        36
       ]
     }
-  ]
+  },
+  "actor_visuals": {
+    "PLAYER": {
+      "display_height": 280,
+      "offset": [
+        0,
+        0
+      ]
+    },
+    "GROUP_LEADER": {
+      "display_height": 280,
+      "offset": [
+        0,
+        0
+      ]
+    },
+    "YOUNG_MEMBER": {
+      "display_height": 280,
+      "offset": [
+        0,
+        0
+      ]
+    },
+    "DAI_ANNAN": {
+      "display_height": 280,
+      "offset": [
+        0,
+        0
+      ]
+    }
+  },
+  "player_motion": {
+    "movement_multiplier": 1.2,
+    "animation_multiplier": 1
+  }
 }

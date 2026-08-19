@@ -270,12 +270,13 @@ export class ForegroundLassoTool {
     this.previewAnchor = null;
     this.edgeMap = null;
     this.edgeMapFailed = false;
+    this.actorContourArmed = false;
     this.drag = null;
     this.lastClick = null;
     this.lastPreviewAt = 0;
     this.lastRebuild = 0;
     this.handleEscape = () => {
-      if (this.editor.enabled && (this.armed || this.drawing)) this.cancel(true, '已取消套索绘制');
+      if (this.editor.enabled && (this.armed || this.drawing || this.actorContourArmed)) this.cancel(true, '已取消套索绘制');
     };
     this.handleContextMenu = (event) => {
       if (!this.editor.enabled || this.editor.kind !== 'foreground') return;
@@ -329,6 +330,17 @@ export class ForegroundLassoTool {
     this.editor.status.textContent = this.edgeMap
       ? '左键放置第一个磁吸锚点；Esc 取消'
       : '边缘分析不可用，将使用直线锚点；Esc 取消';
+    this.editor.setCursor('crosshair');
+    this.editor.updatePanelMode();
+  }
+
+  armActorContour() {
+    this.cancel(false);
+    this.actorContourArmed = true;
+    this.editor.selected = null;
+    this.editor.refreshList();
+    this.editor.refreshInputs();
+    this.editor.status.textContent = '请点击人物贴图，自动选定透明区域外轮廓；Esc 取消';
     this.editor.setCursor('crosshair');
     this.editor.updatePanelMode();
   }
@@ -434,6 +446,11 @@ export class ForegroundLassoTool {
       }
       return;
     }
+    if (this.actorContourArmed) {
+      const hit = [...(this.editor.config.getActorVisuals?.() ?? [])].reverse().find((item) => item.containsPoint?.(point));
+      this.editor.setCursor(hit ? 'crosshair' : 'default');
+      return;
+    }
     if (this.armed) {
       this.previewAnchor = this.magneticPoint(point);
       this.editor.render();
@@ -465,7 +482,7 @@ export class ForegroundLassoTool {
   }
 
   pointerOut() {
-    if (!this.armed && !this.drawing) this.editor.setCursor('default');
+    if (!this.armed && !this.drawing && !this.actorContourArmed) this.editor.setCursor('default');
   }
 
   undo() {
@@ -550,6 +567,10 @@ export class ForegroundLassoTool {
       return;
     }
 
+    this.createItem(points, '已完成磁性套索并自动闭合，点击保存 JSON 写入');
+  }
+
+  createItem(points, message) {
     const item = {
       id: this.editor.createId('foreground'),
       shape: 'polygon',
@@ -562,12 +583,13 @@ export class ForegroundLassoTool {
     };
     this.editor.sourceItems.push(item);
     this.editor.select(item);
-    this.editor.changed('已完成磁性套索并自动闭合，点击保存 JSON 写入');
+    this.editor.changed(message);
   }
 
   cancel(refresh = true, message = '') {
     this.armed = false;
     this.drawing = false;
+    this.actorContourArmed = false;
     this.anchors = [];
     this.segments = [];
     this.previewPoints = [];
@@ -582,7 +604,11 @@ export class ForegroundLassoTool {
   }
 
   applyDepth() {
-    if (!this.editor.selected || this.editor.kind !== 'foreground') return;
+    if (!this.editor.selected || !['foreground', 'visual'].includes(this.editor.kind)) return;
+    const target = this.editor.kind === 'foreground'
+      ? this.editor.selected
+      : (this.editor.config.getForegrounds?.() ?? []).find((item) => item.actor_id === this.editor.selected.id);
+    if (!target) return;
     const rawValue = this.editor.depthInput.value.trim();
     if (!rawValue) return;
     const value = Number(rawValue);
@@ -591,7 +617,7 @@ export class ForegroundLassoTool {
       return;
     }
     const [, worldHeight] = this.editor.config.getWorldSize();
-    this.editor.selected.sort_y = clamp(value, 0, worldHeight);
+    target.sort_y = clamp(value, 0, worldHeight);
     this.editor.changed('遮挡基线已修改，点击保存 JSON 写入');
   }
 

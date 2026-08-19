@@ -26,6 +26,9 @@ import {
 	type TuCompoundState,
 } from "@/scenes/Scene05/tuCompoundMap";
 import { isAncestralHallVariant } from "@/scenes/Scene04/ancestralHallMap";
+import { CH02_FLASHBACK_CHOICES, CH02_FLASHBACK_FLAGS } from "@/scenes/Scene04/ch02Flashback.content";
+import { CH02_DISCIPLINE_FLAGS, CH02_GROUP_CHOICES } from "@/scenes/Scene04/ch02Discipline.content";
+import { CH02_MATERIALS_CHOICES, CH02_MATERIALS_FLAGS } from "@/scenes/Scene04/ch02Materials.content";
 import {
 	CHOICES as CH01_SC01_CHOICES,
 } from "@/scenes/Scene03/ch01Sc01.content";
@@ -586,6 +589,72 @@ export const useDirectorStore = defineStore("director", () => {
 		});
 	}
 
+	// 开发跳转：进入第二章链路前补齐序章与第一章的随机画像和必要剧情旗标，
+	// 保证章末结算的 chapter3Access 与风险判定有完整输入。
+	function prepareChapter2EntryForDev(): void {
+		if (!CHOICES.some((choice) => gameState.state.flags.has(choice.flag))) randomizePrologueChoice();
+		gameState.state.flags.add("FLAG_PRO_Q01_COMPLETED");
+		for (const flag of ["FLAG_PRO02_AUDIO_REVIEWED", "FLAG_PRO02_QUESTION_WRITTEN", "PROLOGUE_COMPLETED", "TIME_TRAVEL_CHECKPOINT"])
+			gameState.state.flags.add(flag);
+		gameState.state.audioReviewed = true;
+		gameState.state.questionWritten = true;
+		if (!CH01_SC01_CHOICES.some((choice) => gameState.state.flags.has(choice.flag))) completeCh01Sc01ForDev();
+		gameState.state.flags.add("CH01_YARD_DONE");
+	}
+
+	function completeCh02FlashbackForDev(): void {
+		if (!CH02_FLASHBACK_CHOICES.some((choice) => gameState.state.flags.has(choice.flag))) {
+			const choice = CH02_FLASHBACK_CHOICES[Math.floor(Math.random() * CH02_FLASHBACK_CHOICES.length)];
+			applyFormalChoice(gameState.state, {
+				choiceId: `CH02_FLASHBACK_${choice.id}`,
+				chapter: 2,
+				isFormalChoice: true,
+				portraitChange: choice.profileDelta,
+				riskChange: choice.riskDelta,
+				flag: choice.flag,
+				echoSummary: choice.label,
+				failureCheck: false,
+			});
+		}
+		gameState.state.flags.add(CH02_FLASHBACK_FLAGS.started);
+		gameState.state.flags.add(CH02_FLASHBACK_FLAGS.complete);
+	}
+
+	function completeCh02GroupChoiceForDev(): void {
+		if (!CH02_GROUP_CHOICES.some((choice) => gameState.state.flags.has(choice.flag))) {
+			const choice = CH02_GROUP_CHOICES[Math.floor(Math.random() * CH02_GROUP_CHOICES.length)];
+			applyFormalChoice(gameState.state, {
+				choiceId: `CH02_GROUP_${choice.id}`,
+				chapter: 2,
+				isFormalChoice: true,
+				portraitChange: choice.profileDelta,
+				riskChange: choice.riskDelta,
+				flag: choice.flag,
+				echoSummary: choice.label,
+				failureCheck: false,
+			});
+		}
+		gameState.state.flags.add(CH02_DISCIPLINE_FLAGS.disciplineComplete);
+	}
+
+	function completeCh02MaterialsChoiceForDev(): void {
+		if (!CH02_MATERIALS_CHOICES.some((choice) => gameState.state.flags.has(choice.flag))) {
+			const choice = CH02_MATERIALS_CHOICES[Math.floor(Math.random() * CH02_MATERIALS_CHOICES.length)];
+			applyFormalChoice(gameState.state, {
+				choiceId: `CH02_MATERIALS_${choice.id}`,
+				chapter: 2,
+				isFormalChoice: true,
+				portraitChange: choice.profileDelta,
+				riskChange: choice.riskDelta,
+				flag: choice.flag,
+				tags: choice.id === "D" ? [CH02_MATERIALS_FLAGS.contactCaution] : [],
+				echoSummary: choice.label,
+				failureCheck: false,
+			});
+		}
+		gameState.state.flags.add(CH02_MATERIALS_FLAGS.materialsComplete);
+	}
+
 	function handleDevNextChapter(sceneKey?: string): void {
 		const activeKey = sceneKey ?? ([...game.value!.scene.getScenes(true)].reverse().find((scene: any) => scene.zoneEditor) as any)?.scene.key;
 		if (activeKey === "Ch01Sc01Scene" || activeKey === "Ch01Sc02Scene") {
@@ -599,11 +668,50 @@ export const useDirectorStore = defineStore("director", () => {
 		}
 
 		if (activeKey === "Ch01Sc03Scene") {
-			clearStoryUi();
-			gameState.state.flags.add("CH01_YARD_DONE");
+			// 一二章衔接：院墙联络完成后不再折返陈家，补齐第一章状态直接进入第二章开场。
+			prepareChapter2EntryForDev();
 			gameState.state.mode = "transition";
 			gameState.state.playerLocked = true;
-			game.value!.events.emit("ch01:sc03-complete");
+			startChapter2Opening();
+			return;
+		}
+
+		// 第二章各幕按剧情顺序推进一幕；章末出发视频后落到第二章结算（第三章待接入）。
+		if (activeKey === "Ch02TransitionScene") {
+			prepareChapter2EntryForDev();
+			openChapter2Map("main", "arrival");
+			return;
+		}
+		if (activeKey === "Ch02AncestralHallScene") {
+			prepareChapter2EntryForDev();
+			const entry = (game.value!.scene.getScene("Ch02AncestralHallScene") as any)?.entry ?? "preview";
+			if (entry === "deployment") startChapter2Flashback();
+			else if (entry === "discipline") {
+				completeCh02FlashbackForDev();
+				completeCh02GroupChoiceForDev();
+				openChapter2Map("sidewall", "materials");
+			} else if (entry === "materials") {
+				completeCh02FlashbackForDev();
+				completeCh02GroupChoiceForDev();
+				completeCh02MaterialsChoiceForDev();
+				startChapter2ToChapter3Transition();
+			}
+			else openChapter2Map("mainhall-close", "deployment");
+			return;
+		}
+		if (activeKey === "Ch02FlashbackScene") {
+			prepareChapter2EntryForDev();
+			completeCh02FlashbackForDev();
+			openChapter2Map("mainhall-close", "discipline");
+			return;
+		}
+		if (activeKey === "Ch02DepartureScene") {
+			prepareChapter2EntryForDev();
+			completeCh02FlashbackForDev();
+			completeCh02GroupChoiceForDev();
+			completeCh02MaterialsChoiceForDev();
+			game.value!.scene.stop("Ch02DepartureScene");
+			finishChapter2();
 			return;
 		}
 
