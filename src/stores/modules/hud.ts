@@ -65,11 +65,9 @@ export interface EndPanel {
   title: string;
   hint: string;
   buttonLabel: string;
-	next: "title" | "chapter2" | "chapter3" | null;
+  next: "title" | "chapter2" | "chapter3" | null;
   checkpoint: string;
-  profile: string;
-  tags: string;
-  risk: string;
+  summary: string;
 }
 
 export interface CombatHudData {
@@ -483,6 +481,7 @@ export const useHudStore = defineStore("hud", () => {
   // --- 暂停 ---
   function togglePause() {
     paused.value = !paused.value;
+	gameState.state.paused = paused.value;
   }
 
   // --- overlay scene ---
@@ -521,9 +520,7 @@ export const useHudStore = defineStore("hud", () => {
       buttonLabel: endMeta?.buttonLabel ?? "进入第一章",
       next: endMeta?.next ?? null,
       checkpoint: `固定回退点：${save.checkpointLabel}（${save.checkpoint}）`,
-      profile: `画像累计 D${save.profile.D} C${save.profile.C} I${save.profile.I} G${save.profile.G} P${save.profile.P} A${save.profile.A}`,
-      tags: `选择标签 ${save.choiceTag ?? "—"} ｜ 固定标签 ${save.fixed.join(" · ")}`,
-      risk: `行动风险 身份${save.risk.identity} 执行${save.risk.execution} 协同${save.risk.coordination}`,
+      summary: "你的选择已经被记录，后续安排与最终画像将在故事中逐步显现。",
     };
   }
 

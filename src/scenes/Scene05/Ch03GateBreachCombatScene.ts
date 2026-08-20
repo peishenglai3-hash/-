@@ -20,6 +20,7 @@ import {
 	showPrompt,
 	showTask,
 	taskNeedsConfirmation,
+	togglePause,
 	updateCombatHud,
 } from "@/common/ui";
 import {
@@ -239,6 +240,7 @@ export class Ch03GateBreachCombatScene extends Phaser.Scene {
 
 		this.keyMap = createKeyMap(this);
 		onAction(this, "INTERACT", () => this.handleConfirm());
+		onAction(this, "PAUSE", () => togglePause());
 		onAction(this, "ADVANCE", () => {
 			if (this.state.inNarrative) advanceNarrative();
 		});

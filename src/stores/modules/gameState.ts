@@ -88,13 +88,13 @@ export const useGameStateStore = defineStore("gameState", () => {
 
 	function resetRunState() {
 		state.value = markRaw(new GameState());
-		if (typeof window !== "undefined") {
+		if (import.meta.env.DEV && typeof window !== "undefined") {
 			// 新游戏会替换整个状态对象，保持浏览器调试/回归入口指向当前实例。
 			(window as any).prologueState = state.value;
 		}
 	}
 
-	if (typeof window !== "undefined") {
+	if (import.meta.env.DEV && typeof window !== "undefined") {
 		(window as any).prologueState = state.value;
 	}
 

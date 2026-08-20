@@ -72,6 +72,7 @@ import {
 	type Ch02MaterialsChoice,
 } from "./ch02Materials.content";
 import { applyFormalChoice } from "@/common/actionProfileSystem";
+import { useGameSaveStore } from "@/stores/modules/gameSave";
 
 const WORLD_W = 1664;
 const WORLD_H = 936;
@@ -406,6 +407,7 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 			echoSummary: choice.label,
 			failureCheck: false,
 		});
+		useGameSaveStore().autosave("CH02_HALL");
 	}
 
 	completeGroupChoice() {
@@ -485,6 +487,7 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 			echoSummary: choice.label,
 			failureCheck: false,
 		});
+		useGameSaveStore().autosave("CH02_HALL");
 	}
 
 	completeMaterialsChoice() {

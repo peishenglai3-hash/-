@@ -1,6 +1,12 @@
 const DEFAULT_AVATAR_BY_SPEAKER: Record<string, string> = {
 	陈继南: "ch02-chen",
 	心理描写: "ch02-chen",
+	家人: "ch01-family",
+	渔民: "ch01-fisherman",
+	少年陈继南: "ch02-chen",
+	门外同学: "student-a",
+	同学甲: "student-a",
+	同学乙: "student-b",
 	门边值守者: "ch02-worker",
 	联络人: "ch02-liaison",
 	厅内男子: "ch02-group-leader",

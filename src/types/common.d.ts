@@ -25,7 +25,9 @@ export type SceneId =
 
 export interface RunSave {
 	version: number;
-	kind: "auto" | "fixed";
+	kind: "auto" | "fixed" | "manual";
+	slot?: number | null;
+	label?: string;
 	sceneId: SceneId;
 	sceneLabel: string;
 	checkpoint: string;

@@ -5,12 +5,13 @@ const hud = useHudStore();
 </script>
 
 <template>
-	<div v-if="hud.taskCards.length" class="task-layer">
+	<div v-if="hud.taskCards.length" class="task-layer" aria-live="polite" aria-label="当前任务">
 		<TransitionGroup name="task-list">
 			<article
 				v-for="(task, index) in hud.visibleTaskCards"
 				:key="task.id"
 				class="task-card"
+				role="status"
 				:class="{ center: task.id === hud.taskCenterId }"
 				:style="{ '--task-index': index, zIndex: 28 - index }"
 			>
@@ -65,8 +66,8 @@ const hud = useHudStore();
 	--task-index: 0;
 	position: absolute;
 	top: calc(16px + var(--task-index) * 94px);
-	right: 48px;
-	width: 280px;
+	right: clamp(36px, 3vw, 48px);
+	width: min(280px, 26vw);
 	height: 84px;
 	padding: 10px 12px;
 	overflow: hidden;

@@ -39,9 +39,7 @@ onUnmounted(() => {
 		<div class="end-card">
 			<strong>{{ hud.endPanel.title }}</strong>
 			<span>{{ hud.endPanel.checkpoint }}</span>
-			<span>{{ hud.endPanel.profile }}</span>
-			<span>{{ hud.endPanel.tags }}</span>
-			<span>{{ hud.endPanel.risk }}</span>
+			<span>{{ hud.endPanel.summary }}</span>
 			<small>{{ hud.endPanel.hint }}</small>
 			<button class="enter-chapter" @click="onClose">{{ hud.endPanel.buttonLabel }}</button>
 		</div>

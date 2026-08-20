@@ -777,6 +777,7 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 			echoSummary: choice.echo_summary,
 			failureCheck: false,
 		});
+		useGameSaveStore().autosave("CH01_SC01");
 		hideChoices();
 		showResult(choice);
 		this.state.mode = "result";
@@ -862,6 +863,7 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 			echoSummary: choice.label,
 			failureCheck: false,
 		});
+		useGameSaveStore().autosave("CH01_SC01");
 		hideChoices();
 		this.state.mode = "narrative";
 		this.state.playerLocked = true;
@@ -903,6 +905,7 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 			echoSummary: choice.label,
 			failureCheck: false,
 		});
+		useGameSaveStore().autosave("CH01_SC01");
 		hideChoices();
 		this.state.mode = "narrative";
 		this.state.playerLocked = true;

@@ -34,6 +34,7 @@ import {
 } from "./content";
 import type { Choice } from "./content";
 import { applyFormalChoice } from "@/common/actionProfileSystem";
+import { useGameSaveStore } from "@/stores/modules/gameSave";
 import { assetPath } from "@/common/paths";
 import {
 	createModernPlayerWalkAnimations,
@@ -787,6 +788,7 @@ export class Scene01 extends Phaser.Scene {
 			echoSummary: choice.echo_summary,
 			failureCheck: false,
 		});
+		useGameSaveStore().autosave("PROLOGUE_SC01");
 		this.state.flags.add("FLAG_PRO_Q01_COMPLETED");
 		hideChoices();
 		showResult(choice);

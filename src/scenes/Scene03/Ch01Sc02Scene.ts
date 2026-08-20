@@ -33,6 +33,7 @@ import {
 	EXIT_NARRATIVE,
 } from "./ch01Sc02.content";
 import { applyFormalChoice } from "@/common/actionProfileSystem";
+import { useGameSaveStore } from "@/stores/modules/gameSave";
 import type { NarrativeEntry } from "@/types/common";
 import { FLAGS2 } from "./ch01Sc02.flags";
 // @ts-ignore Shared developer tools support both grid and pixel-coordinate scenes.
@@ -518,6 +519,7 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 			echoSummary: choice.label,
 			failureCheck: false,
 		});
+		useGameSaveStore().autosave("CH01_SC02");
 		hideChoices();
 		this.state.mode = "narrative";
 		const thoughts: NarrativeEntry[] = choice.thoughts.map((text, index) => ({

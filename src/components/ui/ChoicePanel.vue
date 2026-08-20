@@ -8,11 +8,18 @@ function onChoose(id: string) {
 </script>
 
 <template>
-	<div v-if="hud.choicePanel" class="choice-panel">
-		<div class="choice-title">{{ hud.choicePanel.title }}</div>
+	<div
+		v-if="hud.choicePanel"
+		class="choice-panel"
+		role="dialog"
+		aria-modal="true"
+		aria-labelledby="choice-panel-title"
+	>
+		<div id="choice-panel-title" class="choice-title">{{ hud.choicePanel.title }}</div>
 		<button
 			v-for="choice in hud.choicePanel.items"
 			:key="choice.id"
+			type="button"
 			class="choice"
 			:class="{ 'choice--disabled': choice.disabled }"
 			:disabled="choice.disabled"
@@ -21,7 +28,6 @@ function onChoose(id: string) {
 			<b>[{{ choice.id.slice(-1) }}]</b>
 			<span>
 				<strong>{{ choice.label }}</strong>
-				<small>{{ choice.detail }}</small>
 			</span>
 		</button>
 	</div>
@@ -40,6 +46,8 @@ function onChoose(id: string) {
 	border: 2px solid #c49a5e;
 	box-shadow: 0 10px 40px #000d;
 	z-index: 24;
+	max-height: min(78vh, 560px);
+	overflow: auto;
 }
 
 .choice-title {
@@ -68,6 +76,12 @@ function onChoose(id: string) {
 	border-color: #d3ad64;
 }
 
+.choice:focus-visible {
+	outline: 2px solid #f4d17e;
+	outline-offset: 2px;
+	background: #58452b;
+}
+
 .choice:disabled {
 	opacity: 0.48;
 	cursor: not-allowed;
@@ -83,13 +97,7 @@ function onChoose(id: string) {
 	font-size: 1.25rem;
 }
 
-.choice strong,
-.choice small {
+.choice strong {
 	display: block;
-}
-
-.choice small {
-	margin-top: 0.25rem;
-	color: #d8c9a8;
 }
 </style>

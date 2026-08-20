@@ -9,3 +9,10 @@
 export const KEY_SETTINGS = "redcode.settings";
 export const KEY_AUTO = "redcode.save.auto";
 export const KEY_FIXED = "redcode.save.fixed";
+export const KEY_AUTO_BACKUP = "redcode.save.auto.bak";
+export const KEY_FIXED_BACKUP = "redcode.save.fixed.bak";
+export const KEY_MANUAL_PREFIX = "redcode.save.manual.";
+export const KEY_MANUAL_BACKUP_PREFIX = "redcode.save.manual.bak.";
+
+export const MANUAL_SAVE_SLOTS = [1, 2, 3] as const;
+export type ManualSaveSlot = (typeof MANUAL_SAVE_SLOTS)[number];

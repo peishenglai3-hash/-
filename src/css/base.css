@@ -10,6 +10,18 @@
 	box-sizing: border-box;
 }
 
+button,
+input,
+select,
+textarea {
+	font: inherit;
+}
+
+:focus-visible {
+	outline: 2px solid #f2cd7c;
+	outline-offset: 3px;
+}
+
 html,
 body {
 	margin: 0;
@@ -53,6 +65,14 @@ body {
 	height: min(56.25vw, 100vh);
 	transform: translate(-50%, -50%);
 	pointer-events: none;
+}
+
+@media (max-width: 850px) {
+	#app {
+		width: 100vw;
+		height: 56.25vw;
+		max-height: 100vh;
+	}
 }
 
 .hidden {

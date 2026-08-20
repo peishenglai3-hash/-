@@ -31,6 +31,7 @@ import {
 } from "@/scenes/Scene03/ch01Sc01.content";
 import { FLAGS as CH01_SC01_FLAGS } from "@/scenes/Scene03/ch01Sc01.flags";
 import { useGameStateStore } from "@/stores/modules/gameState";
+import { useHudStore } from "@/stores/modules/hud";
 import { applyFormalChoice, getChapter3Access, PROFILE_AXES } from "@/common/actionProfileSystem";
 import { assetPath } from "@/common/paths";
 import {
@@ -49,6 +50,18 @@ import {
 } from "@/common/ui";
 import { useGameSaveStore, SCENE_KEY } from "@/stores";
 import { ambience } from "@/common/ambience";
+
+const CHAPTER3_FAILURE_FLAGS = new Set([
+	"CH03_RISK_PRECHECK_FAILURE",
+	"CH03_ACTION_REPLACEMENT",
+	"CH03_GATE_ATTACK_REPLACEMENT",
+	"CH03_AFTER_BATTLE_REPLACEMENT",
+	"CH03_CLEARING_REPLACEMENT",
+]);
+
+function isChapter3FailureSave(save: RunSave): boolean {
+	return save.sceneId === "CH03_COMPOUND" && save.tags.some((tag) => CHAPTER3_FAILURE_FLAGS.has(tag));
+}
 
 function createGame(parent: HTMLElement): Phaser.Game {
 	return new Phaser.Game({
@@ -109,8 +122,10 @@ export const useDirectorStore = defineStore("director", () => {
 			// 第三章本场只触发既有固定回退点，不在地图层复制一套存档逻辑。
 			rollbackToCheckpoint();
 		});
-		(window as any).gameDirector = {
+		if (import.meta.env.DEV) (window as any).gameDirector = {
 			game: g,
+			bgm,
+			finishPrologue,
 			enterScene,
 			enterChapter2: startChapter2Opening,
 			enterChapter2Map: openChapter2Map,
@@ -123,6 +138,7 @@ export const useDirectorStore = defineStore("director", () => {
 			enterChapter3Map: openChapter3Map,
 			enterChapter3Combat: startChapter3Combat,
 			enterChapter3HistoricalNode: startChapter3HistoricalNode,
+			replayChapter,
 			getChapter3Access: readChapter3Access,
 		};
 		const query = new URLSearchParams(window.location.search);
@@ -226,8 +242,8 @@ export const useDirectorStore = defineStore("director", () => {
 		}) as EventListener);
 
 		// 测试/调试钩子：失败回退链路
-		(window as any).rollbackToCheckpoint = () =>
-			rollbackToCheckpoint();
+		if (import.meta.env.DEV)
+			(window as any).rollbackToCheckpoint = () => rollbackToCheckpoint();
 	}
 
 	/* ===== 闪回流程路由 ===== */
@@ -303,6 +319,8 @@ export const useDirectorStore = defineStore("director", () => {
 	}
 
 	function clearStoryUi(): void {
+		useHudStore().paused = false;
+		gameState.state.paused = false;
 		hideIntro();
 		hideEndPanel();
 		hideTask();
@@ -647,7 +665,52 @@ export const useDirectorStore = defineStore("director", () => {
 
 	/* ===== 存档 & 场景切换 ===== */
 
+	function replayChapter(chapter: 1 | 2 | 3): void {
+		const g = game.value;
+		if (!g) return;
+		gameSave.prepareChapterReplay(chapter);
+		if (chapter === 2) {
+			startChapter2Opening();
+			return;
+		}
+		if (chapter === 3) {
+			startChapter3Opening();
+			return;
+		}
+
+		clearStoryUi();
+		stopManagedAudio();
+		(window as any).hideTitleCard?.();
+		for (const sceneKey of [
+			"TitleScene",
+			"Scene01",
+			"PrologueScene02",
+			"Ch01Sc01Scene",
+			"Ch01Sc02Scene",
+			"Ch01Sc03Scene",
+			"Ch02TransitionScene",
+			"Ch02AncestralHallScene",
+			"Ch02FlashbackScene",
+			"Ch02DepartureScene",
+			"Ch03OpeningScene",
+			"Ch03Flashback3Scene",
+			"Ch03TuCompoundScene",
+			"Ch03GateBreachCombatScene",
+			"Ch03HistoricalNodeScene",
+			"Ch03ChapterEndScene",
+		]) g.scene.stop(sceneKey);
+		gameSave.autosave("CH01_SC01");
+		g.scene.start("Ch01Sc01Scene");
+	}
+
 	function startFromSave(save: RunSave): void {
+		if (isChapter3FailureSave(save)) {
+			// 失败自动存档只作为崩溃/刷新保护；重新加载时仍必须回到固定点，
+			// 不能停留在第三章失败任务上绕过回退规则。
+			gameSave.applyToState(save);
+			game.value!.scene.stop("TitleScene");
+			if (rollbackToCheckpoint()) return;
+		}
 		gameSave.applyToState(save);
 		game.value!.scene.stop("TitleScene");
 		if (save.sceneId === "CH02_TRANSITION") return startChapter2Opening();
@@ -673,7 +736,7 @@ export const useDirectorStore = defineStore("director", () => {
 	function readChapter3Access() {
 		const access = getChapter3Access(gameState.state.risk);
 		gameState.state.chapter3Access = access;
-		(window as any).chapter3Access = access;
+		if (import.meta.env.DEV) (window as any).chapter3Access = access;
 		return access;
 	}
 
@@ -712,8 +775,11 @@ export const useDirectorStore = defineStore("director", () => {
 	function rollbackToCheckpoint(): boolean {
 		const save = gameSave.loadFixed();
 		if (!save) return false;
+		const retainedProfile = { ...gameState.state.profile };
 		stopPrologueBgm();
 		gameSave.applyToState(save);
+		for (const axis of PROFILE_AXES)
+			gameState.state.profile[axis] = retainedProfile[axis] ?? 0;
 		game.value!.scene.stop("Scene01");
 		game.value!.scene.stop("PrologueScene02");
 		game.value!.scene.stop("Ch01Sc01Scene");
@@ -722,6 +788,7 @@ export const useDirectorStore = defineStore("director", () => {
 		game.value!.scene.stop("Ch03GateBreachCombatScene");
 		game.value!.scene.stop("Ch03HistoricalNodeScene");
 		game.value!.scene.stop("Ch03ChapterEndScene");
+		gameSave.autosave("CH01_SC01");
 		game.value!.scene.start("Ch01Sc01Scene");
 		return true;
 	}
@@ -789,6 +856,7 @@ export const useDirectorStore = defineStore("director", () => {
 		bgm,
 		init,
 		startFromSave,
+		replayChapter,
 		enterScene,
 		startChapter2Opening,
 		startChapter3Opening,
