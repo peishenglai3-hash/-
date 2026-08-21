@@ -33,6 +33,8 @@ import {
 	EXIT_NARRATIVE,
 } from "./ch01Sc02.content";
 import { applyFormalChoice } from "@/common/actionProfileSystem";
+import { useGameSaveStore } from "@/stores/modules/gameSave";
+import { addManagedBgm } from "@/common/audioBus";
 import type { NarrativeEntry } from "@/types/common";
 import { FLAGS2 } from "./ch01Sc02.flags";
 // @ts-ignore Shared developer tools support both grid and pixel-coordinate scenes.
@@ -170,7 +172,7 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 		onAction(this, "PAUSE", () => togglePause());
 		(window as any).ch01Sc02Game = this;
 
-		this.bgm = this.sound.add("ch01_sc02_bgm", { loop: true, volume: 0.35 });
+		this.bgm = addManagedBgm(this, "ch01_sc02_bgm", 0.35);
 		this.bgm.play();
 
 		// 开场：到场叙述 + 渔民对话连播（玩家锁定在书桌旁）
@@ -518,6 +520,7 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 			echoSummary: choice.label,
 			failureCheck: false,
 		});
+		useGameSaveStore().autosave("CH01_SC02");
 		hideChoices();
 		this.state.mode = "narrative";
 		const thoughts: NarrativeEntry[] = choice.thoughts.map((text, index) => ({

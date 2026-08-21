@@ -1,0 +1,72 @@
+{
+  "asset_id": "MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_CLOSE",
+  "map_id": "MAP_CH4_WANGYE_TEMPLE",
+  "shot_id": "SHOT_CLOSE",
+  "shot_summary_zh": "近景：聚焦敞开戏台、两侧对联、宣告位置、台阶与侧方武器交接区。",
+  "state": "SCENE_01_EARLY_MORNING",
+  "time": "1927-09-11 清晨，日出后不久",
+  "canvas": {
+    "width": 1664,
+    "height": 936
+  },
+  "tile_size": {
+    "width": 48,
+    "height": 48
+  },
+  "grid_origin": {
+    "x": 16,
+    "y": 12
+  },
+  "camera": "orthographic_front_facing_top_down; axes parallel to canvas",
+  "source_crop_wide": [
+    354,
+    58,
+    1314,
+    598
+  ],
+  "render_order": [
+    "L01_GROUND",
+    "L02_GROUND_DETAIL",
+    "L03_STRUCTURE_LOW",
+    "L04_PROP_INTERACT",
+    "L05_COLLISION_TRIGGER",
+    "L06_OCCLUSION_HIGH",
+    "L07_LIGHT_FX"
+  ],
+  "files": {
+    "layers": {
+      "L01_GROUND": "MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_CLOSE_L01_GROUND.png",
+      "L02_GROUND_DETAIL": "MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_CLOSE_L02_GROUND_DETAIL.png",
+      "L03_STRUCTURE_LOW": "MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_CLOSE_L03_STRUCTURE_LOW.png",
+      "L04_PROP_INTERACT": "MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_CLOSE_L04_PROP_INTERACT.png",
+      "L05_COLLISION_TRIGGER": "MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_CLOSE_L05_COLLISION_TRIGGER.png",
+      "L06_OCCLUSION_HIGH": "MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_CLOSE_L06_OCCLUSION_HIGH.png",
+      "L07_LIGHT_FX": "MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_CLOSE_L07_LIGHT_FX.png"
+    },
+    "collision_trigger": "MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_CLOSE_L05_COLLISION_TRIGGER.json",
+    "prop_placement": "MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_CLOSE_L04_PROP_PLACEMENT.json",
+    "tiled_map": "MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_CLOSE.tmj",
+    "preview_composite": "MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_CLOSE_PREVIEW_COMPOSITE.png",
+    "preview_editor": "MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_CLOSE_PREVIEW_EDITOR.png",
+    "qa_contact": "MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_CLOSE_QA_LAYER_CONTACT.png"
+  },
+  "runtime": {
+    "fixed_performance": true,
+    "free_movement": false,
+    "characters_baked": false,
+    "crowd_and_wounded_spawn_from_L05": true
+  },
+  "prop_policy": {
+    "couplets_and_association_mark_reused_from_chapter4_zip": true,
+    "text_regenerated_by_model": false,
+    "building_base_contains_text": false
+  },
+  "version": "v01",
+  "generated_date": "20260821",
+  "color_grade": {
+    "id": "EARLY_MORNING_DAYLIGHT_v01",
+    "method": "deterministic RGB luminance curve; alpha and geometry preserved",
+    "reference": "MAP_CH4_WANGYE_TEMPLE_SHOT_WIDE_EARLY_MORNING_COLOR_REFERENCE_v01.png",
+    "regenerated_geometry": false
+  }
+}

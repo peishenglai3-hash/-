@@ -53,6 +53,10 @@ try {
 	const shot = await page.evaluate(() => {
 		const game = window.ch03GateBreachCombatGame;
 		const target = game.enemies[0];
+		// 董云庭是实时协同单位，可能在断言前已命中同一目标；
+		// 射击 smoke 先固定目标初始状态，避免把协同行为竞态误报成玩家武器故障。
+		target.state = "active";
+		target.hp = target.maxHp;
 		target.sprite.x = game.player.x + 120;
 		target.sprite.y = game.player.y;
 		const before = target.hp;

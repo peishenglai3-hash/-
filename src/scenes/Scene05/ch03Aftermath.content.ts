@@ -4,6 +4,7 @@ import type {
 	FormalChoiceDefinition,
 	ProfileDelta,
 	RiskDelta,
+	RiskFailure,
 } from "@/common/actionProfileSystem";
 
 export type ClearingChoiceId = "A" | "B" | "C" | "D";
@@ -28,6 +29,7 @@ export const CH03_CLEARING_FLAGS = {
 	choiceD: "CH03_CLEARING_D",
 	choiceComplete: "CH03_CLEARING_CHOICE_COMPLETE",
 	complete: "CH03_CLEARING_COMPLETE",
+	replacement: "CH03_CLEARING_REPLACEMENT",
 } as const;
 
 export const CH03_MOONCAKE_FLAGS = {
@@ -126,6 +128,13 @@ export const CH03_AFTERMATH_COMPLETE_TASK = {
 	detail: "缴获物资、人员清查和月饼的处理已经记录。后续行动将读取本次清点与物件状态。",
 };
 
+export function buildChapter3ClearingFailureTask(_failure: RiskFailure) {
+	return {
+		title: "行动后撤回",
+		detail: "当前安排已经收紧。你不会继续进入行动核心，接下来会返回“陈继南家中醒来”节点。",
+	};
+}
+
 export const CH03_CHAPTER_END_TASK = {
 	title: "行动结束：三路结果汇合",
 	detail: "街面声势已经停下，后院守住了出口，前门内正在集中人员、武器和物资。前往组长处，听完三路结果汇合的收束。",
@@ -218,7 +227,7 @@ export function buildChapter3ClearingFormalChoice(
 		flag: flagForClearing(choice),
 		tags: choice === "D" && propertySuspicion ? ["PROPERTY_SUSPICION"] : [],
 		echoSummary: CLEARING_LABELS[choice],
-		failureCheck: false,
+		failureCheck: true,
 	};
 }
 

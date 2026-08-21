@@ -1,18 +1,96 @@
 <script setup lang="ts">
+import { nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { useHudStore } from "@/stores/modules/hud";
 const hud = useHudStore();
+
+const buttons = ref<HTMLButtonElement[]>([]);
+const activeIndex = ref(0);
+
+function setButton(button: HTMLButtonElement | null, index: number) {
+	if (button) buttons.value[index] = button;
+}
+
+function usableIndices() {
+	return (hud.choicePanel?.items ?? [])
+		.map((item, index) => (item.disabled ? -1 : index))
+		.filter((index) => index >= 0);
+}
+
+async function focusChoice(index = 0) {
+	await nextTick();
+	const available = usableIndices();
+	if (!available.length) return;
+	const position = available.includes(index) ? index : available[0];
+	activeIndex.value = position;
+	buttons.value[position]?.focus();
+}
 
 function onChoose(id: string) {
 	hud.choicePanel?.onChoose(id);
 }
+
+function onKeyDown(event: KeyboardEvent) {
+	const panel = hud.choicePanel;
+	if (!panel) return;
+	const available = usableIndices();
+	if (!available.length) return;
+
+	const letterIndex = ["a", "b", "c", "d"].indexOf(event.key.toLowerCase());
+	if (letterIndex >= 0 && available.includes(letterIndex)) {
+		event.preventDefault();
+		event.stopPropagation();
+		onChoose(panel.items[letterIndex].id);
+		return;
+	}
+
+	if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+		event.preventDefault();
+		event.stopPropagation();
+		const current = Math.max(0, available.indexOf(activeIndex.value));
+		focusChoice(available[(current + 1) % available.length]);
+		return;
+	}
+	if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
+		event.preventDefault();
+		event.stopPropagation();
+		const current = Math.max(0, available.indexOf(activeIndex.value));
+		focusChoice(available[(current - 1 + available.length) % available.length]);
+		return;
+	}
+	if (event.key === "Enter" || event.key === " ") {
+		event.preventDefault();
+		event.stopPropagation();
+		const item = panel.items[activeIndex.value];
+		if (item && !item.disabled) onChoose(item.id);
+	}
+}
+
+watch(
+	() => hud.choicePanel,
+	(panel) => {
+		if (panel) focusChoice(0);
+	},
+	{ flush: "post" },
+);
+
+onMounted(() => window.addEventListener("keydown", onKeyDown, true));
+onUnmounted(() => window.removeEventListener("keydown", onKeyDown, true));
 </script>
 
 <template>
-	<div v-if="hud.choicePanel" class="choice-panel">
-		<div class="choice-title">{{ hud.choicePanel.title }}</div>
+	<div
+		v-if="hud.choicePanel"
+		class="choice-panel"
+		role="dialog"
+		aria-modal="true"
+		aria-labelledby="choice-panel-title"
+	>
+		<div id="choice-panel-title" class="choice-title">{{ hud.choicePanel.title }}</div>
 		<button
 			v-for="choice in hud.choicePanel.items"
 			:key="choice.id"
+			:ref="(button) => setButton(button as HTMLButtonElement | null, hud.choicePanel?.items.indexOf(choice) ?? 0)"
+			type="button"
 			class="choice"
 			:class="{ 'choice--disabled': choice.disabled }"
 			:disabled="choice.disabled"
@@ -21,7 +99,6 @@ function onChoose(id: string) {
 			<b>[{{ choice.id.slice(-1) }}]</b>
 			<span>
 				<strong>{{ choice.label }}</strong>
-				<small>{{ choice.detail }}</small>
 			</span>
 		</button>
 	</div>
@@ -40,6 +117,8 @@ function onChoose(id: string) {
 	border: 2px solid #c49a5e;
 	box-shadow: 0 10px 40px #000d;
 	z-index: 24;
+	max-height: min(78vh, 560px);
+	overflow: auto;
 }
 
 .choice-title {
@@ -68,6 +147,12 @@ function onChoose(id: string) {
 	border-color: #d3ad64;
 }
 
+.choice:focus-visible {
+	outline: 2px solid #f4d17e;
+	outline-offset: 2px;
+	background: #58452b;
+}
+
 .choice:disabled {
 	opacity: 0.48;
 	cursor: not-allowed;
@@ -83,13 +168,7 @@ function onChoose(id: string) {
 	font-size: 1.25rem;
 }
 
-.choice strong,
-.choice small {
+.choice strong {
 	display: block;
-}
-
-.choice small {
-	margin-top: 0.25rem;
-	color: #d8c9a8;
 }
 </style>

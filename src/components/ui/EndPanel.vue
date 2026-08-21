@@ -14,6 +14,10 @@ const onClose = () => {
 		director.startChapter3Opening();
 		return;
 	}
+	if (hud.endPanel?.next === "chapter4") {
+		director.startChapter4Opening();
+		return;
+	}
 	if (hud.endPanel?.next === "title") {
 		director.goToTitle();
 		return;
@@ -22,7 +26,11 @@ const onClose = () => {
 };
 
 function onKeyDown(e: KeyboardEvent) {
-	if (hud.endPanel) onClose();
+	if (!hud.endPanel) return;
+	if (!["Enter", " ", "Escape"].includes(e.key)) return;
+	e.preventDefault();
+	e.stopPropagation();
+	onClose();
 }
 
 onMounted(() => {
@@ -39,9 +47,7 @@ onUnmounted(() => {
 		<div class="end-card">
 			<strong>{{ hud.endPanel.title }}</strong>
 			<span>{{ hud.endPanel.checkpoint }}</span>
-			<span>{{ hud.endPanel.profile }}</span>
-			<span>{{ hud.endPanel.tags }}</span>
-			<span>{{ hud.endPanel.risk }}</span>
+			<span>{{ hud.endPanel.summary }}</span>
 			<small>{{ hud.endPanel.hint }}</small>
 			<button class="enter-chapter" @click="onClose">{{ hud.endPanel.buttonLabel }}</button>
 		</div>

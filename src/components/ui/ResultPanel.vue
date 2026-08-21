@@ -7,8 +7,8 @@ const hud = useHudStore();
 	<div v-if="hud.resultPanelVisible && hud.resultPanel" class="result-panel">
 		<img :src="hud.resultPanel.image" :alt="''" />
 		<div class="result-copy">
-			<span>…{{ hud.resultPanel.result[0] }}</span>
-			<span>{{ hud.resultPanel.result[1] }}</span>
+			<span>{{ hud.resultPanel.pages ? hud.resultPanel.result[0] : `…${hud.resultPanel.result[0]}` }}</span>
+			<span v-if="hud.resultPanel.result[1]">{{ hud.resultPanel.result[1] }}</span>
 			<small>{{ hud.resultPanel.hint || "Space 继续" }}</small>
 		</div>
 	</div>

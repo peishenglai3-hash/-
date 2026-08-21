@@ -132,10 +132,10 @@ const after = await page.evaluate(() => ({
 if (!rolled) fail('rollbackToCheckpoint 返回 false');
 if (after.polluted) fail('回退后仍含 CH01 污染旗标');
 if (after.risk !== 0) fail('回退后风险未归0');
-if (after.D !== 1) fail('回退后画像未恢复存档态');
+if (after.D !== 9) fail('回退后画像没有按守则保留失败前累计值');
 if (!after.prologueKept) fail('回退后序章标签丢失');
 if (!after.ch01Running) fail('回退后第一章未重启');
-ok('10 失败回退链路合规（不重玩序章/画像恢复/风险归0）');
+ok('10 失败回退链路合规（不重玩序章/保留画像/风险归0）');
 
 // 刷新 → 标题 → 读档直达第一章
 await page.goto('http://127.0.0.1:' + PORT + '/');

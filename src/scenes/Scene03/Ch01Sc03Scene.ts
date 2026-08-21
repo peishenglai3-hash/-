@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { createKeyMap, isActionDown, onAction } from "@/common/actions";
 import { useGameStateStore } from "@/stores/modules/gameState";
+import { addManagedBgm } from "@/common/audioBus";
 import {
 	showTask,
 	hideTask,
@@ -148,7 +149,7 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 		onAction(this, "PAUSE", () => togglePause());
 		(window as any).ch01Sc03Game = this;
 
-		this.bgm = this.sound.add("ch01_sc03_bgm", { loop: true, volume: 0.35 });
+	this.bgm = addManagedBgm(this, "ch01_sc03_bgm", 0.35);
 		this.bgm.play();
 
 		// 开场：任务卡 → 自由探索（走近联络人按 E 触发剧情）

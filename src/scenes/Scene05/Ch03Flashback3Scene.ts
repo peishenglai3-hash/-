@@ -166,6 +166,7 @@ export class Ch03Flashback3Scene extends Phaser.Scene {
 		const definition = buildChapter3Flashback3FormalChoice(id);
 		if (!definition) return;
 		applyFormalChoice(this.state, definition);
+		useGameSaveStore().autosave("CH03_FLASHBACK3");
 		hideChoices();
 		this.phase = "choice-thoughts";
 		this.state.mode = "narrative";
