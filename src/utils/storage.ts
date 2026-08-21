@@ -15,6 +15,7 @@ import {
     KEY_FIXED_BACKUP,
     KEY_MANUAL_PREFIX,
     KEY_MANUAL_BACKUP_PREFIX,
+    KEY_REPLAY_ENTRY_PREFIX,
     type ManualSaveSlot,
 } from '@/constants/storage';
 import type { GameSettings, RunSave } from '@/types/common';
@@ -99,4 +100,17 @@ export function setRedcodeManualSave(slot: ManualSaveSlot, save: RunSave): boole
         `${KEY_MANUAL_BACKUP_PREFIX}${slot}`,
         save,
     );
+}
+
+export function getRedcodeReplayEntry(chapter: 1 | 2 | 3 | 4): RunSave | undefined {
+    return readJson<RunSave>(`${KEY_REPLAY_ENTRY_PREFIX}${chapter}`);
+}
+
+export function setRedcodeReplayEntry(chapter: 1 | 2 | 3 | 4, save: RunSave): boolean {
+    try {
+        window.localStorage.setItem(`${KEY_REPLAY_ENTRY_PREFIX}${chapter}`, JSON.stringify(save));
+        return true;
+    } catch {
+        return false;
+    }
 }

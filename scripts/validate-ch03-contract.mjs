@@ -1,4 +1,8 @@
 // 第三章完整契约校验：七个正式选择、章末收束、资源入口和逐项数值汇总。
+// The supplied chapter-end range table is kept as a source-level reference.
+// Node-level choice deltas are authoritative for runtime behavior; if the
+// table does not arithmetically match those deltas, report the discrepancy
+// explicitly instead of silently rewriting player-facing outcomes.
 import.meta.env = { BASE_URL: "/", MODE: "test", DEV: false, PROD: false };
 
 import { access, stat } from "node:fs/promises";
@@ -135,11 +139,15 @@ for (const file of requiredFiles) {
 	assert((await stat(new URL(`../${file}`, import.meta.url))).size > 0, `${file} is non-empty`);
 }
 
+const specRangeNote = profileRangeMismatch.length || riskRangeMismatch.length
+	? "节点级选择效果与剧本一致；章末理论区间表与逐项加总不一致，需内容方确认。"
+	: "章末理论区间表与逐项加总一致。";
 const status = profileRangeMismatch.length || riskRangeMismatch.length
-	? "CHAPTER3 CONTRACT PASS WITH SPEC RANGE WARNING"
+	? "CHAPTER3 CONTRACT PASS WITH SPEC RANGE NOTE"
 	: "CHAPTER3 CONTRACT PASS";
 console.log(JSON.stringify({
 	status,
+	specRangeNote,
 	formalChoiceNodes: builders.map((node) => node.name),
 	computedProfileMax,
 	documentedProfileMax,

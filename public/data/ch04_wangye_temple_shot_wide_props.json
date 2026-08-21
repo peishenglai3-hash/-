@@ -1,0 +1,174 @@
+{
+  "map_id": "MAP_CH4_WANGYE_TEMPLE",
+  "shot_id": "SHOT_WIDE",
+  "props": [
+    {
+      "prop_id": "PROP0010_LEFT_COUPLET",
+      "source_file": "PROP0010_LeftCouplet_v01.png",
+      "source_sha256": "d1d2da6c6713fb6a9b7e50352f447c55a035aeaae03830814b9925db65fc6b58",
+      "authored_asset_reused": true,
+      "scene_transform": "scale + deterministic early-morning color grade + placement; no redraw and no text regeneration",
+      "source_box_wide": [
+        648,
+        218,
+        30,
+        121
+      ],
+      "rendered_alpha_bbox_wide": [
+        652,
+        218,
+        674,
+        339
+      ],
+      "role_zh": "左联；严格限定在观众视角左侧浅色前柱柱面内。",
+      "allowed_column_bounds_wide": [
+        644,
+        210,
+        40,
+        140
+      ],
+      "instance_file": "Props/MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_WIDE_PROP0010_LEFT_COUPLET_INSTANCE.png",
+      "rendered_alpha_bbox_shot": [
+        652,
+        218,
+        674,
+        339
+      ],
+      "allowed_column_bounds_shot": [
+        644,
+        210,
+        40,
+        140
+      ],
+      "within_column_bounds": true
+    },
+    {
+      "prop_id": "PROP009_RIGHT_COUPLET",
+      "source_file": "PROP009_RightCouplet_v01.png",
+      "source_sha256": "3af2f6bcfba77e9bda13ea6ff012daf3bcbbccd8ac54ab09f80eda2ca4142392",
+      "authored_asset_reused": true,
+      "scene_transform": "scale + deterministic early-morning color grade + placement; no redraw and no text regeneration",
+      "source_box_wide": [
+        978,
+        218,
+        30,
+        121
+      ],
+      "rendered_alpha_bbox_wide": [
+        982,
+        218,
+        1004,
+        339
+      ],
+      "role_zh": "右联；严格限定在观众视角右侧浅色前柱柱面内。",
+      "allowed_column_bounds_wide": [
+        974,
+        210,
+        40,
+        140
+      ],
+      "instance_file": "Props/MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_WIDE_PROP009_RIGHT_COUPLET_INSTANCE.png",
+      "rendered_alpha_bbox_shot": [
+        982,
+        218,
+        1004,
+        339
+      ],
+      "allowed_column_bounds_shot": [
+        974,
+        210,
+        40,
+        140
+      ],
+      "within_column_bounds": true
+    },
+    {
+      "prop_id": "PROP010_PEASANT_ASSOCIATION_MAIN_FLAG",
+      "source_file": "PROP010_PeasantAssociation_MainFlag_v01.png",
+      "source_sha256": "148c299cf8cceea0167fbf53ee60ae4da1bc8248726b8fb603da2db7bb4001e8",
+      "authored_asset_reused": true,
+      "scene_transform": "scale + deterministic early-morning color grade + placement; no redraw and no text regeneration",
+      "source_box_wide": [
+        1160,
+        290,
+        70,
+        94
+      ],
+      "rendered_alpha_bbox_wide": [
+        1160,
+        290,
+        1231,
+        387
+      ],
+      "role_zh": "戏台右侧农会标识；不烘焙进建筑结构层。",
+      "instance_file": "Props/MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_WIDE_PROP010_PEASANT_ASSOCIATION_MAIN_FLAG_INSTANCE.png",
+      "rendered_alpha_bbox_shot": [
+        1160,
+        290,
+        1231,
+        387
+      ]
+    },
+    {
+      "prop_id": "PROP004_CAPTURED_WEAPON_PILE",
+      "source_file": "PROP004_SpearStack_Icon_v1.png",
+      "source_sha256": "d25485086c7f98bff004fb8987606e454a2c37b1ac97a355d4dcc47964e55199",
+      "authored_asset_reused": true,
+      "scene_transform": "scale + deterministic early-morning color grade + placement; no redraw and no text regeneration",
+      "source_box_wide": [
+        1125,
+        404,
+        170,
+        142
+      ],
+      "rendered_alpha_bbox_wide": [
+        1130,
+        404,
+        1292,
+        549
+      ],
+      "role_zh": "戏台右侧缴获枪械、刀矛集中堆。",
+      "instance_file": "Props/MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_WIDE_PROP004_CAPTURED_WEAPON_PILE_INSTANCE.png",
+      "rendered_alpha_bbox_shot": [
+        1130,
+        404,
+        1292,
+        549
+      ]
+    },
+    {
+      "prop_id": "PROP002_SINGLE_GRAIN_BAG",
+      "source_file": "PROP002_SingleGrainBag_Icon_v1.png",
+      "source_sha256": "8a63452287d002c8f2aef77588330d0585b19d10c4b3fadf9a0e6d550964011e",
+      "authored_asset_reused": true,
+      "scene_transform": "scale + deterministic early-morning color grade + placement; no redraw and no text regeneration",
+      "source_box_wide": [
+        1278,
+        355,
+        54,
+        58
+      ],
+      "rendered_alpha_bbox_wide": [
+        1278,
+        355,
+        1334,
+        416
+      ],
+      "role_zh": "戏台右侧缴获粮草区粮袋。",
+      "instance_file": "Props/MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_WIDE_PROP002_SINGLE_GRAIN_BAG_INSTANCE.png",
+      "rendered_alpha_bbox_shot": [
+        1278,
+        355,
+        1334,
+        416
+      ]
+    }
+  ],
+  "couplet_rule": "Couplet alpha must stay fully within the pale front-column faces; it may not touch roof, eaves, fascia, beam, or column base.",
+  "color_grade": {
+    "id": "EARLY_MORNING_DAYLIGHT_v01",
+    "method": "deterministic RGB luminance curve; alpha and geometry preserved",
+    "reference": "MAP_CH4_WANGYE_TEMPLE_SHOT_WIDE_EARLY_MORNING_COLOR_REFERENCE_v01.png",
+    "regenerated_geometry": false
+  }
+}

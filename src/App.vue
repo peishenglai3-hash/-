@@ -26,6 +26,7 @@ import SceneFade from "@/components/ui/SceneFade.vue";
 import PausePanel from "@/components/ui/PausePanel.vue";
 import FlavorToast from "@/components/ui/FlavorToast.vue";
 import EndPanel from "@/components/ui/EndPanel.vue";
+import PortraitResultPanel from "@/components/ui/PortraitResultPanel.vue";
 import ChapterTitleCard from "@/components/ui/ChapterTitleCard.vue";
 import CombatHud from "@/components/ui/CombatHud.vue";
 import { useGameStateStore } from "@/stores/modules/gameState";
@@ -85,6 +86,7 @@ function onDone() {
 	<PausePanel />
 	<FlavorToast />
 	<EndPanel />
+	<PortraitResultPanel />
 	<ChapterTitleCard />
 	<CombatHud />
 </template>

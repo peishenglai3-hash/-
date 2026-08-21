@@ -73,6 +73,7 @@ import {
 } from "./ch02Materials.content";
 import { applyFormalChoice } from "@/common/actionProfileSystem";
 import { useGameSaveStore } from "@/stores/modules/gameSave";
+import { addManagedBgm } from "@/common/audioBus";
 
 const WORLD_W = 1664;
 const WORLD_H = 936;
@@ -317,8 +318,8 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 			this.state.mode = "explore";
 			this.state.playerLocked = false;
 			showTask({
-				title: "第二章地图适配预览",
-				detail: `${this.variant} · WASD/方向键移动，E 关闭本卡或命中地图交互区；剧情内容尚未接入。`,
+				title: "第二章·陈家祠堂场景预览",
+				detail: `${this.variant} · WASD/方向键移动，E 关闭本提示。正式剧情请从第二章入口进入。`,
 			});
 		}
 	}
@@ -745,7 +746,7 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 
 	playChapter2Bgm(key: string) {
 		this.stopChapter2Bgm();
-		this.chapter2Bgm = this.sound.add(key, { loop: true, volume: 0.55 });
+		this.chapter2Bgm = addManagedBgm(this, key, 0.55);
 		this.chapter2Bgm.play();
 	}
 
@@ -998,7 +999,7 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 	}
 
 	updatePrompt() {
-		if (this.state.mode !== "explore") {
+		if (this.state.mode !== "explore" || this.entry === "preview") {
 			hidePrompt();
 			return;
 		}
@@ -1019,6 +1020,10 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 
 	handleConfirm() {
 		if (taskNeedsConfirmation()) return closeTask();
+		if (this.entry === "preview") {
+			hideTask();
+			return;
+		}
 		if (this.entry === "arrival") {
 			const target = this.nearby();
 			if (target?.id === "TRG_HALL_OBSERVE") this.beginDeploymentTransition();
@@ -1053,12 +1058,9 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 				this.beginMaterialsBriefing();
 			return;
 		}
-		const target = this.nearby();
-		if (!target) return;
-		showTask({
-			title: `地图对象：${target.id}`,
-			detail: `${target.type ?? "interaction"} 区域已命中。这里保留为第二章剧情接入点，当前不写入正式剧情。`,
-		});
+		// All supported story entries are handled above. A preview map must not
+		// expose unfinished interaction copy or imply that placeholder objects
+		// are part of the playable chapter flow.
 	}
 
 	beginDeploymentTransition() {

@@ -65,7 +65,8 @@ function endIntro() {
 .intro-panel video {
 	width: min(100vw, 177.7778vh);
 	height: min(56.25vw, 100vh);
-	object-fit: cover;
+	object-fit: contain;
+	background: #000;
 	opacity: 0.9;
 }
 

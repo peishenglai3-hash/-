@@ -21,7 +21,15 @@ export type SceneId =
 	| "CH03_OPENING"
 	| "CH03_FLASHBACK3"
 	| "CH03_COMPOUND"
-	| "CH03_END";
+	| "CH03_END"
+	| "CH04_OPENING"
+	| "CH04_WANGYE_TEMPLE"
+	| "CH04_CONSCIOUSNESS"
+	| "CH04_MODERN_RETURN"
+	| "CH04_FINAL_CHOICE"
+	| "CH04_ANSWER_WRITTEN"
+	| "CH04_SCENE5_VIDEO"
+	| "CH04_PORTRAIT_RESULT";
 
 export interface RunSave {
 	version: number;

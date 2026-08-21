@@ -37,6 +37,9 @@ const {
 	CH02_DEPARTURE_EPILOGUE,
 	CH02_DEPARTURE_VIDEO_SCRIPT,
 } = await import("../src/scenes/Scene04/ch02Departure.content.ts");
+const { CH04_WANGYE_TEMPLE_SCENE1 } = await import(
+	"../src/scenes/Scene06/ch04Scene1.content.ts",
+);
 const fs = await import("node:fs/promises");
 const flavorZones = JSON.parse(await fs.readFile(
 	new URL("../public/data/PRO02_interactions.json", import.meta.url),
@@ -99,6 +102,11 @@ assert(CH02_DEPARTURE_VIDEO_SCRIPT.length === 8, "chapter 2 departure video scri
 assert(CH02_DEPARTURE_EPILOGUE.length === 2, "chapter 2 departure epilogue lock");
 assert(CH02_DEPARTURE_EPILOGUE[0].text.includes("杜家大院外围"), "chapter 2 departure location subtitle lock");
 assert(CH02_DEPARTURE_EPILOGUE[1].text.includes("正在靠近下一处地点"), "chapter 2 departure approach narration lock");
+assert(CH04_WANGYE_TEMPLE_SCENE1.length === 25, "chapter 4 scene 1 narrative lock");
+assert(CH04_WANGYE_TEMPLE_SCENE1[4].text === "1927年9月11日\n戴家场王爷庙戏台", "chapter 4 date/location lock");
+assert(CH04_WANGYE_TEMPLE_SCENE1.some((entry) => entry.text.includes("杜家团防已经被打垮")), "chapter 4 stage defeat line lock");
+assert(CH04_WANGYE_TEMPLE_SCENE1.some((entry) => entry.text.includes("涂济洲")), "chapter 4 Tu Jizhou name lock");
+assert(CH04_WANGYE_TEMPLE_SCENE1.some((entry) => entry.text.includes("彭国材")), "chapter 4 Peng Guocai name lock");
 
 const styles = new Set(["narration", "thought", "dialogue", "cue", "date"]);
 const lists = [
@@ -118,6 +126,7 @@ const lists = [
 	CH02_MATERIALS_NARRATIVE,
 	...CH02_MATERIALS_CHOICES.map((choice) => choice.feedback),
 	CH02_DEPARTURE_EPILOGUE,
+	CH04_WANGYE_TEMPLE_SCENE1,
 ];
 for (const list of lists) {
 	for (const entry of list) {

@@ -3,6 +3,7 @@ import { defineStore } from "pinia";
 import { useGameStateStore } from "@/stores/modules/gameState";
 import { useGameSaveStore } from "@/stores";
 import { defaultAvatarForSpeaker } from "@/common/avatarCatalog";
+import type { PortraitResult } from "@/common/actionProfileSystem";
 
 // ===== 类型定义 =====
 
@@ -59,15 +60,33 @@ export interface ResultPanelData {
   image: string;
   result: [string, string];
   hint?: string;
+  /**
+   * Optional page sequence for a result that needs to reveal several authored
+   * images and text blocks. Existing one-page result panels remain unchanged.
+   */
+  pages?: ResultPanelPage[];
+  pageIndex?: number;
+  onComplete?: () => void;
+}
+
+export interface ResultPanelPage {
+  image: string;
+  result: [string, string];
 }
 
 export interface EndPanel {
   title: string;
   hint: string;
   buttonLabel: string;
-  next: "title" | "chapter2" | "chapter3" | null;
+  next: "title" | "chapter2" | "chapter3" | "chapter4" | null;
   checkpoint: string;
   summary: string;
+}
+
+export interface PortraitPanelData {
+  portrait: PortraitResult;
+  posterSrc: string;
+  coreTendency: string;
 }
 
 export interface CombatHudData {
@@ -185,6 +204,9 @@ export const useHudStore = defineStore("hud", () => {
   // --- end panel ---
   const endPanel = ref<EndPanel | null>(null);
 
+  // --- final portrait result (independent from chapter-complete dialog) ---
+  const portraitPanel = ref<PortraitPanelData | null>(null);
+
   // --- transition overlay ---
   const transition = reactive({
     active: false,
@@ -243,6 +265,12 @@ export const useHudStore = defineStore("hud", () => {
       _finishNarrative();
       return;
     }
+		if (typeof window !== "undefined")
+			window.dispatchEvent(
+				new CustomEvent("honghu:narrative-entry", {
+					detail: { entryId: entry.entry_id },
+				}),
+			);
     const cps = Math.max(4, Math.round((entry.cps || 14) * gameSave.getTextSpeedMult()));
     dialogue.visible = true;
     dialogue.style = entry.style || "narration";
@@ -379,7 +407,11 @@ export const useHudStore = defineStore("hud", () => {
     onChoose: (id: string) => void,
     titleStr: string = "走访结束前，最后确认什么？",
   ) {
-    choicePanel.value = { title: titleStr, items, onChoose };
+    // 选择面板只呈现“选什么”，不泄露画像/风险的后端权重。
+    // 具体数值仍保留在 FormalChoiceDefinition 中，由统一系统结算，
+    // 这样既不改变存档和分支逻辑，也避免未来新增 ChoicePanel UI 时误把 detail 渲染给玩家。
+    const presentationItems = items.map((item) => ({ ...item, detail: "" }));
+    choicePanel.value = { title: titleStr, items: presentationItems, onChoose };
   }
 
   function hideChoices() {
@@ -395,6 +427,33 @@ export const useHudStore = defineStore("hud", () => {
   function hideResult() {
     resultPanelVisible.value = false;
     resultPanel.value = null;
+  }
+
+  /**
+   * Advance a multi-page authored result. This is intentionally separate from
+   * advanceNarrative so a choice result cannot accidentally advance a scene's
+   * dialogue queue or expose backend choice effects in the HUD.
+   */
+  function advanceResult(): boolean {
+    if (!resultPanelVisible.value || !resultPanel.value) return false;
+    const current = resultPanel.value;
+    const pages = current.pages ?? [];
+    const index = current.pageIndex ?? 0;
+    if (index + 1 < pages.length) {
+      const next = pages[index + 1];
+      resultPanel.value = {
+        ...current,
+        image: next.image,
+        result: next.result,
+        pageIndex: index + 1,
+      };
+      return true;
+    }
+
+    const onComplete = current.onComplete;
+    hideResult();
+    onComplete?.();
+    return true;
   }
 
   // --- 任务卡片（两段式：居中强制确认 → 右上角待办） ---
@@ -511,7 +570,7 @@ export const useHudStore = defineStore("hud", () => {
       title?: string;
       hint?: string;
       buttonLabel?: string;
-		next?: "title" | "chapter2" | "chapter3" | null;
+		next?: "title" | "chapter2" | "chapter3" | "chapter4" | null;
     },
   ) {
     endPanel.value = {
@@ -526,6 +585,17 @@ export const useHudStore = defineStore("hud", () => {
 
   function hideEndPanel() {
     endPanel.value = null;
+  }
+
+  function showPortraitResult(data: PortraitPanelData) {
+    portraitPanel.value = data;
+    playerLocked.value = true;
+    gameState.state.playerLocked = true;
+    gameState.state.mode = "end";
+  }
+
+  function hidePortraitResult() {
+    portraitPanel.value = null;
   }
 
   function showCombatHud(data: Partial<CombatHudData> = {}) {
@@ -561,6 +631,7 @@ export const useHudStore = defineStore("hud", () => {
     paused,
     flavorToast,
     endPanel,
+    portraitPanel,
     transition,
     combatHud,
     playerLocked,
@@ -584,6 +655,7 @@ export const useHudStore = defineStore("hud", () => {
     hideChoices,
     showResult,
     hideResult,
+    advanceResult,
     showTask,
     closeTask,
     hideTask,
@@ -601,6 +673,8 @@ export const useHudStore = defineStore("hud", () => {
     hideIntro,
     showEndPanel,
     hideEndPanel,
+    showPortraitResult,
+    hidePortraitResult,
     showCombatHud,
     updateCombatHud,
     hideCombatHud,

@@ -1,0 +1,38 @@
+{
+  "map_id": "MAP_CH4_WANGYE_TEMPLE",
+  "scene": "第四章 场景一：戴家场王爷庙戏台",
+  "state": "SCENE_01_EARLY_MORNING",
+  "time": "1927-09-11 清晨，日出后不久",
+  "packages": [
+    {
+      "asset_id": "MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_WIDE",
+      "directory": "MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_WIDE",
+      "manifest": "MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_WIDE/MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_WIDE_manifest.json",
+      "preview": "MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_WIDE/MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_WIDE_PREVIEW_COMPOSITE.png",
+      "shot": "SHOT_WIDE"
+    },
+    {
+      "asset_id": "MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_MEDIUM",
+      "directory": "MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_MEDIUM",
+      "manifest": "MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_MEDIUM/MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_MEDIUM_manifest.json",
+      "preview": "MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_MEDIUM/MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_MEDIUM_PREVIEW_COMPOSITE.png",
+      "shot": "SHOT_MEDIUM"
+    },
+    {
+      "asset_id": "MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_CLOSE",
+      "directory": "MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_CLOSE",
+      "manifest": "MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_CLOSE/MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_CLOSE_manifest.json",
+      "preview": "MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_CLOSE/MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_CLOSE_PREVIEW_COMPOSITE.png",
+      "shot": "SHOT_CLOSE"
+    }
+  ],
+  "characters_baked": false,
+  "source_props": [
+    "PROP0010_LeftCouplet_v01.png",
+    "PROP002_SingleGrainBag_Icon_v1.png",
+    "PROP004_SpearStack_Icon_v1.png",
+    "PROP009_RightCouplet_v01.png",
+    "PROP010_PeasantAssociation_MainFlag_v01.png"
+  ],
+  "derivation": "color grade from validated predawn seven-layer package; geometry unchanged"
+}

@@ -1,0 +1,271 @@
+{
+  "map_id": "MAP_CH4_WANGYE_TEMPLE",
+  "shot_id": "SHOT_CLOSE",
+  "canvas": {
+    "width": 1664,
+    "height": 936
+  },
+  "tile_size": {
+    "width": 48,
+    "height": 48
+  },
+  "grid_origin": {
+    "x": 16,
+    "y": 12
+  },
+  "fixed_performance": true,
+  "characters_baked": false,
+  "objects": [
+    {
+      "id": 1,
+      "name": "COL_STAGE_BUILDING",
+      "type": "collision",
+      "rect": [
+        64,
+        12,
+        1536,
+        672
+      ],
+      "source_rect_wide": [
+        400,
+        60,
+        864,
+        384
+      ]
+    },
+    {
+      "id": 6,
+      "name": "ZONE_STAGE_ANNOUNCEMENT",
+      "type": "zone",
+      "rect": [
+        304,
+        252,
+        1056,
+        336
+      ],
+      "runtime_group": "stage",
+      "source_rect_wide": [
+        544,
+        204,
+        576,
+        192
+      ]
+    },
+    {
+      "id": 7,
+      "name": "ZONE_MID_INSURGENTS_WOUNDED",
+      "type": "zone",
+      "rect": [
+        400,
+        540,
+        864,
+        336
+      ],
+      "runtime_group": "midground",
+      "source_rect_wide": [
+        592,
+        396,
+        480,
+        144
+      ]
+    },
+    {
+      "id": 8,
+      "name": "ZONE_FRONT_CROWD",
+      "type": "zone",
+      "rect": [
+        208,
+        732,
+        1248,
+        192
+      ],
+      "runtime_group": "foreground_crowd",
+      "source_rect_wide": [
+        496,
+        492,
+        672,
+        240
+      ]
+    },
+    {
+      "id": 9,
+      "name": "ZONE_CAPTURED_MATERIALS",
+      "type": "zone",
+      "rect": [
+        1312,
+        540,
+        336,
+        384
+      ],
+      "runtime_group": "handover",
+      "source_rect_wide": [
+        1120,
+        396,
+        192,
+        192
+      ]
+    },
+    {
+      "id": 11,
+      "name": "TRG_PEASANT_ASSOCIATION_MARK",
+      "type": "interaction",
+      "rect": [
+        1408,
+        396,
+        192,
+        192
+      ],
+      "action": "confirm_peasant_association",
+      "source_rect_wide": [
+        1168,
+        300,
+        96,
+        96
+      ]
+    },
+    {
+      "id": 12,
+      "name": "TRG_CAPTURED_WEAPONS",
+      "type": "interaction",
+      "rect": [
+        1312,
+        540,
+        336,
+        384
+      ],
+      "action": "handover_or_register_weapons",
+      "source_rect_wide": [
+        1120,
+        396,
+        192,
+        192
+      ]
+    },
+    {
+      "id": 13,
+      "name": "SPAWN_STAGE_SPEAKER",
+      "type": "spawn",
+      "rect": [
+        736,
+        396,
+        192,
+        192
+      ],
+      "facing": "down",
+      "source_rect_wide": [
+        784,
+        300,
+        96,
+        96
+      ]
+    },
+    {
+      "id": 14,
+      "name": "SPAWN_WOUNDED_A",
+      "type": "spawn",
+      "rect": [
+        448,
+        636,
+        144,
+        144
+      ],
+      "runtime_group": "wounded",
+      "source_rect_wide": [
+        640,
+        444,
+        48,
+        48
+      ]
+    },
+    {
+      "id": 15,
+      "name": "SPAWN_WOUNDED_HELPER_A",
+      "type": "spawn",
+      "rect": [
+        544,
+        636,
+        144,
+        144
+      ],
+      "runtime_group": "wounded",
+      "source_rect_wide": [
+        688,
+        444,
+        48,
+        48
+      ]
+    },
+    {
+      "id": 16,
+      "name": "SPAWN_CROWD_FRONT_A",
+      "type": "spawn",
+      "rect": [
+        400,
+        876,
+        96,
+        48
+      ],
+      "runtime_group": "foreground_crowd",
+      "source_rect_wide": [
+        592,
+        588,
+        48,
+        48
+      ]
+    },
+    {
+      "id": 18,
+      "name": "SPAWN_CROWD_FRONT_C",
+      "type": "spawn",
+      "rect": [
+        1072,
+        876,
+        96,
+        48
+      ],
+      "runtime_group": "foreground_crowd",
+      "source_rect_wide": [
+        976,
+        588,
+        48,
+        48
+      ]
+    },
+    {
+      "id": 19,
+      "name": "SPAWN_HANDOVER_MEMBER",
+      "type": "spawn",
+      "rect": [
+        1216,
+        636,
+        144,
+        144
+      ],
+      "runtime_group": "handover",
+      "source_rect_wide": [
+        1072,
+        444,
+        48,
+        48
+      ]
+    },
+    {
+      "id": 100,
+      "name": "CAMERA_SHOT_CLOSE",
+      "type": "camera",
+      "rect": [
+        16,
+        12,
+        1632,
+        912
+      ],
+      "fixed_performance": true
+    }
+  ],
+  "color_grade": {
+    "id": "EARLY_MORNING_DAYLIGHT_v01",
+    "method": "deterministic RGB luminance curve; alpha and geometry preserved",
+    "reference": "MAP_CH4_WANGYE_TEMPLE_SHOT_WIDE_EARLY_MORNING_COLOR_REFERENCE_v01.png",
+    "regenerated_geometry": false
+  }
+}

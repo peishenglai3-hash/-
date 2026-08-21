@@ -24,11 +24,14 @@ import {
 	getRedcodeManualSave,
 	getRedcodeManualSaveBackup,
 	setRedcodeManualSave,
+	getRedcodeReplayEntry,
+	setRedcodeReplayEntry,
 } from "@/utils/storage";
 
 export const SAVE_VERSION = 2;
 export const FIXED_TAGS = ["PROLOGUE_COMPLETED", "TIME_TRAVEL_CHECKPOINT"];
 export const MANUAL_SLOTS = MANUAL_SAVE_SLOTS;
+export type ReplayChapter = 1 | 2 | 3 | 4;
 
 // sceneId → Phaser scene key
 export const SCENE_KEY: Record<SceneId, string> = {
@@ -45,6 +48,14 @@ export const SCENE_KEY: Record<SceneId, string> = {
 	CH03_FLASHBACK3: "Ch03Flashback3Scene",
 	CH03_COMPOUND: "Ch03TuCompoundScene",
 	CH03_END: "Ch03ChapterEndScene",
+	CH04_OPENING: "Ch04OpeningScene",
+	CH04_WANGYE_TEMPLE: "Ch04WangyeTempleScene",
+	CH04_CONSCIOUSNESS: "Ch04ConsciousnessScene",
+	CH04_MODERN_RETURN: "Ch04ModernReturnScene",
+	CH04_FINAL_CHOICE: "Ch04FinalChoiceScene",
+	CH04_ANSWER_WRITTEN: "Ch04AnswerWrittenScene",
+	CH04_SCENE5_VIDEO: "Ch04Scene5VideoScene",
+	CH04_PORTRAIT_RESULT: "Ch04PortraitScene",
 };
 
 export const SCENE_META: Record<
@@ -99,6 +110,38 @@ export const SCENE_META: Record<
 	CH03_END: {
 		label: "第三章·行动结束：三路结果汇合",
 		checkpoint: "CH03_ACTION_END",
+	},
+	CH04_OPENING: {
+		label: "第四章·戴家场王爷庙开场",
+		checkpoint: "CH04_OPENING_TRANSITION",
+	},
+	CH04_WANGYE_TEMPLE: {
+		label: "第四章·戴家场王爷庙戏台",
+		checkpoint: "CH04_WANGYE_TEMPLE_SCENE1",
+	},
+	CH04_CONSCIOUSNESS: {
+		label: "第四章·意识交错",
+		checkpoint: "CH04_CONSCIOUSNESS",
+	},
+	CH04_MODERN_RETURN: {
+		label: "第四章·回到现代",
+		checkpoint: "CH04_MODERN_RETURN",
+	},
+	CH04_FINAL_CHOICE: {
+		label: "第四章·补完序章留下的问题",
+		checkpoint: "CH04_FINAL_CHOICE",
+	},
+	CH04_ANSWER_WRITTEN: {
+		label: "第四章·答案写下之后",
+		checkpoint: "CH04_ANSWER_WRITTEN",
+	},
+	CH04_SCENE5_VIDEO: {
+		label: "第四章·答案写下之后的转场",
+		checkpoint: "CH04_SCENE5_VIDEO",
+	},
+	CH04_PORTRAIT_RESULT: {
+		label: "第四章·历史现场画像",
+		checkpoint: "CH04_PORTRAIT_RESULT",
 	},
 };
 
@@ -161,6 +204,35 @@ function isValidRisk(value: unknown): boolean {
 	return RISK_DIMENSIONS.every((dimension) => isNonNegativeInteger(record[dimension]));
 }
 
+function isValidSceneId(value: unknown): value is SceneId {
+	return typeof value === "string" && value in SCENE_META;
+}
+
+function isValidTags(value: unknown): value is string[] {
+	return Array.isArray(value) && value.every((tag) => typeof tag === "string");
+}
+
+function isValidChoice(value: unknown): boolean {
+	if (value === null) return true;
+	if (!value || typeof value !== "object") return false;
+	const choice = value as Record<string, unknown>;
+	return ["id", "flag", "echo_summary"].every((key) => typeof choice[key] === "string");
+}
+
+function isValidSaveShape(candidate: Record<string, unknown>): boolean {
+	if (!isValidSceneId(candidate.sceneId)) return false;
+	if (!["auto", "fixed", "manual"].includes(String(candidate.kind))) return false;
+	if (typeof candidate.sceneLabel !== "string" || typeof candidate.checkpoint !== "string") return false;
+	if (candidate.label !== undefined && typeof candidate.label !== "string") return false;
+	if (typeof candidate.timestamp !== "number" || !Number.isFinite(candidate.timestamp) || candidate.timestamp <= 0) return false;
+	if (!isValidTags(candidate.tags) || !isValidTags(candidate.fixed)) return false;
+	if (!isValidChoice(candidate.choice) || !isValidProfile(candidate.profile) || !isValidRisk(candidate.risk)) return false;
+	if (!candidate.propStates || typeof candidate.propStates !== "object" || Array.isArray(candidate.propStates)) return false;
+	const slot = candidate.slot;
+	if (candidate.kind === "manual") return MANUAL_SLOTS.includes(slot as ManualSaveSlot);
+	return slot === null || slot === undefined;
+}
+
 function verify(raw: unknown): RunSave | null {
 	if (!raw || typeof raw !== "object") return null;
 	const candidate = raw as Record<string, unknown>;
@@ -172,7 +244,7 @@ function verify(raw: unknown): RunSave | null {
 	// payload first, then upgrade it so old browser saves remain loadable.
 	if (candidate.version === 1) {
 		if (checksum(rest as Omit<RunSave, "checksum">) !== sum) return null;
-		if (!isValidProfile(candidate.profile) || !isValidRisk(candidate.risk)) return null;
+		if (!isValidProfile(candidate.profile) || !isValidRisk(candidate.risk) || !isValidSaveShape({ ...candidate, version: SAVE_VERSION, slot: null })) return null;
 		const migrated: Omit<RunSave, "checksum"> = {
 			...(rest as Omit<RunSave, "checksum">),
 			version: SAVE_VERSION,
@@ -184,7 +256,7 @@ function verify(raw: unknown): RunSave | null {
 
 	if (candidate.version !== SAVE_VERSION) return null;
 	if (checksum(rest as Omit<RunSave, "checksum">) !== sum) return null;
-	if (!isValidProfile(candidate.profile) || !isValidRisk(candidate.risk)) return null;
+	if (!isValidSaveShape(candidate)) return null;
 	return candidate as unknown as RunSave;
 }
 
@@ -275,11 +347,35 @@ export const useGameSaveStore = defineStore("gameSave", () => {
 		);
 	}
 
-	function prepareChapterReplay(chapter: 1 | 2 | 3): void {
-		const source = loadAuto() ?? MANUAL_SLOTS.map((slot) => loadManual(slot)).find(Boolean) ?? loadFixed();
+	function captureChapterEntry(chapter: ReplayChapter): RunSave | null {
+		const sceneId: Record<ReplayChapter, SceneId> = {
+			1: "CH01_SC01",
+			2: "CH02_TRANSITION",
+			3: "CH03_OPENING",
+			4: "CH04_OPENING",
+		};
+		const { state } = useGameStateStore();
+		const tags = [...state.flags];
+		const fixed = tags.filter((t) => FIXED_TAGS.includes(t));
+		const save = buildSave("auto", sceneId[chapter], tags, fixed, { ...state.risk });
+		return setRedcodeReplayEntry(chapter, save) ? save : null;
+	}
+
+	function loadChapterEntry(chapter: ReplayChapter): RunSave | null {
+		return verify(getRedcodeReplayEntry(chapter));
+	}
+
+	function prepareChapterReplay(chapter: ReplayChapter): void {
+		const source = loadChapterEntry(chapter) ?? loadAuto() ?? MANUAL_SLOTS.map((slot) => loadManual(slot)).find(Boolean) ?? loadFixed();
 		if (source) applyToState(source);
 		const { state, resetTransientState } = useGameStateStore();
-		const prefixesToClear = chapter === 1 ? ["CH01", "CH02", "CH03"] : chapter === 2 ? ["CH02", "CH03"] : ["CH03"];
+		const prefixesToClear = chapter === 1
+			? ["CH01", "CH02", "CH03", "CH04"]
+			: chapter === 2
+				? ["CH02", "CH03", "CH04"]
+				: chapter === 3
+					? ["CH03", "CH04"]
+					: ["CH04"];
 		const localTags = new Set([
 			"GROUP_CONFIRMED", "SIGNAL_CONFIRMED", "GROUP_REAR_POSITION", "SUPPLY_HANDLED",
 			"SUPPLY_OPENED", "CONTACT_CAUTION", "FLASHBACK_CONSCRIPTION", "GATE_OBSERVED",
@@ -289,7 +385,8 @@ export const useGameSaveStore = defineStore("gameSave", () => {
 		state.flags = new Set([...state.flags].filter((tag) =>
 			!prefixesToClear.some((prefix) => tag.startsWith(prefix)) &&
 			!(chapter <= 2 && localTags.has(tag)) &&
-			!(chapter === 3 && ["GATE_OBSERVED", "MOVEMENT_RESTRICTED", "POSITION_ABANDONED", "PROPERTY_SUSPICION", "MOONCAKE_GROUP", "MOONCAKE_SELF", "MOONCAKE_KEPT", "MOONCAKE_SHARED"].includes(tag)),
+			!(chapter === 3 && ["GATE_OBSERVED", "MOVEMENT_RESTRICTED", "POSITION_ABANDONED", "PROPERTY_SUSPICION", "MOONCAKE_GROUP", "MOONCAKE_SELF", "MOONCAKE_KEPT", "MOONCAKE_SHARED"].includes(tag)) &&
+			!(chapter === 4 && tag.startsWith("FIN_")),
 		));
 		state.choice = null;
 		state.chapter3Access = null;
@@ -337,6 +434,8 @@ export const useGameSaveStore = defineStore("gameSave", () => {
 		loadManual,
 		listManualSlots,
 		listSlots,
+		captureChapterEntry,
+		loadChapterEntry,
 		prepareChapterReplay,
 		getCurrentSceneId: () => lastSceneId,
 		applyToState,

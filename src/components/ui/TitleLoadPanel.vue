@@ -18,6 +18,7 @@ const replayChapters = [
 	{ chapter: 1 as const, label: "第一章", detail: "从陈继南家中醒来重新体验" },
 	{ chapter: 2 as const, label: "第二章", detail: "从陈家祠堂场景衔接重新体验" },
 	{ chapter: 3 as const, label: "第三章", detail: "从杜家大院外围开场重新体验" },
+	{ chapter: 4 as const, label: "第四章", detail: "从戴家场王爷庙开场重新体验" },
 ];
 
 function fmtTime(ts: number): string {
@@ -29,7 +30,7 @@ function pick(save: RunSave) {
 	useDirectorStore().startFromSave(save);
 }
 
-function replay(chapter: 1 | 2 | 3) {
+function replay(chapter: 1 | 2 | 3 | 4) {
 	hud.title.loadOpen = false;
 	useDirectorStore().replayChapter(chapter);
 }

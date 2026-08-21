@@ -3,6 +3,7 @@ import { createKeyMap, isActionDown, onAction } from "@/common/actions";
 import { actorDepth } from "@/common/displayDepth";
 import { useGameStateStore } from "@/stores/modules/gameState";
 import { useGameSaveStore } from "@/stores/modules/gameSave";
+import { addManagedBgm } from "@/common/audioBus";
 import { classifyRisk, applyFormalChoice, type RiskFailure } from "@/common/actionProfileSystem";
 // @ts-ignore Shared JS helpers are intentionally untyped in the current project.
 import { actorColliderBottomAt, actorColliderRectAt, ensureActorColliderConfig, createActorColliderEntry, ensureActorVisualConfig, createActorVisualEntry } from "../../actor-collider.js";
@@ -342,7 +343,7 @@ export class Ch03TuCompoundScene extends Phaser.Scene {
 		this.definition = TU_COMPOUND_MAPS[this.compoundState];
 		preloadLayeredMap(this, this.definition);
 		preloadChenWalk(this);
-		this.load.image("ch03_elder_member", "assets/characters/ch03-elder-member/idle.png");
+		this.load.image("ch03_elder_member", "assets/characters/ch03-elder-member/idle-v2.png");
 		this.load.image("ch03_dong_yunting_after_battle", "assets/characters/ch03-dong-yunting/idle.png");
 		this.load.image("ch03_wounded_member", "assets/characters/ch03-wounded-member/idle.png");
 		this.load.image("ch02_npc_group_leader", "assets/ch02/actors/ch02_npc_group_leader.png");
@@ -350,7 +351,7 @@ export class Ch03TuCompoundScene extends Phaser.Scene {
 		this.load.image("ch02_npc_young_member", "assets/ch02/actors/ch02_npc_young_member.png");
 		this.load.image("ch02_npc_worker_straw_hat", "assets/ch02/actors/ch02_npc_worker_straw_hat.png");
 		this.load.image("ch02_npc_worker_blue_headcloth", "assets/ch02/actors/ch02_npc_worker_blue_headcloth.png");
-		this.load.image("ch03_npc_peng_dingbang", "assets/characters/ch03-peng-dingbang/idle.png");
+		this.load.image("ch03_npc_peng_dingbang", "assets/characters/ch03-peng-dingbang/idle-v2.png");
 		this.load.image("ch03_militia_guard_a", "assets/characters/ch03-militia/idle-a.png");
 		this.load.image("ch03_militia_guard_b", "assets/characters/ch03-militia/idle-b.png");
 		this.load.image(CH03_OBSERVATION_IMAGE_KEYS.A, "assets/ch03/observation/observation-A.png");
@@ -1758,10 +1759,9 @@ export class Ch03TuCompoundScene extends Phaser.Scene {
 	}
 
 	nearby() {
-		const candidates = [
-			...this.mapDocument.interactions,
-			...this.mapDocument.exits.map((entry) => ({ ...entry, prompt: entry.prompt ?? entry.id })),
-		];
+		// 当前版本只有隐蔽处接入了正式交互。地图中的门、榨房、后路等
+		// 区域是镜头/碰撞标记，不应向玩家暴露“后续实现”的占位任务。
+		const candidates = this.mapDocument.interactions.filter((target) => target.id === "TRG_HIDING_ZONE");
 		return candidates.find((target) => {
 			const [x, y, width, height] = target.rect;
 			return this.player.x >= x - 32 && this.player.x <= x + width + 32 && this.player.y >= y - 32 && this.player.y <= y + height + 32;
@@ -1832,11 +1832,7 @@ export class Ch03TuCompoundScene extends Phaser.Scene {
 			this.beginObservationChoice();
 			return;
 		}
-		const action = "action" in target ? target.action : undefined;
-		showTask({
-			title: `地图交互｜${target.id}`,
-			detail: `${action ?? target.type ?? "interaction"}。当前只完成杜家大院地图状态接入；该交互将由后续第三章场景实现。`,
-		});
+		return;
 	}
 
 	beginFlashback3Transition() {
@@ -1899,10 +1895,7 @@ export class Ch03TuCompoundScene extends Phaser.Scene {
 			: this.compoundState === "STATE_AFTER_BATTLE"
 				? "ch03_bgm_after_battle"
 				: "ch03_bgm_three_routes";
-		this.chapter3Bgm = this.sound.add(cue, {
-			loop: true,
-			volume: 0.55,
-		});
+		this.chapter3Bgm = addManagedBgm(this, cue, 0.55);
 		this.chapter3Bgm.play();
 	}
 
