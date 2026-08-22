@@ -18,17 +18,29 @@ export function ensureActorColliderConfig(document, id, defaults) {
   return profile;
 }
 
-export function ensureActorVisualConfig(document, id, defaultHeight) {
+export function ensureActorVisualConfig(document, id, defaultHeight, defaultPosition = null) {
   document.actor_visuals ??= {};
   const current = document.actor_visuals[id] ?? {};
   const height = Number(current.display_height);
   current.display_height = Number.isFinite(height) && height > 0 ? height : defaultHeight;
   current.offset = finitePair(current.offset, [0, 0]);
+  if (Array.isArray(current.position) && current.position.length === 2 && current.position.every(Number.isFinite)) {
+    current.position = [...current.position];
+  } else {
+    const base = Array.isArray(defaultPosition)
+      ? defaultPosition
+      : defaultPosition && Number.isFinite(defaultPosition.x) && Number.isFinite(defaultPosition.y)
+        ? [defaultPosition.x, defaultPosition.y]
+        : null;
+    if (base && base.length === 2 && base.every(Number.isFinite)) {
+      current.position = [base[0] + current.offset[0], base[1] + current.offset[1]];
+    }
+  }
   document.actor_visuals[id] = current;
   return current;
 }
 
-export function createActorVisualEntry({ id, label, getActor, getProfile, getAnchor, onPositionChange, tileSize = DEFAULT_TILE_SIZE }) {
+export function createActorVisualEntry({ id, label, getActor, getProfile, getAnchor, onPositionChange, absolutePosition = false, tileSize = DEFAULT_TILE_SIZE }) {
   return {
     id,
     label,
@@ -68,16 +80,37 @@ export function createActorVisualEntry({ id, label, getActor, getProfile, getAnc
     },
     get position() {
       const actor = getActor();
-      return actor ? { x: actor.x / tileSize, y: actor.y / tileSize } : null;
+      if (actor) return { x: actor.x / tileSize, y: actor.y / tileSize };
+      const saved = getProfile()?.position;
+      if (absolutePosition && Array.isArray(saved) && saved.length === 2 && saved.every(Number.isFinite)) {
+        return { x: saved[0], y: saved[1] };
+      }
+      return null;
     },
     set position(value) {
-      const profile = getProfile();
+      if (absolutePosition) {
+        const profile = getProfile();
+        if (!profile || !value || !Number.isFinite(value.x) || !Number.isFinite(value.y)) return;
+        profile.position = [value.x, value.y];
+        profile.offset = [0, 0];
+        onPositionChange?.(id, profile.position);
+        return;
+      }
       const anchor = getAnchor?.() ?? this.position;
-      if (!profile || !anchor || !value) return;
-      profile.offset = [value.x - anchor.x, value.y - anchor.y];
+      if (!anchor || !value) return;
+      this.offset = [value.x - anchor.x, value.y - anchor.y];
+    },
+    get offset() {
+      return finitePair(getProfile()?.offset, [0, 0]);
+    },
+    set offset(value) {
+      const profile = getProfile();
+      if (!profile) return;
+      profile.offset = finitePair(value, [0, 0]);
       onPositionChange?.(id, profile.offset);
     },
     get anchor() {
+      if (absolutePosition) return this.position;
       return getAnchor?.() ?? this.position;
     },
     containsPoint(point) {

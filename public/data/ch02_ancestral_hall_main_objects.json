@@ -633,7 +633,11 @@
         0,
         0
       ],
-      "enabled": false
+      "enabled": false,
+      "position": [
+        720,
+        726
+      ]
     },
     "ARRIVAL_GUARD_1": {
       "display_height": 208,
@@ -641,7 +645,11 @@
         0,
         0
       ],
-      "enabled": false
+      "enabled": false,
+      "position": [
+        920,
+        726
+      ]
     },
     "ARRIVAL_CROWD_0": {
       "display_height": 280,
@@ -649,7 +657,11 @@
         0,
         0
       ],
-      "enabled": false
+      "enabled": false,
+      "position": [
+        270,
+        688
+      ]
     },
     "ARRIVAL_CROWD_1": {
       "display_height": 280,
@@ -657,7 +669,11 @@
         0,
         0
       ],
-      "enabled": false
+      "enabled": false,
+      "position": [
+        385,
+        642
+      ]
     },
     "ARRIVAL_CROWD_2": {
       "display_height": 280,
@@ -665,7 +681,11 @@
         0,
         0
       ],
-      "enabled": false
+      "enabled": false,
+      "position": [
+        510,
+        700
+      ]
     },
     "ARRIVAL_CROWD_3": {
       "display_height": 280,
@@ -673,15 +693,23 @@
         0,
         0
       ],
-      "enabled": false
+      "enabled": false,
+      "position": [
+        620,
+        650
+      ]
     },
     "ARRIVAL_CROWD_4": {
       "display_height": 280,
       "offset": [
-        -82.85954785031163,
-        21.482286486095063
+        0,
+        0
       ],
-      "enabled": false
+      "enabled": false,
+      "position": [
+        1010,
+        666
+      ]
     },
     "ARRIVAL_CROWD_5": {
       "display_height": 280,
@@ -689,7 +717,11 @@
         0,
         0
       ],
-      "enabled": false
+      "enabled": false,
+      "position": [
+        1130,
+        704
+      ]
     },
     "ARRIVAL_CROWD_6": {
       "display_height": 280,
@@ -697,7 +729,11 @@
         0,
         0
       ],
-      "enabled": false
+      "enabled": false,
+      "position": [
+        1270,
+        648
+      ]
     },
     "ARRIVAL_CROWD_7": {
       "display_height": 280,
@@ -705,7 +741,11 @@
         0,
         0
       ],
-      "enabled": false
+      "enabled": false,
+      "position": [
+        1410,
+        704
+      ]
     },
     "ARRIVAL_CROWD_8": {
       "display_height": 280,
@@ -713,11 +753,15 @@
         0,
         0
       ],
-      "enabled": false
+      "enabled": false,
+      "position": [
+        1510,
+        654
+      ]
     }
   },
   "player_motion": {
     "movement_multiplier": 1.2,
-    "animation_multiplier": 1.5
+    "animation_multiplier": 1.2
   }
 }

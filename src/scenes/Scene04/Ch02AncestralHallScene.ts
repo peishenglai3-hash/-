@@ -940,6 +940,7 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 				getProfile: () => this.actorVisualProfiles[id],
 				getAnchor: () => this.namedNpcBasePositions[id] ?? null,
 				onPositionChange: (changedId: string) => this.applyActorVisualPosition(changedId),
+				absolutePosition: true,
 				tileSize: 1,
 			})),
 		];
@@ -998,6 +999,11 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 		this.namedNpcBasePositions[id] = { x, y };
 		if (this.variant === "sidewall") this.materialsActors[id] = actor;
 		else this.deploymentActors[id] = actor;
+		const profile = this.actorVisualProfiles[id];
+		if (!Array.isArray(profile.position)) {
+			profile.position = [x + (profile.offset?.[0] ?? 0), y + (profile.offset?.[1] ?? 0)];
+			profile.offset = [0, 0];
+		}
 		this.applyActorVisualHeight(id, this.actorVisualProfiles[id]?.display_height ?? NPC_DISPLAY_HEIGHT);
 		this.applyActorVisualPosition(id);
 	}
@@ -1005,6 +1011,10 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 	registerFreeNpcVisual(id: string, actor: Phaser.GameObjects.Image, x: number, y: number) {
 		this.freeNpcAnchors[id] = { x, y };
 		this.actorVisualProfiles[id] = ensureActorVisualConfig(this.mapDocument as any, id, actor.displayHeight || NPC_DISPLAY_HEIGHT);
+		if (!Array.isArray(this.actorVisualProfiles[id].position)) {
+			this.actorVisualProfiles[id].position = [x + (this.actorVisualProfiles[id].offset?.[0] ?? 0), y + (this.actorVisualProfiles[id].offset?.[1] ?? 0)];
+			this.actorVisualProfiles[id].offset = [0, 0];
+		}
 		actor.setVisible(this.actorVisualProfiles[id].enabled !== false);
 		this.actorVisualEntries.push(createActorVisualEntry({
 			id,
@@ -1013,15 +1023,20 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 			getProfile: () => this.actorVisualProfiles[id],
 			getAnchor: () => this.freeNpcAnchors[id],
 			onPositionChange: () => this.applyFreeNpcVisualPosition(id),
+			absolutePosition: true,
 			tileSize: 1,
 		}));
+		// 读完 JSON 里的绝对坐标后，把贴图真正移到点击/编辑保存过的位置，
+		// 否则这里只记录 base 而贴图仍停在代码定义点，保存再加载会丢失位置。
+		this.applyFreeNpcVisualPosition(id);
 	}
 
 	applyFreeNpcVisualPosition(id: string) {
 		const actor = this.actorVisualEntries.find((entry) => entry.id === id)?.getActor?.();
-		const base = this.freeNpcAnchors[id];
+		const profile = this.actorVisualProfiles[id];
+		const base = profile?.position ?? this.freeNpcAnchors[id];
 		const offset = this.actorVisualProfiles[id]?.offset ?? [0, 0];
-		if (actor && base) actor.setPosition(base.x + offset[0], base.y + offset[1]);
+		if (actor && base) actor.setPosition(base[0] ?? base.x + offset[0], base[1] ?? base.y + offset[1]);
 	}
 
 	applyActorVisualHeight(id: string, height: number) {
@@ -1048,14 +1063,16 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 			return;
 		}
 		const actor = this.getNamedNpcActor(id as NamedNpcId) ?? this.actorVisualEntries.find((entry) => entry.id === id)?.getActor?.();
+		const profile = this.actorVisualProfiles[id];
 		const base = this.namedNpcBasePositions[id];
 		if (!base && this.freeNpcAnchors[id]) {
 			this.applyFreeNpcVisualPosition(id);
 			return;
 		}
 		if (!actor || !base) return;
-		const offset = this.actorVisualProfiles[id]?.offset ?? [0, 0];
-		actor.setPosition(base.x + offset[0], base.y + offset[1]);
+		const position = profile?.position;
+		const offset = profile?.offset ?? [0, 0];
+		actor.setPosition(position?.[0] ?? base.x + offset[0], position?.[1] ?? base.y + offset[1]);
 		this.interactionMarkers[id as DeploymentNpcId]?.setPosition(actor.x, actor.y - NPC_DISPLAY_HEIGHT - 20);
 	}
 

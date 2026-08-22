@@ -133,6 +133,11 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 			.setDepth(actorDepth(liaisonSpawn.position[1]));
 		this.applyActorVisualHeight("NPC_LIAISON", this.actorVisualProfiles.NPC_LIAISON.display_height);
 		this.applyActorVisualPosition("NPC_LIAISON");
+		// NPC 贴图位置一律以绝对坐标存取：首次生成时把当前落脚点写入 position，
+		// 并把 offset 归零，保证移动/缩放后中心点(落脚点)随贴图走，且保存 JSON 时
+		// 写的是绝对坐标而不是原先设定的 spawn 锚点。
+		this.initNpcVisualPosition("NPC_LIAISON", this.liaison);
+		this.applyActorVisualPosition("NPC_LIAISON");
 
 		this.camera = this.cameras.main
 			.setBounds(0, 0, WORLD_W, WORLD_H)
@@ -175,7 +180,7 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 		];
 		this.actorVisualProfiles = {
 			PLAYER: ensureActorVisualConfig(this.manifest as any, "PLAYER", PLAYER_DISPLAY_HEIGHT),
-			NPC_LIAISON: ensureActorVisualConfig(this.manifest as any, "NPC_LIAISON", LIAISON_DISPLAY_HEIGHT),
+			NPC_LIAISON: ensureActorVisualConfig(this.manifest as any, "NPC_LIAISON", LIAISON_DISPLAY_HEIGHT, this.actorSpawnPosition("NPC_LIAISON")),
 		};
 		this.actorVisualEntries = [
 			createActorVisualEntry({
@@ -194,6 +199,7 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 				getProfile: () => this.actorVisualProfiles.NPC_LIAISON,
 				getAnchor: () => this.actorSpawnPosition("NPC_LIAISON"),
 				onPositionChange: () => this.applyActorVisualPosition("NPC_LIAISON"),
+				absolutePosition: true,
 				tileSize: 1,
 			}),
 		];
@@ -223,7 +229,18 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 			? { x: this.player.x, y: this.player.y }
 			: this.actorSpawnPosition(id);
 		const offset = this.actorVisualProfiles[id]?.offset ?? [0, 0];
-		if (actor && anchor) actor.setPosition(anchor.x + offset[0], anchor.y + offset[1]);
+		const position = this.actorVisualProfiles[id]?.position;
+		if (actor && anchor) actor.setPosition(position?.[0] ?? anchor.x + offset[0], position?.[1] ?? anchor.y + offset[1]);
+	}
+
+	// NPC 视觉贴图使用绝对坐标：首次生成时用贴图当前落脚点作为 position，
+	// 偏移归零，anchor 跟随贴图而非固定 spawn 点。
+	initNpcVisualPosition(id: string, actor: Phaser.GameObjects.Sprite | null) {
+		const profile = this.actorVisualProfiles[id];
+		if (!profile || !actor) return;
+		if (Array.isArray(profile.position) && profile.position.length === 2 && profile.position.every(Number.isFinite)) return;
+		profile.position = [actor.x, actor.y];
+		profile.offset = [0, 0];
 	}
 
 	applyPlayerColliderBody() {

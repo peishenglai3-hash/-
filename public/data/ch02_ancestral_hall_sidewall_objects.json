@@ -335,6 +335,10 @@
       "offset": [
         0,
         0
+      ],
+      "position": [
+        784,
+        728
       ]
     },
     "GROUP_LEADER": {
@@ -342,6 +346,10 @@
       "offset": [
         0,
         0
+      ],
+      "position": [
+        640,
+        575
       ]
     },
     "YOUNG_MEMBER": {
@@ -349,6 +357,10 @@
       "offset": [
         0,
         0
+      ],
+      "position": [
+        1085,
+        620
       ]
     },
     "DAI_ANNAN": {
@@ -356,6 +368,61 @@
       "offset": [
         0,
         0
+      ]
+    },
+    "MATERIALS_CROWD_0": {
+      "display_height": 266.92474063133176,
+      "offset": [
+        0,
+        0
+      ],
+      "position": [
+        347.6663061965448,
+        557.9540439311673
+      ]
+    },
+    "MATERIALS_CROWD_1": {
+      "display_height": 256.7775841516039,
+      "offset": [
+        0,
+        0
+      ],
+      "position": [
+        462.86010316065517,
+        635
+      ]
+    },
+    "MATERIALS_CROWD_2": {
+      "display_height": 278.714785552688,
+      "offset": [
+        0,
+        0
+      ],
+      "position": [
+        850.0299044086145,
+        565
+      ]
+    },
+    "MATERIALS_CROWD_3": {
+      "display_height": 283.2342216196428,
+      "offset": [
+        0,
+        0
+      ],
+      "position": [
+        1204.2981099352637,
+        575
+      ]
+    },
+    "MATERIALS_CROWD_4": {
+      "display_height": 257.80015204220314,
+      "offset": [
+        0,
+        0
+      ],
+      "position": [
+        1320.356699609144,
+        650
       ]
     }
   },
