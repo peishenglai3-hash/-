@@ -161,6 +161,8 @@ function validateChoiceDefinition(choice: FormalChoiceDefinition): void {
 		throw new Error(`${choice.choiceId} cannot mutate risk in the prologue`);
 	if (choice.chapter === 4 && Object.values(choice.riskChange).some((value) => value !== 0))
 		throw new Error(`${choice.choiceId} cannot mutate risk in Chapter 4`);
+	if (choice.chapter === 4 && choice.failureCheck)
+		throw new Error(`${choice.choiceId} cannot check failure in Chapter 4`);
 	assertProfileDelta(choice.portraitChange);
 	assertRiskDelta(choice.riskChange);
 }

@@ -1,8 +1,5 @@
 import type { NarrativeEntry } from "@/stores/modules/hud";
-import {
-	riskLevelLabel,
-	type Chapter3TaskAssignment,
-} from "./ch03RiskPrecheck";
+import type { Chapter3TaskAssignment } from "./ch03RiskPrecheck";
 
 export const CH03_RISK_PRECHECK_INTRO: NarrativeEntry[] = [
 	{
@@ -75,16 +72,12 @@ function entry(
 export function buildChapter3RiskInfo(
 	assignment: Chapter3TaskAssignment,
 ): string[] {
-	const { levels } = assignment.access;
 	return [
-		`当前安全等级：${assignment.safetyLabel}`,
-		`身份风险：${riskLevelLabel(levels.identity)}`,
-		`执行风险：${riskLevelLabel(levels.execution)}`,
-		`协同风险：${riskLevelLabel(levels.coordination)}`,
-		"本次检查只调整你可以接触的任务，不改变今晚行动的历史结果。",
-		assignment.access.canContinue
-			? "风险仍在可继续范围内，但不同风险会对应不同的行动位置。"
-			: "风险已经达到全章失败阈值，行动核心不会向你开放。",
+		!assignment.access.canContinue
+			? "重新安排已经完成。你暂时不会进入行动核心。"
+			: assignment.permission === "FORWARD_SUPPORT"
+				? "重新安排已经完成。你仍被允许继续参与行动。"
+				: "重新安排已经完成。你仍可继续参与，但会从较远的位置开始。",
 	];
 }
 
@@ -274,16 +267,12 @@ export function buildChapter3RiskCompleteTask(
 ) {
 	if (assignment.permission === "WITHDRAWN") {
 		return {
-			title: "风险预检查｜退出行动",
-			detail: "当前安全等级已达到全章失败阈值。你不会进入杜家大院行动核心，系统将返回“陈继南家中醒来”节点。",
+			title: "行动前重新安排｜暂停参与",
+			detail: "当前安排不再允许你进入杜家大院行动核心，接下来会回到“陈继南家中醒来”节点。",
 		};
 	}
-	const extra =
-		assignment.restrictions.length > 1
-			? "多项风险同时偏高，后续节点按更严格的限制执行。"
-			: "本场不改写永久风险；后续节点只读取这次任务权限。";
 	return {
-		title: `风险预检查｜${assignment.label}`,
-		detail: `${extra} 下一段为“等待行动时的观察”。`,
+		title: "行动前重新安排｜已完成",
+		detail: "安排已经完成。下一段为“等待行动时的观察”。",
 	};
 }

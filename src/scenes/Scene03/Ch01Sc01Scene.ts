@@ -46,6 +46,7 @@ import { FLAGS } from "./ch01Sc01.flags";
 import { FLAGS2 } from "./ch01Sc02.flags";
 import { assetPath } from "@/common/paths";
 import { useGameSaveStore } from "@/stores";
+import { addManagedBgm } from "@/common/audioBus";
 import { playInkTransition } from "@/common/inkTransition";
 import { RETURN_NARRATIVE } from "./ch01Sc02.content";
 import { KNOCK_CHAIN, DOOR_CODE_CHAIN, Q3_CHOICES, Q4_CHOICES, FAREWELL_INTRO, ENDING_NARRATIVE, END_SUBTITLE } from "./ch01Return.content";
@@ -238,7 +239,7 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 			else if (itemPanelOpen()) closeItem();
 		});
 		onAction(this, "PAUSE", () => togglePause());
-		(window as any).ch01Sc01Game = this;
+		if (import.meta.env.DEV) (window as any).ch01Sc01Game = this;
 
 		if (!this.state.flags.has(FLAGS.VIDEO_SEEN)) {
 			this.playIntroVideo();
@@ -457,6 +458,7 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	}
 
 	setupZoneEditor() {
+		if (!import.meta.env.DEV) return;
 		const file = "public/data/ch01_sc01_chen_home_wake_manifest.json";
 		const documents = { [file]: this.manifest as any };
 		this.zoneEditor = new CollisionEditor(this, {
@@ -777,6 +779,7 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 			echoSummary: choice.echo_summary,
 			failureCheck: false,
 		});
+		useGameSaveStore().autosave("CH01_SC01");
 		hideChoices();
 		showResult(choice);
 		this.state.mode = "result";
@@ -862,6 +865,7 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 			echoSummary: choice.label,
 			failureCheck: false,
 		});
+		useGameSaveStore().autosave("CH01_SC01");
 		hideChoices();
 		this.state.mode = "narrative";
 		this.state.playerLocked = true;
@@ -903,6 +907,7 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 			echoSummary: choice.label,
 			failureCheck: false,
 		});
+		useGameSaveStore().autosave("CH01_SC01");
 		hideChoices();
 		this.state.mode = "narrative";
 		this.state.playerLocked = true;
@@ -1001,7 +1006,7 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 
 	startBgm() {
 		if (!this.bgm)
-			this.bgm = this.sound.add("ch01_sc01_bgm", { loop: true, volume: 0.35 });
+			this.bgm = addManagedBgm(this, "ch01_sc01_bgm", 0.35);
 		if (!this.bgm.isPlaying) this.bgm.play();
 	}
 

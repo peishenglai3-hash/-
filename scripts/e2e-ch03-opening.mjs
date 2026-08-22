@@ -77,7 +77,12 @@ const riskInfo = await page.evaluate(() => ({
 	text: document.querySelector(".info-card")?.textContent ?? "",
 }));
 await page.screenshot({ path: `${output}ch03-risk-precheck-info.png` });
-if (!riskInfo.text.includes("当前安全等级")) throw new Error(`risk readout missing: ${JSON.stringify(riskInfo)}`);
+if (
+	!riskInfo.title.includes("行动前重新安排") ||
+	!riskInfo.text.includes("重新安排已经完成") ||
+	/[身份执行协同]风险|安全等级|[+＋-－]\d/.test(riskInfo.text)
+)
+	throw new Error(`risk readout visibility contract mismatch: ${JSON.stringify(riskInfo)}`);
 await page.locator(".info-card button").click();
 
 for (let i = 0; i < 20; i += 1) {

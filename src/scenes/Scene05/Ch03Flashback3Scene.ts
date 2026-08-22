@@ -95,7 +95,7 @@ export class Ch03Flashback3Scene extends Phaser.Scene {
 		onAction(this, "INTERACT", () => this.handleAdvance());
 		onAction(this, "ADVANCE", () => this.handleAdvance());
 		onAction(this, "PAUSE", () => togglePause());
-		(window as any).ch03Flashback3Game = this;
+		if (import.meta.env.DEV) (window as any).ch03Flashback3Game = this;
 	}
 
 	fitVideo(video: Phaser.GameObjects.Video) {
@@ -166,6 +166,7 @@ export class Ch03Flashback3Scene extends Phaser.Scene {
 		const definition = buildChapter3Flashback3FormalChoice(id);
 		if (!definition) return;
 		applyFormalChoice(this.state, definition);
+		useGameSaveStore().autosave("CH03_FLASHBACK3");
 		hideChoices();
 		this.phase = "choice-thoughts";
 		this.state.mode = "narrative";
@@ -193,7 +194,7 @@ export class Ch03Flashback3Scene extends Phaser.Scene {
 		this.videoOverlay?.stop();
 		this.videoOverlay?.destroy();
 		this.videoOverlay = undefined;
-		if ((window as any).ch03Flashback3Game === this)
+		if (import.meta.env.DEV && (window as any).ch03Flashback3Game === this)
 			delete (window as any).ch03Flashback3Game;
 	}
 }

@@ -1,0 +1,274 @@
+{
+  "valid": true,
+  "package_count": 3,
+  "packages": [
+    {
+      "asset_id": "MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_WIDE",
+      "state": "SCENE_01_EARLY_MORNING",
+      "layers": {
+        "L01_GROUND": {
+          "size": [
+            1664,
+            936
+          ],
+          "nontransparent_pixels": 185889
+        },
+        "L02_GROUND_DETAIL": {
+          "size": [
+            1664,
+            936
+          ],
+          "nontransparent_pixels": 52074
+        },
+        "L03_STRUCTURE_LOW": {
+          "size": [
+            1664,
+            936
+          ],
+          "nontransparent_pixels": 365371
+        },
+        "L04_PROP_INTERACT": {
+          "size": [
+            1664,
+            936
+          ],
+          "nontransparent_pixels": 52468
+        },
+        "L05_COLLISION_TRIGGER": {
+          "size": [
+            1664,
+            936
+          ],
+          "nontransparent_pixels": 1490929
+        },
+        "L06_OCCLUSION_HIGH": {
+          "size": [
+            1664,
+            936
+          ],
+          "nontransparent_pixels": 780158
+        },
+        "L07_LIGHT_FX": {
+          "size": [
+            1664,
+            936
+          ],
+          "nontransparent_pixels": 140636
+        }
+      },
+      "recomposition_pixel_exact": true,
+      "couplet_checks": [
+        {
+          "prop_id": "PROP0010_LEFT_COUPLET",
+          "within_column_bounds": true
+        },
+        {
+          "prop_id": "PROP009_RIGHT_COUPLET",
+          "within_column_bounds": true
+        }
+      ],
+      "prop_provenance_checks": [
+        {
+          "prop_id": "PROP0010_LEFT_COUPLET",
+          "sha256_match": true
+        },
+        {
+          "prop_id": "PROP009_RIGHT_COUPLET",
+          "sha256_match": true
+        },
+        {
+          "prop_id": "PROP010_PEASANT_ASSOCIATION_MAIN_FLAG",
+          "sha256_match": true
+        },
+        {
+          "prop_id": "PROP004_CAPTURED_WEAPON_PILE",
+          "sha256_match": true
+        },
+        {
+          "prop_id": "PROP002_SINGLE_GRAIN_BAG",
+          "sha256_match": true
+        }
+      ],
+      "errors": []
+    },
+    {
+      "asset_id": "MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_MEDIUM",
+      "state": "SCENE_01_EARLY_MORNING",
+      "layers": {
+        "L01_GROUND": {
+          "size": [
+            1664,
+            936
+          ],
+          "nontransparent_pixels": 94778
+        },
+        "L02_GROUND_DETAIL": {
+          "size": [
+            1664,
+            936
+          ],
+          "nontransparent_pixels": 70618
+        },
+        "L03_STRUCTURE_LOW": {
+          "size": [
+            1664,
+            936
+          ],
+          "nontransparent_pixels": 412778
+        },
+        "L04_PROP_INTERACT": {
+          "size": [
+            1664,
+            936
+          ],
+          "nontransparent_pixels": 85584
+        },
+        "L05_COLLISION_TRIGGER": {
+          "size": [
+            1664,
+            936
+          ],
+          "nontransparent_pixels": 1490929
+        },
+        "L06_OCCLUSION_HIGH": {
+          "size": [
+            1664,
+            936
+          ],
+          "nontransparent_pixels": 699324
+        },
+        "L07_LIGHT_FX": {
+          "size": [
+            1664,
+            936
+          ],
+          "nontransparent_pixels": 226083
+        }
+      },
+      "recomposition_pixel_exact": true,
+      "couplet_checks": [
+        {
+          "prop_id": "PROP0010_LEFT_COUPLET",
+          "within_column_bounds": true
+        },
+        {
+          "prop_id": "PROP009_RIGHT_COUPLET",
+          "within_column_bounds": true
+        }
+      ],
+      "prop_provenance_checks": [
+        {
+          "prop_id": "PROP0010_LEFT_COUPLET",
+          "sha256_match": true
+        },
+        {
+          "prop_id": "PROP009_RIGHT_COUPLET",
+          "sha256_match": true
+        },
+        {
+          "prop_id": "PROP010_PEASANT_ASSOCIATION_MAIN_FLAG",
+          "sha256_match": true
+        },
+        {
+          "prop_id": "PROP004_CAPTURED_WEAPON_PILE",
+          "sha256_match": true
+        },
+        {
+          "prop_id": "PROP002_SINGLE_GRAIN_BAG",
+          "sha256_match": true
+        }
+      ],
+      "errors": []
+    },
+    {
+      "asset_id": "MAP_CH4_WANGYE_TEMPLE_EARLY_MORNING_SHOT_CLOSE",
+      "state": "SCENE_01_EARLY_MORNING",
+      "layers": {
+        "L01_GROUND": {
+          "size": [
+            1664,
+            936
+          ],
+          "nontransparent_pixels": 55257
+        },
+        "L02_GROUND_DETAIL": {
+          "size": [
+            1664,
+            936
+          ],
+          "nontransparent_pixels": 47245
+        },
+        "L03_STRUCTURE_LOW": {
+          "size": [
+            1664,
+            936
+          ],
+          "nontransparent_pixels": 746662
+        },
+        "L04_PROP_INTERACT": {
+          "size": [
+            1664,
+            936
+          ],
+          "nontransparent_pixels": 156469
+        },
+        "L05_COLLISION_TRIGGER": {
+          "size": [
+            1664,
+            936
+          ],
+          "nontransparent_pixels": 1490929
+        },
+        "L06_OCCLUSION_HIGH": {
+          "size": [
+            1664,
+            936
+          ],
+          "nontransparent_pixels": 418244
+        },
+        "L07_LIGHT_FX": {
+          "size": [
+            1664,
+            936
+          ],
+          "nontransparent_pixels": 188492
+        }
+      },
+      "recomposition_pixel_exact": true,
+      "couplet_checks": [
+        {
+          "prop_id": "PROP0010_LEFT_COUPLET",
+          "within_column_bounds": true
+        },
+        {
+          "prop_id": "PROP009_RIGHT_COUPLET",
+          "within_column_bounds": true
+        }
+      ],
+      "prop_provenance_checks": [
+        {
+          "prop_id": "PROP0010_LEFT_COUPLET",
+          "sha256_match": true
+        },
+        {
+          "prop_id": "PROP009_RIGHT_COUPLET",
+          "sha256_match": true
+        },
+        {
+          "prop_id": "PROP010_PEASANT_ASSOCIATION_MAIN_FLAG",
+          "sha256_match": true
+        },
+        {
+          "prop_id": "PROP004_CAPTURED_WEAPON_PILE",
+          "sha256_match": true
+        },
+        {
+          "prop_id": "PROP002_SINGLE_GRAIN_BAG",
+          "sha256_match": true
+        }
+      ],
+      "errors": []
+    }
+  ],
+  "pixel_exact_count": 3
+}

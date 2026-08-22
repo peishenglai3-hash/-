@@ -69,7 +69,7 @@ export class Ch03HistoricalNodeScene extends Phaser.Scene {
 		// 允许测试/试玩用 E 或 Space 跳过；正常流程仍以 complete 为准。
 		onAction(this, "INTERACT", () => this.handleAdvance());
 		onAction(this, "ADVANCE", () => this.handleAdvance());
-		(window as any).ch03HistoricalNodeGame = this;
+		if (import.meta.env.DEV) (window as any).ch03HistoricalNodeGame = this;
 	}
 
 	fitVideo(video: Phaser.GameObjects.Video) {
@@ -102,7 +102,7 @@ export class Ch03HistoricalNodeScene extends Phaser.Scene {
 		this.videoOverlay?.stop();
 		this.videoOverlay?.destroy();
 		this.videoOverlay = undefined;
-		if ((window as any).ch03HistoricalNodeGame === this)
+		if (import.meta.env.DEV && (window as any).ch03HistoricalNodeGame === this)
 			delete (window as any).ch03HistoricalNodeGame;
 	}
 }

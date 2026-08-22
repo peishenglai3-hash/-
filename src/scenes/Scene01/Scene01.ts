@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import "./style.css";
 import { createKeyMap, isActionDown, onAction } from "@/common/actions";
+import { WORLD_INDICATOR_DEPTH } from "@/common/displayDepth";
 import { useGameStateStore } from "@/stores/modules/gameState";
 import {
 	showTask,
@@ -34,6 +35,7 @@ import {
 } from "./content";
 import type { Choice } from "./content";
 import { applyFormalChoice } from "@/common/actionProfileSystem";
+import { useGameSaveStore } from "@/stores/modules/gameSave";
 import { assetPath } from "@/common/paths";
 import {
 	createModernPlayerWalkAnimations,
@@ -102,6 +104,7 @@ export class Scene01 extends Phaser.Scene {
 	studentA!: Phaser.GameObjects.Sprite;
 	studentB!: Phaser.GameObjects.Sprite | Phaser.GameObjects.DOMElement;
 	studentBExit: Phaser.GameObjects.Sprite | null = null;
+	npcMarkers: Partial<Record<"A" | "B", Phaser.GameObjects.Container>> = {};
 	leaveNpcArrived: { A: boolean; B: boolean } | null = null;
 	monumentChoiceTimer: number | null = null;
 
@@ -206,6 +209,9 @@ export class Scene01 extends Phaser.Scene {
 			studentBSpawn.position[1],
 			studentBSpawn.facing,
 		);
+		this.npcMarkers = {};
+		this.createNpcMarker("A", this.studentA, this.actorVisualProfiles.NPC_CH00_STUDENT_A.display_height);
+		this.createNpcMarker("B", this.studentB, this.actorVisualProfiles.NPC_CH00_STUDENT_B.display_height);
 		onAction(this, "INTERACT", () => this.handleConfirm());
 		onAction(this, "ADVANCE", () => {
 			if (this.state.mode === "result") this.beginLeave();
@@ -213,7 +219,7 @@ export class Scene01 extends Phaser.Scene {
 			else if (itemPanelOpen()) closeItem();
 		});
 		onAction(this, "PAUSE", () => togglePause());
-		(window as any).scene01Game = this;
+		if (import.meta.env.DEV) (window as any).scene01Game = this;
 	}
 
 	beginExplore() {
@@ -367,6 +373,7 @@ export class Scene01 extends Phaser.Scene {
 	}
 
 	setupZoneEditor() {
+		if (!import.meta.env.DEV) return;
 		const file = "public/data/scene01_manifest.json";
 		const documents = { [file]: this.manifest as any };
 		this.zoneEditor = new CollisionEditor(this, {
@@ -506,6 +513,42 @@ export class Scene01 extends Phaser.Scene {
 		this.setActorVisualBasePosition(id, x * PX, y * PX);
 	}
 
+	createNpcMarker(
+		id: "A" | "B",
+		actor: Phaser.GameObjects.GameObject & { x: number; y: number },
+		displayHeight: number,
+	) {
+		const marker = this.add
+			.container(actor.x, actor.y - displayHeight - 18)
+			.setDepth(WORLD_INDICATOR_DEPTH)
+			.setAlpha(0.96)
+			.setVisible(false);
+		const badge = this.add.graphics();
+		badge.fillStyle(0xf0cf67, 1);
+		badge.fillRoundedRect(-12, -15, 24, 28, 5);
+		badge.fillTriangle(-7, 12, 7, 12, 0, 20);
+		badge.lineStyle(2, 0x4a2c1f, 1);
+		badge.strokeRoundedRect(-12, -15, 24, 28, 5);
+		const symbol = this.add.text(0, -1, "!", {
+			color: "#4a2c1f",
+			fontFamily: "monospace",
+			fontSize: "18px",
+			fontStyle: "bold",
+			stroke: "#fff3b0",
+			strokeThickness: 1,
+		}).setOrigin(0.5);
+		marker.add([badge, symbol]);
+		this.npcMarkers[id] = marker;
+		this.tweens.add({
+			targets: marker,
+			y: marker.y - 6,
+			duration: 520,
+			yoyo: true,
+			repeat: -1,
+			ease: "Sine.easeInOut",
+		});
+	}
+
 	repositionActors() {
 		this.player.setPosition(24 * PX, 25 * PX);
 		this.setActorVisualBasePosition("NPC_CH00_STUDENT_A", 26 * PX, 25 * PX);
@@ -622,6 +665,17 @@ export class Scene01 extends Phaser.Scene {
 
 	updatePrompt() {
 		const nearby = this.nearby();
+		const showMarkers = this.state.mode === "explore" || this.state.mode === "leave_walk";
+		const aVisible = showMarkers && (
+			this.state.mode === "explore" || (!this.state.npcDialogue.has("A") && !!this.leaveNpcArrived?.A)
+		);
+		const bVisible = showMarkers && (
+			this.state.mode === "explore" || (this.state.npcDialogue.has("A") && !this.state.npcDialogue.has("B") && !!this.leaveNpcArrived?.B)
+		);
+		this.npcMarkers.A?.setPosition(this.studentA.x, this.studentA.y - this.actorVisualProfiles.NPC_CH00_STUDENT_A.display_height - 18);
+		this.npcMarkers.B?.setPosition(this.studentB.x, this.studentB.y - this.actorVisualProfiles.NPC_CH00_STUDENT_B.display_height - 18);
+		this.npcMarkers.A?.setVisible(aVisible);
+		this.npcMarkers.B?.setVisible(bVisible);
 		showPrompt(nearby ? `${nearby.prompt || nearby.id}  ·  E` : "");
 	}
 
@@ -787,6 +841,7 @@ export class Scene01 extends Phaser.Scene {
 			echoSummary: choice.echo_summary,
 			failureCheck: false,
 		});
+		useGameSaveStore().autosave("PROLOGUE_SC01");
 		this.state.flags.add("FLAG_PRO_Q01_COMPLETED");
 		hideChoices();
 		showResult(choice);

@@ -26,6 +26,7 @@ import SceneFade from "@/components/ui/SceneFade.vue";
 import PausePanel from "@/components/ui/PausePanel.vue";
 import FlavorToast from "@/components/ui/FlavorToast.vue";
 import EndPanel from "@/components/ui/EndPanel.vue";
+import PortraitResultPanel from "@/components/ui/PortraitResultPanel.vue";
 import ChapterTitleCard from "@/components/ui/ChapterTitleCard.vue";
 import CombatHud from "@/components/ui/CombatHud.vue";
 import { useGameStateStore } from "@/stores/modules/gameState";
@@ -37,22 +38,24 @@ const gameEl = ref<HTMLElement | null>(null);
 onMounted(() => {
 	directorStore.init(gameEl.value!);
 
-	const game = directorStore.game!;
-	window.addEventListener("honghu:dev-add-task", () => hud.addTestTask());
+	if (import.meta.env.DEV) {
+		const game = directorStore.game!;
+		window.addEventListener("honghu:dev-add-task", () => hud.addTestTask());
 
-	// P 键切换区域编辑器
-	window.addEventListener("keydown", (event) => {
-		if (event.code !== "KeyP") return;
-		const editorPanel = document.querySelector(".dev-zone-editor");
-		const target = event.target as HTMLElement | null;
-		if (
-			["INPUT", "TEXTAREA", "SELECT"].includes(target?.tagName ?? "") &&
-			!editorPanel?.contains(target)
-		) return;
-		event.preventDefault();
-		const scene = [...game.scene.getScenes(true)].reverse().find((item: any) => item.zoneEditor) as any;
-		scene?.zoneEditor.toggle();
-	});
+		// P 键切换区域编辑器（仅开发构建）
+		window.addEventListener("keydown", (event) => {
+			if (event.code !== "KeyP") return;
+			const editorPanel = document.querySelector(".dev-zone-editor");
+			const target = event.target as HTMLElement | null;
+			if (
+				["INPUT", "TEXTAREA", "SELECT"].includes(target?.tagName ?? "") &&
+				!editorPanel?.contains(target)
+			) return;
+			event.preventDefault();
+			const scene = [...game.scene.getScenes(true)].reverse().find((item: any) => item.zoneEditor) as any;
+			scene?.zoneEditor.toggle();
+		});
+	}
 });
 
 // 开场视频开始播放：解锁 Web Audio
@@ -63,7 +66,7 @@ function onStart() {
 // 开场视频结束（或被跳过）：起 BGM 并放开场景探索
 function onDone() {
 	directorStore.bgm.play().catch(() => {});
-	(window as any).scene01Game?.beginExplore();
+	directorStore.beginPrologueExplore();
 }
 </script>
 
@@ -85,6 +88,7 @@ function onDone() {
 	<PausePanel />
 	<FlavorToast />
 	<EndPanel />
+	<PortraitResultPanel />
 	<ChapterTitleCard />
 	<CombatHud />
 </template>

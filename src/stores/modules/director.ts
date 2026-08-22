@@ -1,4 +1,4 @@
-import { ref } from "vue";
+import { shallowRef } from "vue";
 import { defineStore } from "pinia";
 import Phaser from "phaser";
 import type { GameSettings, RunSave, SaveData, SceneId } from "@/types/common";
@@ -20,20 +20,30 @@ import { Ch03TuCompoundScene } from "@/scenes/Scene05/Ch03TuCompoundScene";
 import { Ch03GateBreachCombatScene } from "@/scenes/Scene05/Ch03GateBreachCombatScene";
 import { Ch03HistoricalNodeScene } from "@/scenes/Scene05/Ch03HistoricalNodeScene";
 import { Ch03ChapterEndScene } from "@/scenes/Scene05/Ch03ChapterEndScene";
+import { Ch04OpeningScene } from "@/scenes/Scene06/Ch04OpeningScene";
+import { Ch04WangyeTempleScene } from "@/scenes/Scene06/Ch04WangyeTempleScene";
+import { Ch04ConsciousnessScene } from "@/scenes/Scene06/Ch04ConsciousnessScene";
+import { Ch04ModernReturnScene } from "@/scenes/Scene06/Ch04ModernReturnScene";
+import { Ch04FinalChoiceScene } from "@/scenes/Scene06/Ch04FinalChoiceScene";
+import { Ch04AnswerWrittenScene } from "@/scenes/Scene06/Ch04AnswerWrittenScene";
+import { Ch04Scene5VideoScene } from "@/scenes/Scene06/Ch04Scene5VideoScene";
+import { Ch04PortraitScene } from "@/scenes/Scene06/Ch04PortraitScene";
+import {
+	isCh04TempleShot,
+	type Ch04TempleShot,
+} from "@/scenes/Scene06/ch04WangyeTempleMap";
 import { CH03_COMBAT_FLAGS } from "@/scenes/Scene05/ch03GateBreachCombat.content";
 import {
 	isTuCompoundState,
 	type TuCompoundState,
 } from "@/scenes/Scene05/tuCompoundMap";
 import { isAncestralHallVariant } from "@/scenes/Scene04/ancestralHallMap";
-import { CH02_FLASHBACK_CHOICES, CH02_FLASHBACK_FLAGS } from "@/scenes/Scene04/ch02Flashback.content";
-import { CH02_DISCIPLINE_FLAGS, CH02_GROUP_CHOICES } from "@/scenes/Scene04/ch02Discipline.content";
-import { CH02_MATERIALS_CHOICES, CH02_MATERIALS_FLAGS } from "@/scenes/Scene04/ch02Materials.content";
 import {
 	CHOICES as CH01_SC01_CHOICES,
 } from "@/scenes/Scene03/ch01Sc01.content";
 import { FLAGS as CH01_SC01_FLAGS } from "@/scenes/Scene03/ch01Sc01.flags";
 import { useGameStateStore } from "@/stores/modules/gameState";
+import { useHudStore } from "@/stores/modules/hud";
 import { applyFormalChoice, getChapter3Access, PROFILE_AXES } from "@/common/actionProfileSystem";
 import { assetPath } from "@/common/paths";
 import {
@@ -45,6 +55,7 @@ import {
 	hideDialogue,
 	hideChoices,
 	hideResult,
+	hidePortraitResult,
 	showPrompt,
 	hideCombatHud,
 	clearFade,
@@ -52,6 +63,19 @@ import {
 } from "@/common/ui";
 import { useGameSaveStore, SCENE_KEY } from "@/stores";
 import { ambience } from "@/common/ambience";
+import { applyManagedBgmVolume } from "@/common/audioBus";
+
+const CHAPTER3_FAILURE_FLAGS = new Set([
+	"CH03_RISK_PRECHECK_FAILURE",
+	"CH03_ACTION_REPLACEMENT",
+	"CH03_GATE_ATTACK_REPLACEMENT",
+	"CH03_AFTER_BATTLE_REPLACEMENT",
+	"CH03_CLEARING_REPLACEMENT",
+]);
+
+function isChapter3FailureSave(save: RunSave): boolean {
+	return save.sceneId === "CH03_COMPOUND" && save.tags.some((tag) => CHAPTER3_FAILURE_FLAGS.has(tag));
+}
 
 function createGame(parent: HTMLElement): Phaser.Game {
 	return new Phaser.Game({
@@ -89,14 +113,53 @@ function createGame(parent: HTMLElement): Phaser.Game {
 			Ch03GateBreachCombatScene,
 			Ch03HistoricalNodeScene,
 			Ch03ChapterEndScene,
+			Ch04OpeningScene,
+			Ch04WangyeTempleScene,
+			Ch04ConsciousnessScene,
+			Ch04ModernReturnScene,
+			Ch04FinalChoiceScene,
+			Ch04AnswerWrittenScene,
+			Ch04Scene5VideoScene,
+			Ch04PortraitScene,
 		],
 	});
+}
+
+const MANAGED_SCENE_KEYS = [
+	"TitleScene",
+	"Scene01",
+	"PrologueScene02",
+	"Ch01Sc01Scene",
+	"Ch01Sc02Scene",
+	"Ch01Sc03Scene",
+	"Ch02TransitionScene",
+	"Ch02AncestralHallScene",
+	"Ch02FlashbackScene",
+	"Ch02DepartureScene",
+	"Ch03OpeningScene",
+	"Ch03Flashback3Scene",
+	"Ch03TuCompoundScene",
+	"Ch03GateBreachCombatScene",
+	"Ch03HistoricalNodeScene",
+	"Ch03ChapterEndScene",
+	"Ch04OpeningScene",
+	"Ch04WangyeTempleScene",
+	"Ch04ConsciousnessScene",
+	"Ch04ModernReturnScene",
+	"Ch04FinalChoiceScene",
+	"Ch04AnswerWrittenScene",
+	"Ch04Scene5VideoScene",
+	"Ch04PortraitScene",
+] as const;
+
+function stopManagedScenes(game: Phaser.Game): void {
+	for (const sceneKey of MANAGED_SCENE_KEYS) game.scene.stop(sceneKey);
 }
 
 export const useDirectorStore = defineStore("director", () => {
 	const gameState = useGameStateStore();
 	const gameSave = useGameSaveStore();
-	const game = ref<Phaser.Game | null>(null);
+	const game = shallowRef<Phaser.Game | null>(null);
 	const transitionAudio = new TransitionAudioController();
 	const bgm = new Audio(assetPath("/assets/audio/prologue_bgm.wav"));
 	bgm.loop = true;
@@ -107,13 +170,15 @@ export const useDirectorStore = defineStore("director", () => {
 		if (game.value) return;
 		const g = createGame(parent);
 		game.value = g;
-		(window as any).game = g;
+		if (import.meta.env.DEV) (window as any).game = g;
 		g.events.on("ch03:risk-failure", () => {
 			// 第三章本场只触发既有固定回退点，不在地图层复制一套存档逻辑。
 			rollbackToCheckpoint();
 		});
-		(window as any).gameDirector = {
+		if (import.meta.env.DEV) (window as any).gameDirector = {
 			game: g,
+			bgm,
+			finishPrologue,
 			enterScene,
 			enterChapter2: startChapter2Opening,
 			enterChapter2Map: openChapter2Map,
@@ -126,24 +191,65 @@ export const useDirectorStore = defineStore("director", () => {
 			enterChapter3Map: openChapter3Map,
 			enterChapter3Combat: startChapter3Combat,
 			enterChapter3HistoricalNode: startChapter3HistoricalNode,
+			enterChapter4Opening: startChapter4Opening,
+			enterChapter4Temple: openChapter4Temple,
+			enterChapter4Consciousness: startChapter4Consciousness,
+			enterChapter4ModernReturn: startChapter4ModernReturn,
+			enterChapter4FinalChoice: startChapter4FinalChoice,
+			enterChapter4AnswerWritten: startChapter4AnswerWritten,
+			enterChapter4Scene5Video: startChapter4Scene5Video,
+			enterChapter4Portrait: startChapter4Portrait,
+			replayChapter,
 			getChapter3Access: readChapter3Access,
 		};
-		const query = new URLSearchParams(window.location.search);
-		const requestedMap = query.get("ch2map");
-		const requestedChapter3State = query.get("ch3state");
-		if (isAncestralHallVariant(requestedMap)) {
-			window.setTimeout(() => openChapter2Map(requestedMap), 0);
-		} else if (isTuCompoundState(requestedChapter3State)) {
-			window.setTimeout(() => openChapter3Map(requestedChapter3State), 0);
-		} else if (query.get("chapter") === "2") {
-			// 仅第二章试玩入口：从第二章入口视频开始，不要求先完成第一章。
-			window.setTimeout(() => startChapter2Opening(), 0);
-		} else if (query.get("chapter") === "3" && query.get("combat") === "1") {
-			// 战斗切片试玩入口：直接进入大门撞开后的独立战斗场景。
-			window.setTimeout(() => startChapter3Combat(), 0);
-		} else if (query.get("chapter") === "3") {
-			// 第三章试玩入口：先播放章节衔接视频，再进入杜家大院外围底座。
-			window.setTimeout(() => startChapter3Opening(), 0);
+		if (import.meta.env.DEV) {
+			const query = new URLSearchParams(window.location.search);
+			const requestedMap = query.get("ch2map");
+			const requestedChapter3State = query.get("ch3state");
+			const requestedChapter4Shot = query.get("ch4shot");
+			const requestedChapter4Scene = query.get("ch4scene");
+			if (query.get("scene") === "fb") {
+				// 旧版回归脚本使用的独立闪回验收入口，仅限 DEV；正式包不接受该参数。
+				(window as any).gameDirector.standaloneFb = true;
+				window.setTimeout(() => game.value?.scene.start("Ch01Sc02Scene"), 0);
+			} else if (isAncestralHallVariant(requestedMap)) {
+				window.setTimeout(() => openChapter2Map(requestedMap), 0);
+			} else if (isTuCompoundState(requestedChapter3State)) {
+				window.setTimeout(() => openChapter3Map(requestedChapter3State), 0);
+			} else if (query.get("chapter") === "2") {
+				// 仅第二章试玩入口：从第二章入口视频开始，不要求先完成第一章。
+				window.setTimeout(() => startChapter2Opening(), 0);
+			} else if (query.get("chapter") === "3" && query.get("combat") === "1") {
+				// 战斗切片试玩入口：直接进入大门撞开后的独立战斗场景。
+				window.setTimeout(() => startChapter3Combat(), 0);
+			} else if (query.get("chapter") === "3") {
+				// 第三章试玩入口：先播放章节衔接视频，再进入杜家大院外围底座。
+				window.setTimeout(() => startChapter3Opening(), 0);
+			} else if (query.get("chapter") === "4" && requestedChapter4Scene === "consciousness") {
+				// 第四章意识交错验收入口：固定镜头、跳过前置视频和场景一。
+				window.setTimeout(() => startChapter4Consciousness("SHOT_WIDE"), 0);
+			} else if (query.get("chapter") === "4" && requestedChapter4Scene === "modern-return") {
+				// 第四章场景三验收入口：复用序章实践驻地，跳过王爷庙前置段落。
+				window.setTimeout(() => startChapter4ModernReturn(), 0);
+			} else if (query.get("chapter") === "4" && requestedChapter4Scene === "final-choice") {
+				// 第四章最终选择验收入口：直接进入实践笔记补写流程。
+				window.setTimeout(() => startChapter4FinalChoice(), 0);
+			} else if (query.get("chapter") === "4" && requestedChapter4Scene === "answer-written") {
+				// 第四章场景五验收入口：跳过最终选择，直接查看答案写下之后。
+				window.setTimeout(() => startChapter4AnswerWritten(), 0);
+			} else if (query.get("chapter") === "4" && requestedChapter4Scene === "scene5-video") {
+				// 第四章场景五转场视频验收入口。
+				window.setTimeout(() => startChapter4Scene5Video(), 0);
+			} else if (query.get("chapter") === "4" && requestedChapter4Scene === "portrait") {
+				// 第四章最终画像验收入口：直接按当前画像状态结算。
+				window.setTimeout(() => startChapter4Portrait(), 0);
+			} else if (query.get("chapter") === "4" && isCh04TempleShot(requestedChapter4Shot)) {
+				// 第四章地图镜头验收入口：绕过视频，直接查看指定镜头。
+				window.setTimeout(() => openChapter4Temple(requestedChapter4Shot), 0);
+			} else if (query.get("chapter") === "4") {
+				// 第四章试玩入口：先播放“戴家场王爷庙”开场视频。
+				window.setTimeout(() => startChapter4Opening(), 0);
+			}
 		}
 
 		// 闪回流程路由（SC01 ↔ SC02 / SC01 ↔ SC03）
@@ -201,6 +307,33 @@ export const useDirectorStore = defineStore("director", () => {
 			g.scene.stop("Ch03TuCompoundScene");
 			startChapter3End();
 		});
+		g.events.on("ch04:opening-complete", () => {
+			// 与视频场景解耦，避免在视频 complete 回调内直接切换场景。
+			window.setTimeout(() => openChapter4Temple("SHOT_WIDE"), 80);
+		});
+		g.events.on("ch04:wangye-temple-complete", () => {
+			// 群众声音达到高点后直接进入意识交错；切换延后一拍，避免在
+			// NarrativeStore 的完成回调中同步修改 Phaser 场景列表。
+			window.setTimeout(() => startChapter4Consciousness("SHOT_WIDE"), 80);
+		});
+		g.events.on("ch04:consciousness-complete", () => {
+			// 意识交错结束后以短黑幕进入现代实践驻地。
+			window.setTimeout(() => startChapter4ModernReturn(), 80);
+		});
+		g.events.on("ch04:modern-return-complete", () => {
+			window.setTimeout(() => startChapter4FinalChoice(), 80);
+		});
+		g.events.on("ch04:final-choice-complete", () => {
+			// 最终选择完成后先停留在“答案写下之后”，让玩家看到选择从纸面
+			// 回到自身的收束，再进入专用转场视频和最终画像结算。
+			window.setTimeout(() => startChapter4AnswerWritten(), 80);
+		});
+		g.events.on("ch04:answer-written-complete", () => {
+			window.setTimeout(() => startChapter4Scene5Video(), 80);
+		});
+		g.events.on("ch04:scene5-video-complete", () => {
+			window.setTimeout(() => startChapter4Portrait(), 80);
+		});
 
 		// 结算 → 第一章
 		window.addEventListener("prologue:scene-exit", ((event: CustomEvent<SaveData>) => {
@@ -218,19 +351,21 @@ export const useDirectorStore = defineStore("director", () => {
 			hideIntro();
 			g.scene.stop("Scene01");
 			g.scene.stop("PrologueScene02");
+			gameSave.captureChapterEntry(1);
 			enterScene("Ch01Sc01Scene", "CH01_SC01");
 		}) as EventListener);
 
 		gameSave.onSettingsChange((s) => applySettings(s));
 		applySettings(gameSave.getSettings());
 
-		window.addEventListener("honghu:dev-next-chapter", ((event: CustomEvent<{ sceneKey?: string }>) => {
-			handleDevNextChapter(event.detail?.sceneKey);
-		}) as EventListener);
+		if (import.meta.env.DEV)
+			window.addEventListener("honghu:dev-next-chapter", ((event: CustomEvent<{ sceneKey?: string }>) => {
+				handleDevNextChapter(event.detail?.sceneKey);
+			}) as EventListener);
 
 		// 测试/调试钩子：失败回退链路
-		(window as any).rollbackToCheckpoint = () =>
-			rollbackToCheckpoint();
+		if (import.meta.env.DEV)
+			(window as any).rollbackToCheckpoint = () => rollbackToCheckpoint();
 	}
 
 	/* ===== 闪回流程路由 ===== */
@@ -306,6 +441,8 @@ export const useDirectorStore = defineStore("director", () => {
 	}
 
 	function clearStoryUi(): void {
+		useHudStore().paused = false;
+		gameState.state.paused = false;
 		hideIntro();
 		hideEndPanel();
 		hideTask();
@@ -313,6 +450,7 @@ export const useDirectorStore = defineStore("director", () => {
 		hideDialogue();
 		hideChoices();
 		hideResult();
+		hidePortraitResult();
 		hideInfoPanel();
 		hideCombatHud();
 		showPrompt("");
@@ -343,9 +481,10 @@ export const useDirectorStore = defineStore("director", () => {
 		g.scene.start("Ch02AncestralHallScene", { variant: selectedVariant, entry });
 	}
 
-	function startChapter2Opening(): void {
+	function startChapter2Opening(captureEntry = true): void {
 		const g = game.value;
 		if (!g) return;
+		if (captureEntry) gameSave.captureChapterEntry(2);
 		gameSave.autosave("CH02_TRANSITION");
 		clearStoryUi();
 		stopManagedAudio();
@@ -395,9 +534,10 @@ export const useDirectorStore = defineStore("director", () => {
 		g.scene.start("Ch02DepartureScene");
 	}
 
-	function startChapter3Opening(): void {
+	function startChapter3Opening(captureEntry = true): void {
 		const g = game.value;
 		if (!g) return;
+		if (captureEntry) gameSave.captureChapterEntry(3);
 		gameSave.autosave("CH03_OPENING");
 		clearStoryUi();
 		stopManagedAudio();
@@ -559,6 +699,89 @@ export const useDirectorStore = defineStore("director", () => {
 		g.scene.start("Ch03ChapterEndScene");
 	}
 
+	function startChapter4Opening(captureEntry = true): void {
+		const g = game.value;
+		if (!g) return;
+		if (captureEntry) gameSave.captureChapterEntry(4);
+		gameSave.autosave("CH04_OPENING");
+		clearStoryUi();
+		stopManagedAudio();
+		(window as any).hideTitleCard?.();
+		stopManagedScenes(g);
+		// 视频自身带声音；不启动章节 BGM，避免与视频音轨混音。
+		g.scene.start("Ch04OpeningScene");
+	}
+
+	function openChapter4Temple(shot: Ch04TempleShot = "SHOT_WIDE"): void {
+		const g = game.value;
+		if (!g) return;
+		gameSave.autosave("CH04_WANGYE_TEMPLE");
+		clearStoryUi();
+		stopManagedAudio();
+		stopManagedScenes(g);
+		g.scene.start("Ch04WangyeTempleScene", { shot });
+	}
+
+	function startChapter4Consciousness(shot: Ch04TempleShot = "SHOT_WIDE"): void {
+		const g = game.value;
+		if (!g) return;
+		gameSave.autosave("CH04_CONSCIOUSNESS");
+		clearStoryUi();
+		stopManagedAudio();
+		stopManagedScenes(g);
+		g.scene.start("Ch04ConsciousnessScene", { shot });
+	}
+
+	function startChapter4ModernReturn(): void {
+		const g = game.value;
+		if (!g) return;
+		gameSave.autosave("CH04_MODERN_RETURN");
+		clearStoryUi();
+		stopManagedAudio();
+		stopManagedScenes(g);
+		g.scene.start("Ch04ModernReturnScene");
+	}
+
+	function startChapter4FinalChoice(): void {
+		const g = game.value;
+		if (!g) return;
+		gameSave.autosave("CH04_FINAL_CHOICE");
+		clearStoryUi();
+		stopManagedAudio();
+		stopManagedScenes(g);
+		g.scene.start("Ch04FinalChoiceScene");
+	}
+
+	function startChapter4AnswerWritten(): void {
+		const g = game.value;
+		if (!g) return;
+		gameSave.autosave("CH04_ANSWER_WRITTEN");
+		clearStoryUi();
+		stopManagedAudio();
+		stopManagedScenes(g);
+		g.scene.start("Ch04AnswerWrittenScene");
+	}
+
+	function startChapter4Scene5Video(): void {
+		const g = game.value;
+		if (!g) return;
+		gameSave.autosave("CH04_SCENE5_VIDEO");
+		clearStoryUi();
+		stopManagedAudio();
+		stopManagedScenes(g);
+		g.scene.start("Ch04Scene5VideoScene");
+	}
+
+	function startChapter4Portrait(): void {
+		const g = game.value;
+		if (!g) return;
+		gameSave.autosave("CH04_PORTRAIT_RESULT");
+		clearStoryUi();
+		stopManagedAudio();
+		stopManagedScenes(g);
+		g.scene.start("Ch04PortraitScene");
+	}
+
 	function finishChapter2(): void {
 		const runSave = gameSave.autosave("CH02_DEPARTURE");
 		const chapter3Access = readChapter3Access();
@@ -589,72 +812,6 @@ export const useDirectorStore = defineStore("director", () => {
 		});
 	}
 
-	// 开发跳转：进入第二章链路前补齐序章与第一章的随机画像和必要剧情旗标，
-	// 保证章末结算的 chapter3Access 与风险判定有完整输入。
-	function prepareChapter2EntryForDev(): void {
-		if (!CHOICES.some((choice) => gameState.state.flags.has(choice.flag))) randomizePrologueChoice();
-		gameState.state.flags.add("FLAG_PRO_Q01_COMPLETED");
-		for (const flag of ["FLAG_PRO02_AUDIO_REVIEWED", "FLAG_PRO02_QUESTION_WRITTEN", "PROLOGUE_COMPLETED", "TIME_TRAVEL_CHECKPOINT"])
-			gameState.state.flags.add(flag);
-		gameState.state.audioReviewed = true;
-		gameState.state.questionWritten = true;
-		if (!CH01_SC01_CHOICES.some((choice) => gameState.state.flags.has(choice.flag))) completeCh01Sc01ForDev();
-		gameState.state.flags.add("CH01_YARD_DONE");
-	}
-
-	function completeCh02FlashbackForDev(): void {
-		if (!CH02_FLASHBACK_CHOICES.some((choice) => gameState.state.flags.has(choice.flag))) {
-			const choice = CH02_FLASHBACK_CHOICES[Math.floor(Math.random() * CH02_FLASHBACK_CHOICES.length)];
-			applyFormalChoice(gameState.state, {
-				choiceId: `CH02_FLASHBACK_${choice.id}`,
-				chapter: 2,
-				isFormalChoice: true,
-				portraitChange: choice.profileDelta,
-				riskChange: choice.riskDelta,
-				flag: choice.flag,
-				echoSummary: choice.label,
-				failureCheck: false,
-			});
-		}
-		gameState.state.flags.add(CH02_FLASHBACK_FLAGS.started);
-		gameState.state.flags.add(CH02_FLASHBACK_FLAGS.complete);
-	}
-
-	function completeCh02GroupChoiceForDev(): void {
-		if (!CH02_GROUP_CHOICES.some((choice) => gameState.state.flags.has(choice.flag))) {
-			const choice = CH02_GROUP_CHOICES[Math.floor(Math.random() * CH02_GROUP_CHOICES.length)];
-			applyFormalChoice(gameState.state, {
-				choiceId: `CH02_GROUP_${choice.id}`,
-				chapter: 2,
-				isFormalChoice: true,
-				portraitChange: choice.profileDelta,
-				riskChange: choice.riskDelta,
-				flag: choice.flag,
-				echoSummary: choice.label,
-				failureCheck: false,
-			});
-		}
-		gameState.state.flags.add(CH02_DISCIPLINE_FLAGS.disciplineComplete);
-	}
-
-	function completeCh02MaterialsChoiceForDev(): void {
-		if (!CH02_MATERIALS_CHOICES.some((choice) => gameState.state.flags.has(choice.flag))) {
-			const choice = CH02_MATERIALS_CHOICES[Math.floor(Math.random() * CH02_MATERIALS_CHOICES.length)];
-			applyFormalChoice(gameState.state, {
-				choiceId: `CH02_MATERIALS_${choice.id}`,
-				chapter: 2,
-				isFormalChoice: true,
-				portraitChange: choice.profileDelta,
-				riskChange: choice.riskDelta,
-				flag: choice.flag,
-				tags: choice.id === "D" ? [CH02_MATERIALS_FLAGS.contactCaution] : [],
-				echoSummary: choice.label,
-				failureCheck: false,
-			});
-		}
-		gameState.state.flags.add(CH02_MATERIALS_FLAGS.materialsComplete);
-	}
-
 	function handleDevNextChapter(sceneKey?: string): void {
 		const activeKey = sceneKey ?? ([...game.value!.scene.getScenes(true)].reverse().find((scene: any) => scene.zoneEditor) as any)?.scene.key;
 		if (activeKey === "Ch01Sc01Scene" || activeKey === "Ch01Sc02Scene") {
@@ -668,50 +825,11 @@ export const useDirectorStore = defineStore("director", () => {
 		}
 
 		if (activeKey === "Ch01Sc03Scene") {
-			// 一二章衔接：院墙联络完成后不再折返陈家，补齐第一章状态直接进入第二章开场。
-			prepareChapter2EntryForDev();
+			clearStoryUi();
+			gameState.state.flags.add("CH01_YARD_DONE");
 			gameState.state.mode = "transition";
 			gameState.state.playerLocked = true;
-			startChapter2Opening();
-			return;
-		}
-
-		// 第二章各幕按剧情顺序推进一幕；章末出发视频后落到第二章结算（第三章待接入）。
-		if (activeKey === "Ch02TransitionScene") {
-			prepareChapter2EntryForDev();
-			openChapter2Map("main", "arrival");
-			return;
-		}
-		if (activeKey === "Ch02AncestralHallScene") {
-			prepareChapter2EntryForDev();
-			const entry = (game.value!.scene.getScene("Ch02AncestralHallScene") as any)?.entry ?? "preview";
-			if (entry === "deployment") startChapter2Flashback();
-			else if (entry === "discipline") {
-				completeCh02FlashbackForDev();
-				completeCh02GroupChoiceForDev();
-				openChapter2Map("sidewall", "materials");
-			} else if (entry === "materials") {
-				completeCh02FlashbackForDev();
-				completeCh02GroupChoiceForDev();
-				completeCh02MaterialsChoiceForDev();
-				startChapter2ToChapter3Transition();
-			}
-			else openChapter2Map("mainhall-close", "deployment");
-			return;
-		}
-		if (activeKey === "Ch02FlashbackScene") {
-			prepareChapter2EntryForDev();
-			completeCh02FlashbackForDev();
-			openChapter2Map("mainhall-close", "discipline");
-			return;
-		}
-		if (activeKey === "Ch02DepartureScene") {
-			prepareChapter2EntryForDev();
-			completeCh02FlashbackForDev();
-			completeCh02GroupChoiceForDev();
-			completeCh02MaterialsChoiceForDev();
-			game.value!.scene.stop("Ch02DepartureScene");
-			finishChapter2();
+			game.value!.events.emit("ch01:sc03-complete");
 			return;
 		}
 
@@ -749,22 +867,112 @@ export const useDirectorStore = defineStore("director", () => {
 
 	function applySettings(s: GameSettings): void {
 		bgm.volume = s.bgmVolume;
-		game.value!.sound.volume = s.sfxVolume;
+		// Phaser 轨道只承载场景 BGM；战斗/环境音效走独立 Web Audio 总线。
+		if (game.value) {
+			game.value.sound.volume = 1;
+			applyManagedBgmVolume(game.value.sound, s.bgmVolume);
+		}
 		ambience.setVolume(s.sfxVolume);
 	}
 
 	/* ===== 存档 & 场景切换 ===== */
 
+	function replayChapter(chapter: 1 | 2 | 3 | 4): void {
+		const g = game.value;
+		if (!g) return;
+		if (!gameSave.prepareChapterReplay(chapter)) {
+			useHudStore().showFlavor("该章节尚无可用的重玩入口存档。");
+			return;
+		}
+		if (chapter === 2) {
+			startChapter2Opening();
+			return;
+		}
+		if (chapter === 3) {
+			startChapter3Opening();
+			return;
+		}
+		if (chapter === 4) {
+			startChapter4Opening();
+			return;
+		}
+
+		clearStoryUi();
+		stopManagedAudio();
+		(window as any).hideTitleCard?.();
+		for (const sceneKey of [
+			"TitleScene",
+			"Scene01",
+			"PrologueScene02",
+			"Ch01Sc01Scene",
+			"Ch01Sc02Scene",
+			"Ch01Sc03Scene",
+			"Ch02TransitionScene",
+			"Ch02AncestralHallScene",
+			"Ch02FlashbackScene",
+			"Ch02DepartureScene",
+			"Ch03OpeningScene",
+			"Ch03Flashback3Scene",
+			"Ch03TuCompoundScene",
+			"Ch03GateBreachCombatScene",
+			"Ch03HistoricalNodeScene",
+			"Ch03ChapterEndScene",
+		]) g.scene.stop(sceneKey);
+		gameSave.autosave("CH01_SC01");
+		g.scene.start("Ch01Sc01Scene");
+	}
+
 	function startFromSave(save: RunSave): void {
+		if (isChapter3FailureSave(save)) {
+			// 失败自动存档只作为崩溃/刷新保护；重新加载时仍必须回到固定点，
+			// 不能停留在第三章失败任务上绕过回退规则。
+			gameSave.applyToState(save);
+			game.value!.scene.stop("TitleScene");
+			if (rollbackToCheckpoint()) return;
+			// 固定回退点和备份同时损坏时，不能继续应用失败存档并路由到第三章。
+			// 回到标题页，让玩家重新开始或修复本地存档。
+			gameState.state.mode = "intro";
+			gameState.state.playerLocked = true;
+			goToTitle();
+			return;
+		}
 		gameSave.applyToState(save);
 		game.value!.scene.stop("TitleScene");
-		if (save.sceneId === "CH02_TRANSITION") return startChapter2Opening();
+		if (save.sceneId === "CH02_TRANSITION") return startChapter2Opening(false);
 		if (save.sceneId === "CH02_HALL") return openChapter2Map("main", "arrival");
 		if (save.sceneId === "CH02_FLASHBACK") return startChapter2Flashback();
 		if (save.sceneId === "CH02_DEPARTURE") return startChapter2ToChapter3Transition();
-		if (save.sceneId === "CH03_OPENING") return startChapter3Opening();
+		if (save.sceneId === "CH03_OPENING") return startChapter3Opening(false);
 		if (save.sceneId === "CH03_FLASHBACK3") return startChapter3Flashback3();
 		if (save.sceneId === "CH03_END") return startChapter3End();
+		if (save.sceneId === "CH04_OPENING") return startChapter4Opening(false);
+		if (save.sceneId === "CH04_WANGYE_TEMPLE") {
+			return gameState.state.flags.has("CH04_SCENE1_COMPLETE")
+				? startChapter4Consciousness("SHOT_WIDE")
+				: openChapter4Temple("SHOT_WIDE");
+		}
+		if (save.sceneId === "CH04_CONSCIOUSNESS") return startChapter4Consciousness("SHOT_WIDE");
+		if (save.sceneId === "CH04_MODERN_RETURN") {
+			return gameState.state.flags.has("CH04_SCENE3_COMPLETE")
+				? startChapter4FinalChoice()
+				: startChapter4ModernReturn();
+		}
+		if (save.sceneId === "CH04_FINAL_CHOICE") {
+			return gameState.state.flags.has("CH04_FINAL_CHOICE_COMPLETE")
+				? startChapter4AnswerWritten()
+				: startChapter4FinalChoice();
+		}
+		if (save.sceneId === "CH04_ANSWER_WRITTEN") {
+			return gameState.state.flags.has("CH04_SCENE5_COMPLETE")
+				? startChapter4Scene5Video()
+				: startChapter4AnswerWritten();
+		}
+		if (save.sceneId === "CH04_SCENE5_VIDEO") {
+			return gameState.state.flags.has("CH04_SCENE5_VIDEO_COMPLETE")
+				? startChapter4Portrait()
+				: startChapter4Scene5Video();
+		}
+		if (save.sceneId === "CH04_PORTRAIT_RESULT") return startChapter4Portrait();
 		if (save.sceneId === "CH03_COMPOUND") {
 			return openChapter3Map(
 				gameState.state.flags.has(CH03_COMBAT_FLAGS.historicalNodeSeen) ? "STATE_AFTER_BATTLE" : "STATE_WAITING",
@@ -781,13 +989,18 @@ export const useDirectorStore = defineStore("director", () => {
 	function readChapter3Access() {
 		const access = getChapter3Access(gameState.state.risk);
 		gameState.state.chapter3Access = access;
-		(window as any).chapter3Access = access;
+		if (import.meta.env.DEV) (window as any).chapter3Access = access;
 		return access;
 	}
 
 	function enterScene(key: string, sceneId: SceneId): void {
 		gameSave.autosave(sceneId);
 		game.value!.scene.start(key);
+	}
+
+	function beginPrologueExplore(): void {
+		const scene = game.value?.scene.getScene("Scene01") as { beginExplore?: () => void } | undefined;
+		scene?.beginExplore?.();
 	}
 
 	/** 章末结算后的标题路由；第二章入口由结算面板单独调用 startChapter2Opening。 */
@@ -812,6 +1025,14 @@ export const useDirectorStore = defineStore("director", () => {
 		g.scene.stop("Ch03GateBreachCombatScene");
 		g.scene.stop("Ch03HistoricalNodeScene");
 		g.scene.stop("Ch03ChapterEndScene");
+		g.scene.stop("Ch04OpeningScene");
+		g.scene.stop("Ch04WangyeTempleScene");
+		g.scene.stop("Ch04ConsciousnessScene");
+		g.scene.stop("Ch04ModernReturnScene");
+		g.scene.stop("Ch04FinalChoiceScene");
+		g.scene.stop("Ch04AnswerWrittenScene");
+		g.scene.stop("Ch04Scene5VideoScene");
+		g.scene.stop("Ch04PortraitScene");
 		g.scene.stop("PrologueScene02");
 		g.scene.stop("Scene01");
 		g.scene.start("TitleScene");
@@ -820,8 +1041,11 @@ export const useDirectorStore = defineStore("director", () => {
 	function rollbackToCheckpoint(): boolean {
 		const save = gameSave.loadFixed();
 		if (!save) return false;
+		const retainedProfile = { ...gameState.state.profile };
 		stopPrologueBgm();
 		gameSave.applyToState(save);
+		for (const axis of PROFILE_AXES)
+			gameState.state.profile[axis] = retainedProfile[axis] ?? 0;
 		game.value!.scene.stop("Scene01");
 		game.value!.scene.stop("PrologueScene02");
 		game.value!.scene.stop("Ch01Sc01Scene");
@@ -830,6 +1054,7 @@ export const useDirectorStore = defineStore("director", () => {
 		game.value!.scene.stop("Ch03GateBreachCombatScene");
 		game.value!.scene.stop("Ch03HistoricalNodeScene");
 		game.value!.scene.stop("Ch03ChapterEndScene");
+		gameSave.autosave("CH01_SC01");
 		game.value!.scene.start("Ch01Sc01Scene");
 		return true;
 	}
@@ -897,13 +1122,22 @@ export const useDirectorStore = defineStore("director", () => {
 		bgm,
 		init,
 		startFromSave,
+		replayChapter,
 		enterScene,
 		startChapter2Opening,
 		startChapter3Opening,
 		startChapter3Flashback3,
 		startChapter3Combat,
 		startChapter3End,
+		startChapter4Opening,
+		startChapter4Consciousness,
+		startChapter4ModernReturn,
+		startChapter4FinalChoice,
+		startChapter4AnswerWritten,
+		startChapter4Scene5Video,
+		startChapter4Portrait,
 		goToTitle,
 		finishPrologue,
+		beginPrologueExplore,
 	};
 });

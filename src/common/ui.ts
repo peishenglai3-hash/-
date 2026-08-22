@@ -1,7 +1,12 @@
 // ui.ts — HUD 控制接口，所有函数转发到 Pinia store
 // Phaser Scene 继续通过此模块控制 HUD，无需关心底层是 Vue 还是原生 DOM
 
-import { useHudStore, type DevPlayerMotionConfig } from "@/stores/modules/hud";
+import {
+  useHudStore,
+  type DevPlayerMotionConfig,
+  type PortraitPanelData,
+  type ResultPanelData,
+} from "@/stores/modules/hud";
 
 // 延迟获取 store 实例，避免模块初始化时调用（此时 Pinia 尚未安装）
 function store() {
@@ -36,8 +41,9 @@ export function closeInfoPanel() { store().closeInfoPanel(); }
 export function hideInfoPanel() { store().hideInfoPanel(); }
 export function showChoices(items: any[], onChoose: (id: string) => void, title?: string) { store().showChoices(items as any, onChoose, title); }
 export function hideChoices() { store().hideChoices(); }
-export function showResult(choice: { image: string; result: [string, string]; hint?: string }) { store().showResult(choice); }
+export function showResult(choice: ResultPanelData) { store().showResult(choice); }
 export function hideResult() { store().hideResult(); }
+export function advanceResult() { return store().advanceResult(); }
 export function showTask(task: any) { store().showTask(task); }
 export function closeTask() { store().closeTask(); }
 export function hideTask() { store().hideTask(); }
@@ -57,6 +63,8 @@ export function togglePause() { store().togglePause(); }
 export function hideIntro() { store().hideIntro(); }
 export function showEndPanel(save: any, endMeta?: any) { store().showEndPanel(save, endMeta); }
 export function hideEndPanel() { store().hideEndPanel(); }
+export function showPortraitResult(data: PortraitPanelData) { store().showPortraitResult(data); }
+export function hidePortraitResult() { store().hidePortraitResult(); }
 export function showCombatHud(data: any = {}) { store().showCombatHud(data); }
 export function updateCombatHud(data: any) { store().updateCombatHud(data); }
 export function hideCombatHud() { store().hideCombatHud(); }

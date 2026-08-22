@@ -12,7 +12,9 @@ export interface LayeredMapManifest {
 	tile_size: number;
 	coordinate_origin?: "top_left" | string;
 	render_order: string[];
-	layers: Record<string, LayeredMapLayerManifest>;
+	// Older runtime manifests use `layers`; authored asset packages may keep
+	// the same filenames under `files.layers`. The mount adapter accepts both.
+	layers?: Record<string, LayeredMapLayerManifest>;
 	collision_objects?: string;
 }
 
@@ -93,7 +95,7 @@ export function mountLayeredMap(
 
 	const layers: Record<string, Phaser.GameObjects.Image> = {};
 	for (const [index, layerName] of manifest.render_order.entries()) {
-		const layerManifest = manifest.layers[layerName];
+		const layerManifest = manifest.layers?.[layerName] ?? { file: layerName };
 		const key = definition.layerKeys[layerName];
 		if (
 			!layerManifest ||

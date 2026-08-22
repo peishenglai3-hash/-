@@ -266,7 +266,13 @@ export class CollisionEditor {
   }
 
   refreshList() {
-    this.itemSelect.innerHTML = this.items.map((item, index) => `<option value="${index}">${item.id || `${this.kind}_${index + 1}`}</option>`).join('');
+    this.itemSelect.replaceChildren();
+    this.items.forEach((item, index) => {
+      const option = document.createElement('option');
+      option.value = String(index);
+      option.textContent = item.id || `${this.kind}_${index + 1}`;
+      this.itemSelect.append(option);
+    });
     this.itemSelect.value = String(Math.max(0, this.items.indexOf(this.selected)));
   }
 

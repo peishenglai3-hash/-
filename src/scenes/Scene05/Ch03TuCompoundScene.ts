@@ -3,7 +3,8 @@ import { createKeyMap, isActionDown, onAction } from "@/common/actions";
 import { actorDepth } from "@/common/displayDepth";
 import { useGameStateStore } from "@/stores/modules/gameState";
 import { useGameSaveStore } from "@/stores/modules/gameSave";
-import { classifyRisk, applyFormalChoice, applyRiskDelta, type RiskFailure } from "@/common/actionProfileSystem";
+import { addManagedBgm } from "@/common/audioBus";
+import { classifyRisk, applyFormalChoice, type RiskFailure } from "@/common/actionProfileSystem";
 // @ts-ignore Shared JS helpers are intentionally untyped in the current project.
 import { actorColliderBottomAt, actorColliderRectAt, ensureActorColliderConfig, createActorColliderEntry, ensureActorVisualConfig, createActorVisualEntry } from "../../actor-collider.js";
 // @ts-ignore Shared collision geometry is JavaScript and covered by runtime tests.
@@ -36,6 +37,7 @@ import {
 	showPrompt,
 	showTask,
 	taskNeedsConfirmation,
+	togglePause,
 } from "@/common/ui";
 import {
 	mountLayeredMap,
@@ -51,7 +53,6 @@ import {
 } from "./tuCompoundMap";
 import {
 	CH03_RISK_PRECHECK_FLAGS,
-	chapter3PrecheckRiskAdjustment,
 	getChapter3TaskAssignment,
 	TASK_PERMISSION_LABELS,
 	taskPermissionFlags,
@@ -123,6 +124,7 @@ import {
 import {
 	buildChapter3ClearingChoices,
 	buildChapter3ClearingFeedback,
+	buildChapter3ClearingFailureTask,
 	buildChapter3ClearingFormalChoice,
 	buildChapter3MooncakeChoices,
 	buildChapter3MooncakeFeedback,
@@ -278,6 +280,7 @@ export class Ch03TuCompoundScene extends Phaser.Scene {
 	afterBattleChoice: AfterBattleChoiceId | null = null;
 	afterBattleFailure: RiskFailure | null = null;
 	clearingChoice: ClearingChoiceId | null = null;
+	clearingFailure: RiskFailure | null = null;
 	clearingPropertySuspicion = false;
 	mooncakeChoice: MooncakeChoiceId | null = null;
 	afterBattleMarker?: Phaser.GameObjects.Container;
@@ -323,6 +326,7 @@ export class Ch03TuCompoundScene extends Phaser.Scene {
 		this.afterBattleChoice = null;
 		this.afterBattleFailure = null;
 		this.clearingChoice = null;
+		this.clearingFailure = null;
 		this.clearingPropertySuspicion = false;
 		this.mooncakeChoice = null;
 		this.afterBattleMarker = undefined;
@@ -339,7 +343,7 @@ export class Ch03TuCompoundScene extends Phaser.Scene {
 		this.definition = TU_COMPOUND_MAPS[this.compoundState];
 		preloadLayeredMap(this, this.definition);
 		preloadChenWalk(this);
-		this.load.image("ch03_elder_member", "assets/characters/ch03-elder-member/idle.png");
+		this.load.image("ch03_elder_member", "assets/characters/ch03-elder-member/idle-v2.png");
 		this.load.image("ch03_dong_yunting_after_battle", "assets/characters/ch03-dong-yunting/idle.png");
 		this.load.image("ch03_wounded_member", "assets/characters/ch03-wounded-member/idle.png");
 		this.load.image("ch02_npc_group_leader", "assets/ch02/actors/ch02_npc_group_leader.png");
@@ -347,7 +351,7 @@ export class Ch03TuCompoundScene extends Phaser.Scene {
 		this.load.image("ch02_npc_young_member", "assets/ch02/actors/ch02_npc_young_member.png");
 		this.load.image("ch02_npc_worker_straw_hat", "assets/ch02/actors/ch02_npc_worker_straw_hat.png");
 		this.load.image("ch02_npc_worker_blue_headcloth", "assets/ch02/actors/ch02_npc_worker_blue_headcloth.png");
-		this.load.image("ch03_npc_peng_dingbang", "assets/characters/ch03-peng-dingbang/idle.png");
+		this.load.image("ch03_npc_peng_dingbang", "assets/characters/ch03-peng-dingbang/idle-v2.png");
 		this.load.image("ch03_militia_guard_a", "assets/characters/ch03-militia/idle-a.png");
 		this.load.image("ch03_militia_guard_b", "assets/characters/ch03-militia/idle-b.png");
 		this.load.image(CH03_OBSERVATION_IMAGE_KEYS.A, "assets/ch03/observation/observation-A.png");
@@ -413,6 +417,7 @@ export class Ch03TuCompoundScene extends Phaser.Scene {
 		if (this.compoundState !== "STATE_WAITING") this.cameras.main.fadeIn(650, 0, 0, 0);
 		this.keyMap = createKeyMap(this);
 		onAction(this, "INTERACT", () => this.handleConfirm());
+		onAction(this, "PAUSE", () => togglePause());
 		 onAction(this, "ADVANCE", () => {
 			if (this.state.mode === "result") {
 				if (this.actionPhase === "result") this.closeActionResult();
@@ -425,7 +430,7 @@ export class Ch03TuCompoundScene extends Phaser.Scene {
 			else if (this.state.inNarrative) advanceNarrative();
 			else if (this.state.mode === "info") closeInfoPanel();
 		});
-		(window as any).ch03TuCompoundGame = this;
+		if (import.meta.env.DEV) (window as any).ch03TuCompoundGame = this;
 		if (this.compoundState === "STATE_AFTER_BATTLE") {
 			this.restoreAfterBattleState();
 		} else if (this.state.flags.has(CH03_RISK_PRECHECK_FLAGS.complete)) {
@@ -619,7 +624,7 @@ export class Ch03TuCompoundScene extends Phaser.Scene {
 		this.state.mode = "info";
 		this.state.playerLocked = true;
 		showInfoPanel({
-			title: "风险预检查｜当前安全等级",
+			title: "行动前重新安排",
 			items: buildChapter3RiskInfo(this.riskAssignment),
 			continueLabel: "查看重新安排",
 			onContinue: () => this.playRiskBranch(),
@@ -654,10 +659,6 @@ export class Ch03TuCompoundScene extends Phaser.Scene {
 		this.clearTaskPermissionFlags();
 		this.state.flags.add(CH03_RISK_PRECHECK_FLAGS.complete);
 		for (const tag of taskPermissionFlags(this.riskAssignment.permission)) this.state.flags.add(tag);
-		if (!this.state.flags.has(CH03_RISK_PRECHECK_FLAGS.adjusted)) {
-			applyRiskDelta(this.state.risk, chapter3PrecheckRiskAdjustment(this.riskAssignment));
-			this.state.flags.add(CH03_RISK_PRECHECK_FLAGS.adjusted);
-		}
 		this.state.chapter3Access = getChapter3TaskAssignment({ ...this.state.risk }).access;
 		this.state.chapter3TaskPermission = this.riskAssignment.permission;
 		useGameSaveStore().autosave("CH03_COMPOUND");
@@ -722,6 +723,7 @@ export class Ch03TuCompoundScene extends Phaser.Scene {
 		if (!definition) return;
 
 		const result = applyFormalChoice(this.state, definition);
+		useGameSaveStore().autosave("CH03_COMPOUND");
 		this.observationChoice = choice;
 		this.observationFailure = result.failure;
 		this.observationPhase = "result";
@@ -860,6 +862,7 @@ export class Ch03TuCompoundScene extends Phaser.Scene {
 		if (!definition) return;
 
 		const result = applyFormalChoice(this.state, definition);
+		useGameSaveStore().autosave("CH03_COMPOUND");
 		this.actionChoice = choice;
 		this.actionFailure = result.failure;
 		this.actionPhase = "result";
@@ -1031,6 +1034,7 @@ export class Ch03TuCompoundScene extends Phaser.Scene {
 		if (!definition) return;
 
 		const result = applyFormalChoice(this.state, definition);
+		useGameSaveStore().autosave("CH03_COMPOUND");
 		this.gateEntryChoice = choice;
 		this.gateEntryFailure = result.failure;
 		this.gateAttackPhase = "result";
@@ -1095,6 +1099,13 @@ export class Ch03TuCompoundScene extends Phaser.Scene {
 			this.state.mode = "end";
 			this.state.playerLocked = true;
 			showTask(buildChapter3AfterBattleFailureTask(this.riskAssignment.access.failure ?? "coordination"));
+			return;
+		}
+		if (this.state.flags.has(CH03_CLEARING_FLAGS.replacement)) {
+			this.afterBattlePhase = "replacement";
+			this.state.mode = "end";
+			this.state.playerLocked = true;
+			showTask(buildChapter3ClearingFailureTask(this.riskAssignment.access.failure ?? "coordination"));
 			return;
 		}
 		if (!this.state.flags.has(CH03_AFTER_BATTLE_FLAGS.choiceComplete)) {
@@ -1164,6 +1175,7 @@ export class Ch03TuCompoundScene extends Phaser.Scene {
 		const definition = buildChapter3AfterBattleFormalChoice(id);
 		if (!definition) return;
 		const result = applyFormalChoice(this.state, definition);
+		useGameSaveStore().autosave("CH03_COMPOUND");
 		this.afterBattleChoice = choice;
 		this.afterBattleFailure = result.failure;
 		this.afterBattlePhase = "result";
@@ -1248,8 +1260,10 @@ export class Ch03TuCompoundScene extends Phaser.Scene {
 		this.clearingPropertySuspicion = choice === "D" && classifyRisk(projectedRisk).coordination !== "LOW";
 		const definition = buildChapter3ClearingFormalChoice(id, this.clearingPropertySuspicion);
 		if (!definition) return;
-		applyFormalChoice(this.state, definition);
+		const result = applyFormalChoice(this.state, definition);
+		useGameSaveStore().autosave("CH03_COMPOUND");
 		this.clearingChoice = choice;
+		this.clearingFailure = result.failure;
 		this.afterBattlePhase = "clearing_result";
 		hideChoices();
 		hidePrompt();
@@ -1281,6 +1295,19 @@ export class Ch03TuCompoundScene extends Phaser.Scene {
 		if (this.afterBattlePhase !== "clearing_feedback") return;
 		this.state.flags.add(CH03_CLEARING_FLAGS.choiceComplete);
 		this.state.flags.add(CH03_CLEARING_FLAGS.complete);
+		if (this.clearingFailure) {
+			this.afterBattlePhase = "replacement";
+			this.state.flags.add(CH03_CLEARING_FLAGS.replacement);
+			this.state.mode = "end";
+			this.state.playerLocked = true;
+			hideDialogue();
+			hideChoices();
+			hidePrompt();
+			useGameSaveStore().autosave("CH03_COMPOUND");
+			showTask(buildChapter3ClearingFailureTask(this.clearingFailure));
+			this.time.delayedCall(900, () => this.game.events.emit("ch03:risk-failure"));
+			return;
+		}
 		this.afterBattlePhase = "moon_cake_ready";
 		this.state.mode = "explore";
 		this.state.playerLocked = false;
@@ -1323,6 +1350,7 @@ export class Ch03TuCompoundScene extends Phaser.Scene {
 		const definition = buildChapter3MooncakeFormalChoice(id);
 		if (!definition) return;
 		applyFormalChoice(this.state, definition);
+		useGameSaveStore().autosave("CH03_COMPOUND");
 		this.state.propStates.mooncake = moonCakeStatus(choice);
 		this.mooncakeChoice = choice;
 		this.afterBattlePhase = "moon_cake_result";
@@ -1334,7 +1362,7 @@ export class Ch03TuCompoundScene extends Phaser.Scene {
 			image: mooncakeImagePath(choice),
 			result: [
 				`你选择了“${available.label}”。`,
-				`物件状态：${moonCakeStatus(choice)}。按 Space 退出图片，进入月饼处理反馈。`,
+				"月饼处理结果已记录。按 Space 退出图片，进入月饼处理反馈。",
 			],
 			hint: "Space 退出",
 		});
@@ -1731,10 +1759,9 @@ export class Ch03TuCompoundScene extends Phaser.Scene {
 	}
 
 	nearby() {
-		const candidates = [
-			...this.mapDocument.interactions,
-			...this.mapDocument.exits.map((entry) => ({ ...entry, prompt: entry.prompt ?? entry.id })),
-		];
+		// 当前版本只有隐蔽处接入了正式交互。地图中的门、榨房、后路等
+		// 区域是镜头/碰撞标记，不应向玩家暴露“后续实现”的占位任务。
+		const candidates = this.mapDocument.interactions.filter((target) => target.id === "TRG_HIDING_ZONE");
 		return candidates.find((target) => {
 			const [x, y, width, height] = target.rect;
 			return this.player.x >= x - 32 && this.player.x <= x + width + 32 && this.player.y >= y - 32 && this.player.y <= y + height + 32;
@@ -1805,11 +1832,7 @@ export class Ch03TuCompoundScene extends Phaser.Scene {
 			this.beginObservationChoice();
 			return;
 		}
-		const action = "action" in target ? target.action : undefined;
-		showTask({
-			title: `地图交互｜${target.id}`,
-			detail: `${action ?? target.type ?? "interaction"}。当前只完成杜家大院地图状态接入；该交互将由后续第三章场景实现。`,
-		});
+		return;
 	}
 
 	beginFlashback3Transition() {
@@ -1872,10 +1895,7 @@ export class Ch03TuCompoundScene extends Phaser.Scene {
 			: this.compoundState === "STATE_AFTER_BATTLE"
 				? "ch03_bgm_after_battle"
 				: "ch03_bgm_three_routes";
-		this.chapter3Bgm = this.sound.add(cue, {
-			loop: true,
-			volume: 0.55,
-		});
+		this.chapter3Bgm = addManagedBgm(this, cue, 0.55);
 		this.chapter3Bgm.play();
 	}
 
@@ -1947,6 +1967,6 @@ export class Ch03TuCompoundScene extends Phaser.Scene {
 		for (const actor of this.npcActors) actor.destroy();
 		this.npcActors = [];
 		this.playerVisual?.destroy();
-		if ((window as any).ch03TuCompoundGame === this) delete (window as any).ch03TuCompoundGame;
+		if (import.meta.env.DEV && (window as any).ch03TuCompoundGame === this) delete (window as any).ch03TuCompoundGame;
 	}
 }

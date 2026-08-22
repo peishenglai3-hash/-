@@ -68,7 +68,7 @@ export class Ch03OpeningScene extends Phaser.Scene {
 		// 监听在场景创建时立即注册，避免视频刚就绪时玩家的第一次输入被吞掉。
 		onAction(this, "INTERACT", () => this.handleAdvance());
 		onAction(this, "ADVANCE", () => this.handleAdvance());
-		(window as any).ch03OpeningGame = this;
+		if (import.meta.env.DEV) (window as any).ch03OpeningGame = this;
 	}
 
 	fitVideo(video: Phaser.GameObjects.Video) {
@@ -102,6 +102,6 @@ export class Ch03OpeningScene extends Phaser.Scene {
 		this.videoOverlay?.stop();
 		this.videoOverlay?.destroy();
 		this.videoOverlay = undefined;
-		if ((window as any).ch03OpeningGame === this) delete (window as any).ch03OpeningGame;
+		if (import.meta.env.DEV && (window as any).ch03OpeningGame === this) delete (window as any).ch03OpeningGame;
 	}
 }

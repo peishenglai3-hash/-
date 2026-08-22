@@ -615,11 +615,16 @@ export class CollisionEditor {
   }
 
   refreshList() {
-    this.itemSelect.innerHTML = this.items.map((item, index) => {
+    this.itemSelect.replaceChildren();
+    this.items.forEach((item, index) => {
       const name = item.label ?? item.id ?? `${this.kind}_${index + 1}`;
-      if (item.actorVisual) return `<option value="${index}">角色 · ${item.id} · ${name}</option>`;
-      return `<option value="${index}">${item.actorCollider ? `人物 · ${name}` : name}</option>`;
-    }).join('');
+      const option = document.createElement('option');
+      option.value = String(index);
+      option.textContent = item.actorVisual
+        ? `角色 · ${item.id} · ${name}`
+        : (item.actorCollider ? `人物 · ${name}` : String(name));
+      this.itemSelect.append(option);
+    });
     this.itemSelect.value = String(Math.max(0, this.items.indexOf(this.selected)));
   }
 

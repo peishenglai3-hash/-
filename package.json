@@ -9,8 +9,14 @@
 		"test:content": "tsx scripts/validate-content.mjs",
 		"test:systems": "tsx scripts/validate-systems.mjs",
 		"test:ch03:contract": "tsx scripts/validate-ch03-contract.mjs",
+		"test:ch04:contract": "tsx scripts/validate-ch04-contract.mjs",
+		"test:names": "node scripts/validate-character-name-contract.mjs",
+		"test:audio-routing": "node scripts/validate-audio-routing.mjs",
+		"test:security:gray": "node scripts/security-gray-matrix.mjs",
 		"e2e": "node scripts/e2e.mjs",
 		"e2e:ch03": "node scripts/e2e-ch03-opening.mjs",
+		"e2e:ch04": "node scripts/e2e-ch04-opening.mjs",
+		"e2e:ch04:final": "node scripts/e2e-ch04-modern-final.mjs",
 		"e2e:ch03:risk": "node scripts/e2e-ch03-risk-branches.mjs",
 		"e2e:ch03:observation": "node scripts/e2e-ch03-observation.mjs",
 		"e2e:ch03:flashback3": "node scripts/e2e-ch03-flashback3.mjs",
@@ -31,6 +37,6 @@
 		"prettier": "^3.9.6",
 		"tsx": "^4.23.12",
 		"typescript": "^7.0.2",
-		"vite": "5.4.14"
+		"vite": "6.4.3"
 	}
 }
