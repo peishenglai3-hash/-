@@ -1026,9 +1026,9 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 			absolutePosition: true,
 			tileSize: 1,
 		}));
-		// 读完 JSON 里的绝对坐标后，把贴图真正移到点击/编辑保存过的位置，
-		// 否则这里只记录 base 而贴图仍停在代码定义点，保存再加载会丢失位置。
-		this.applyFreeNpcVisualPosition(id);
+		// 读完 JSON 里的高度和绝对坐标后，把贴图真正缩放到保存过的大小并移到保存过的位置，
+		// 否则这里只记录 base 而贴图仍停在代码定义点，保存再加载会丢失位置和大小。
+		this.applyActorVisualHeight(id, this.actorVisualProfiles[id].display_height);
 	}
 
 	applyFreeNpcVisualPosition(id: string) {
