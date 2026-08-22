@@ -28,8 +28,9 @@ export class TitleScene extends Phaser.Scene {
 	}
 
 	create() {
-		// 保留浏览器回归测试与调试工具需要的当前标题场景引用。
-		(window as Window & { titleScene?: TitleScene }).titleScene = this;
+		// 标题场景引用仅供开发回归测试使用。
+		if (import.meta.env.DEV)
+			(window as Window & { titleScene?: TitleScene }).titleScene = this;
 		// 设计图为 2000×1125，等比缩放铺满 1280×720 画布（热区坐标按此比例标定）
 		this.add.image(640, 360, "title_bg").setDisplaySize(1280, 720);
 

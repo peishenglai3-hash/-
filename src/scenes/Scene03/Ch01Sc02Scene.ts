@@ -170,7 +170,7 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 			if (this.state.inNarrative) advanceNarrative();
 		});
 		onAction(this, "PAUSE", () => togglePause());
-		(window as any).ch01Sc02Game = this;
+		if (import.meta.env.DEV) (window as any).ch01Sc02Game = this;
 
 		this.bgm = addManagedBgm(this, "ch01_sc02_bgm", 0.35);
 		this.bgm.play();
@@ -269,6 +269,7 @@ export class Ch01Sc02Scene extends Phaser.Scene {
 	}
 
 	setupZoneEditor() {
+		if (!import.meta.env.DEV) return;
 		const file = "public/data/ch01_sc02_flashback_petition_manifest.json";
 		const documents = { [file]: this.manifest as any };
 		this.zoneEditor = new CollisionEditor(this, {

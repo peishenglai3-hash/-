@@ -296,7 +296,7 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 			if (this.state.inNarrative) advanceNarrative();
 		});
 		onAction(this, "PAUSE", () => togglePause());
-		(window as any).ch02AncestralHallGame = this;
+		if (import.meta.env.DEV) (window as any).ch02AncestralHallGame = this;
 
 		if (this.entry === "arrival") {
 			this.setupArrivalPresentation();
@@ -854,6 +854,7 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 	}
 
 	setupZoneEditor() {
+		if (!import.meta.env.DEV) return;
 		const documents = { [this.mapDocumentFile]: serializeRuntimeManifest(this.mapDocument) };
 		this.zoneEditor = new CollisionEditor(this, {
 			documents,

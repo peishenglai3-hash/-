@@ -211,9 +211,9 @@ export class PrologueScene02 extends Phaser.Scene {
 			else if (itemPanelOpen()) closeItem();
 		});
 		onAction(this, "PAUSE", () => togglePause());
-		if (new URLSearchParams(window.location.search).get("debug") === "1")
+		if (import.meta.env.DEV && new URLSearchParams(window.location.search).get("debug") === "1")
 			this.drawDebug();
-		(window as any).scene02Game = this;
+		if (import.meta.env.DEV) (window as any).scene02Game = this;
 		this.startOpening();
 	}
 
@@ -283,6 +283,7 @@ export class PrologueScene02 extends Phaser.Scene {
 	}
 
 	setupZoneEditor() {
+		if (!import.meta.env.DEV) return;
 		const logicFile = "public/data/PRO02_logic.json";
 		const interactionsFile = "public/data/PRO02_interactions.json";
 		const documents = { [logicFile]: this.logic as any, [interactionsFile]: this.interactionData as any };

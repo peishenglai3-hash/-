@@ -147,7 +147,7 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 			if (this.state.inNarrative) advanceNarrative();
 		});
 		onAction(this, "PAUSE", () => togglePause());
-		(window as any).ch01Sc03Game = this;
+		if (import.meta.env.DEV) (window as any).ch01Sc03Game = this;
 
 	this.bgm = addManagedBgm(this, "ch01_sc03_bgm", 0.35);
 		this.bgm.play();
@@ -240,6 +240,7 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 	}
 
 	setupZoneEditor() {
+		if (!import.meta.env.DEV) return;
 		const file = "public/data/ch01_sc03_yard_manifest.json";
 		const documents = { [file]: this.manifest as any };
 		this.zoneEditor = new CollisionEditor(this, {

@@ -239,7 +239,7 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 			else if (itemPanelOpen()) closeItem();
 		});
 		onAction(this, "PAUSE", () => togglePause());
-		(window as any).ch01Sc01Game = this;
+		if (import.meta.env.DEV) (window as any).ch01Sc01Game = this;
 
 		if (!this.state.flags.has(FLAGS.VIDEO_SEEN)) {
 			this.playIntroVideo();
@@ -458,6 +458,7 @@ export class Ch01Sc01Scene extends Phaser.Scene {
 	}
 
 	setupZoneEditor() {
+		if (!import.meta.env.DEV) return;
 		const file = "public/data/ch01_sc01_chen_home_wake_manifest.json";
 		const documents = { [file]: this.manifest as any };
 		this.zoneEditor = new CollisionEditor(this, {

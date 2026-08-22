@@ -89,7 +89,7 @@ export class Ch02FlashbackScene extends Phaser.Scene {
 		onAction(this, "INTERACT", () => this.handleAdvance());
 		onAction(this, "ADVANCE", () => this.handleAdvance());
 		onAction(this, "PAUSE", () => togglePause());
-		(window as any).ch02FlashbackGame = this;
+		if (import.meta.env.DEV) (window as any).ch02FlashbackGame = this;
 	}
 
 	fitVideo(video: Phaser.GameObjects.Video) {

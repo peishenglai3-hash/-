@@ -60,7 +60,7 @@ export class Ch04PortraitScene extends Phaser.Scene {
 			coreTendency: PORTRAIT_CORE_TENDENCY[portrait.code],
 		});
 		useGameSaveStore().autosave("CH04_PORTRAIT_RESULT");
-		(window as any).ch04PortraitGame = this;
+		if (import.meta.env.DEV) (window as any).ch04PortraitGame = this;
 
 		// 最终面板由 Vue 负责 Esc 返回标题；Phaser 仅保持场景和音频生命周期。
 		clearFade();
@@ -83,7 +83,7 @@ export class Ch04PortraitScene extends Phaser.Scene {
 		this.bgm?.stop();
 		this.bgm?.destroy();
 		this.bgm = undefined;
-		if ((window as any).ch04PortraitGame === this)
+		if (import.meta.env.DEV && (window as any).ch04PortraitGame === this)
 			delete (window as any).ch04PortraitGame;
 	}
 }

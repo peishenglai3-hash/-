@@ -109,7 +109,7 @@ export class Ch04WangyeTempleScene extends Phaser.Scene {
 
 		onAction(this, "INTERACT", () => this.handleAdvance());
 		onAction(this, "ADVANCE", () => this.handleAdvance());
-		(window as any).ch04WangyeTempleGame = this;
+		if (import.meta.env.DEV) (window as any).ch04WangyeTempleGame = this;
 	}
 
 	resetHud() {
@@ -159,7 +159,7 @@ export class Ch04WangyeTempleScene extends Phaser.Scene {
 		if (this.narrativeEntryListener)
 			window.removeEventListener("honghu:narrative-entry", this.narrativeEntryListener);
 		this.narrativeEntryListener = undefined;
-		if ((window as any).ch04WangyeTempleGame === this)
+		if (import.meta.env.DEV && (window as any).ch04WangyeTempleGame === this)
 			delete (window as any).ch04WangyeTempleGame;
 	}
 }

@@ -106,7 +106,7 @@ assert(CH04_WANGYE_TEMPLE_SCENE1.length === 25, "chapter 4 scene 1 narrative loc
 assert(CH04_WANGYE_TEMPLE_SCENE1[4].text === "1927年9月11日\n戴家场王爷庙戏台", "chapter 4 date/location lock");
 assert(CH04_WANGYE_TEMPLE_SCENE1.some((entry) => entry.text.includes("杜家团防已经被打垮")), "chapter 4 stage defeat line lock");
 assert(CH04_WANGYE_TEMPLE_SCENE1.some((entry) => entry.text.includes("涂济洲")), "chapter 4 Tu Jizhou name lock");
-assert(CH04_WANGYE_TEMPLE_SCENE1.some((entry) => entry.text.includes("彭国材")), "chapter 4 Peng Guocai name lock");
+assert(CH04_WANGYE_TEMPLE_SCENE1.some((entry) => entry.text.includes("彭定邦")), "chapter 4 Peng Dingbang name lock");
 
 const styles = new Set(["narration", "thought", "dialogue", "cue", "date"]);
 const lists = [

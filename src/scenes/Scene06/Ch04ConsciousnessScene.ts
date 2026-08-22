@@ -121,7 +121,7 @@ export class Ch04ConsciousnessScene extends Phaser.Scene {
 		// 只接收叙事推进动作；没有移动、交互目标或物理输入注册。
 		onAction(this, "INTERACT", () => this.handleAdvance());
 		onAction(this, "ADVANCE", () => this.handleAdvance());
-		(window as any).ch04ConsciousnessGame = this;
+		if (import.meta.env.DEV) (window as any).ch04ConsciousnessGame = this;
 	}
 
 	resetHud() {
@@ -187,7 +187,7 @@ export class Ch04ConsciousnessScene extends Phaser.Scene {
 	}
 
 	shutdown() {
-		if ((window as any).ch04ConsciousnessGame === this)
+		if (import.meta.env.DEV && (window as any).ch04ConsciousnessGame === this)
 			delete (window as any).ch04ConsciousnessGame;
 	}
 }

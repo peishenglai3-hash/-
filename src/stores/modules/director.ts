@@ -170,7 +170,7 @@ export const useDirectorStore = defineStore("director", () => {
 		if (game.value) return;
 		const g = createGame(parent);
 		game.value = g;
-		(window as any).game = g;
+		if (import.meta.env.DEV) (window as any).game = g;
 		g.events.on("ch03:risk-failure", () => {
 			// 第三章本场只触发既有固定回退点，不在地图层复制一套存档逻辑。
 			rollbackToCheckpoint();
@@ -202,48 +202,54 @@ export const useDirectorStore = defineStore("director", () => {
 			replayChapter,
 			getChapter3Access: readChapter3Access,
 		};
-		const query = new URLSearchParams(window.location.search);
-		const requestedMap = query.get("ch2map");
-		const requestedChapter3State = query.get("ch3state");
-		const requestedChapter4Shot = query.get("ch4shot");
-		const requestedChapter4Scene = query.get("ch4scene");
-		if (isAncestralHallVariant(requestedMap)) {
-			window.setTimeout(() => openChapter2Map(requestedMap), 0);
-		} else if (isTuCompoundState(requestedChapter3State)) {
-			window.setTimeout(() => openChapter3Map(requestedChapter3State), 0);
-		} else if (query.get("chapter") === "2") {
-			// 仅第二章试玩入口：从第二章入口视频开始，不要求先完成第一章。
-			window.setTimeout(() => startChapter2Opening(), 0);
-		} else if (query.get("chapter") === "3" && query.get("combat") === "1") {
-			// 战斗切片试玩入口：直接进入大门撞开后的独立战斗场景。
-			window.setTimeout(() => startChapter3Combat(), 0);
-		} else if (query.get("chapter") === "3") {
-			// 第三章试玩入口：先播放章节衔接视频，再进入杜家大院外围底座。
-			window.setTimeout(() => startChapter3Opening(), 0);
-		} else if (query.get("chapter") === "4" && requestedChapter4Scene === "consciousness") {
-			// 第四章意识交错验收入口：固定镜头、跳过前置视频和场景一。
-			window.setTimeout(() => startChapter4Consciousness("SHOT_WIDE"), 0);
-		} else if (query.get("chapter") === "4" && requestedChapter4Scene === "modern-return") {
-			// 第四章场景三验收入口：复用序章实践驻地，跳过王爷庙前置段落。
-			window.setTimeout(() => startChapter4ModernReturn(), 0);
-		} else if (query.get("chapter") === "4" && requestedChapter4Scene === "final-choice") {
-			// 第四章最终选择验收入口：直接进入实践笔记补写流程。
-			window.setTimeout(() => startChapter4FinalChoice(), 0);
-		} else if (query.get("chapter") === "4" && requestedChapter4Scene === "answer-written") {
-			// 第四章场景五验收入口：跳过最终选择，直接查看答案写下之后。
-			window.setTimeout(() => startChapter4AnswerWritten(), 0);
-		} else if (query.get("chapter") === "4" && requestedChapter4Scene === "scene5-video") {
-			// 第四章场景五转场视频验收入口。
-			window.setTimeout(() => startChapter4Scene5Video(), 0);
-		} else if (query.get("chapter") === "4" && requestedChapter4Scene === "portrait") {
-			// 第四章最终画像验收入口：直接按当前画像状态结算。
-			window.setTimeout(() => startChapter4Portrait(), 0);
-		} else if (query.get("chapter") === "4" && isCh04TempleShot(requestedChapter4Shot)) {
-			// 第四章地图镜头验收入口：绕过视频，直接查看指定镜头。
-			window.setTimeout(() => openChapter4Temple(requestedChapter4Shot), 0);
-		} else if (query.get("chapter") === "4") {
-			// 第四章试玩入口：先播放“戴家场王爷庙”开场视频。
-			window.setTimeout(() => startChapter4Opening(), 0);
+		if (import.meta.env.DEV) {
+			const query = new URLSearchParams(window.location.search);
+			const requestedMap = query.get("ch2map");
+			const requestedChapter3State = query.get("ch3state");
+			const requestedChapter4Shot = query.get("ch4shot");
+			const requestedChapter4Scene = query.get("ch4scene");
+			if (query.get("scene") === "fb") {
+				// 旧版回归脚本使用的独立闪回验收入口，仅限 DEV；正式包不接受该参数。
+				(window as any).gameDirector.standaloneFb = true;
+				window.setTimeout(() => game.value?.scene.start("Ch01Sc02Scene"), 0);
+			} else if (isAncestralHallVariant(requestedMap)) {
+				window.setTimeout(() => openChapter2Map(requestedMap), 0);
+			} else if (isTuCompoundState(requestedChapter3State)) {
+				window.setTimeout(() => openChapter3Map(requestedChapter3State), 0);
+			} else if (query.get("chapter") === "2") {
+				// 仅第二章试玩入口：从第二章入口视频开始，不要求先完成第一章。
+				window.setTimeout(() => startChapter2Opening(), 0);
+			} else if (query.get("chapter") === "3" && query.get("combat") === "1") {
+				// 战斗切片试玩入口：直接进入大门撞开后的独立战斗场景。
+				window.setTimeout(() => startChapter3Combat(), 0);
+			} else if (query.get("chapter") === "3") {
+				// 第三章试玩入口：先播放章节衔接视频，再进入杜家大院外围底座。
+				window.setTimeout(() => startChapter3Opening(), 0);
+			} else if (query.get("chapter") === "4" && requestedChapter4Scene === "consciousness") {
+				// 第四章意识交错验收入口：固定镜头、跳过前置视频和场景一。
+				window.setTimeout(() => startChapter4Consciousness("SHOT_WIDE"), 0);
+			} else if (query.get("chapter") === "4" && requestedChapter4Scene === "modern-return") {
+				// 第四章场景三验收入口：复用序章实践驻地，跳过王爷庙前置段落。
+				window.setTimeout(() => startChapter4ModernReturn(), 0);
+			} else if (query.get("chapter") === "4" && requestedChapter4Scene === "final-choice") {
+				// 第四章最终选择验收入口：直接进入实践笔记补写流程。
+				window.setTimeout(() => startChapter4FinalChoice(), 0);
+			} else if (query.get("chapter") === "4" && requestedChapter4Scene === "answer-written") {
+				// 第四章场景五验收入口：跳过最终选择，直接查看答案写下之后。
+				window.setTimeout(() => startChapter4AnswerWritten(), 0);
+			} else if (query.get("chapter") === "4" && requestedChapter4Scene === "scene5-video") {
+				// 第四章场景五转场视频验收入口。
+				window.setTimeout(() => startChapter4Scene5Video(), 0);
+			} else if (query.get("chapter") === "4" && requestedChapter4Scene === "portrait") {
+				// 第四章最终画像验收入口：直接按当前画像状态结算。
+				window.setTimeout(() => startChapter4Portrait(), 0);
+			} else if (query.get("chapter") === "4" && isCh04TempleShot(requestedChapter4Shot)) {
+				// 第四章地图镜头验收入口：绕过视频，直接查看指定镜头。
+				window.setTimeout(() => openChapter4Temple(requestedChapter4Shot), 0);
+			} else if (query.get("chapter") === "4") {
+				// 第四章试玩入口：先播放“戴家场王爷庙”开场视频。
+				window.setTimeout(() => startChapter4Opening(), 0);
+			}
 		}
 
 		// 闪回流程路由（SC01 ↔ SC02 / SC01 ↔ SC03）
@@ -352,9 +358,10 @@ export const useDirectorStore = defineStore("director", () => {
 		gameSave.onSettingsChange((s) => applySettings(s));
 		applySettings(gameSave.getSettings());
 
-		window.addEventListener("honghu:dev-next-chapter", ((event: CustomEvent<{ sceneKey?: string }>) => {
-			handleDevNextChapter(event.detail?.sceneKey);
-		}) as EventListener);
+		if (import.meta.env.DEV)
+			window.addEventListener("honghu:dev-next-chapter", ((event: CustomEvent<{ sceneKey?: string }>) => {
+				handleDevNextChapter(event.detail?.sceneKey);
+			}) as EventListener);
 
 		// 测试/调试钩子：失败回退链路
 		if (import.meta.env.DEV)
@@ -873,7 +880,10 @@ export const useDirectorStore = defineStore("director", () => {
 	function replayChapter(chapter: 1 | 2 | 3 | 4): void {
 		const g = game.value;
 		if (!g) return;
-		gameSave.prepareChapterReplay(chapter);
+		if (!gameSave.prepareChapterReplay(chapter)) {
+			useHudStore().showFlavor("该章节尚无可用的重玩入口存档。");
+			return;
+		}
 		if (chapter === 2) {
 			startChapter2Opening();
 			return;
@@ -919,6 +929,12 @@ export const useDirectorStore = defineStore("director", () => {
 			gameSave.applyToState(save);
 			game.value!.scene.stop("TitleScene");
 			if (rollbackToCheckpoint()) return;
+			// 固定回退点和备份同时损坏时，不能继续应用失败存档并路由到第三章。
+			// 回到标题页，让玩家重新开始或修复本地存档。
+			gameState.state.mode = "intro";
+			gameState.state.playerLocked = true;
+			goToTitle();
+			return;
 		}
 		gameSave.applyToState(save);
 		game.value!.scene.stop("TitleScene");
@@ -980,6 +996,11 @@ export const useDirectorStore = defineStore("director", () => {
 	function enterScene(key: string, sceneId: SceneId): void {
 		gameSave.autosave(sceneId);
 		game.value!.scene.start(key);
+	}
+
+	function beginPrologueExplore(): void {
+		const scene = game.value?.scene.getScene("Scene01") as { beginExplore?: () => void } | undefined;
+		scene?.beginExplore?.();
 	}
 
 	/** 章末结算后的标题路由；第二章入口由结算面板单独调用 startChapter2Opening。 */
@@ -1117,5 +1138,6 @@ export const useDirectorStore = defineStore("director", () => {
 		startChapter4Portrait,
 		goToTitle,
 		finishPrologue,
+		beginPrologueExplore,
 	};
 });

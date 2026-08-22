@@ -84,7 +84,7 @@ export class Ch04ModernReturnScene extends Phaser.Scene {
 		this.completed = this.state.flags.has(COMPLETE_FLAG);
 		this.state.playerLocked = true;
 		this.state.mode = this.completed ? "transition" : "narrative";
-		(window as any).ch04ModernReturnGame = this;
+		if (import.meta.env.DEV) (window as any).ch04ModernReturnGame = this;
 
 		if (this.completed) {
 			fadeToBlack();
@@ -138,7 +138,7 @@ export class Ch04ModernReturnScene extends Phaser.Scene {
 		this.bgm?.stop();
 		this.bgm?.destroy();
 		this.bgm = undefined;
-		if ((window as any).ch04ModernReturnGame === this)
+		if (import.meta.env.DEV && (window as any).ch04ModernReturnGame === this)
 			delete (window as any).ch04ModernReturnGame;
 	}
 }

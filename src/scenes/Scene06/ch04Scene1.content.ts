@@ -201,7 +201,7 @@ export const CH04_WANGYE_TEMPLE_SCENE1: NarrativeEntry[] = [
 		kind: "dialogue",
 		speaker_id: "STAGE_VOICE",
 		speaker_name: "戏台声音",
-		text: "成立农民自卫团！彭国材任团长！",
+		text: "成立农民自卫团！彭定邦任团长！",
 		style: "dialogue",
 		cps: 14,
 		advance: "manual",

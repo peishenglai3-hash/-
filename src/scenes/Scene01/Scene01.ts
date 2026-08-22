@@ -219,7 +219,7 @@ export class Scene01 extends Phaser.Scene {
 			else if (itemPanelOpen()) closeItem();
 		});
 		onAction(this, "PAUSE", () => togglePause());
-		(window as any).scene01Game = this;
+		if (import.meta.env.DEV) (window as any).scene01Game = this;
 	}
 
 	beginExplore() {
@@ -373,6 +373,7 @@ export class Scene01 extends Phaser.Scene {
 	}
 
 	setupZoneEditor() {
+		if (!import.meta.env.DEV) return;
 		const file = "public/data/scene01_manifest.json";
 		const documents = { [file]: this.manifest as any };
 		this.zoneEditor = new CollisionEditor(this, {

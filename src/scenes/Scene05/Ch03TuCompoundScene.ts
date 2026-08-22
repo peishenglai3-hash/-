@@ -430,7 +430,7 @@ export class Ch03TuCompoundScene extends Phaser.Scene {
 			else if (this.state.inNarrative) advanceNarrative();
 			else if (this.state.mode === "info") closeInfoPanel();
 		});
-		(window as any).ch03TuCompoundGame = this;
+		if (import.meta.env.DEV) (window as any).ch03TuCompoundGame = this;
 		if (this.compoundState === "STATE_AFTER_BATTLE") {
 			this.restoreAfterBattleState();
 		} else if (this.state.flags.has(CH03_RISK_PRECHECK_FLAGS.complete)) {
@@ -1967,6 +1967,6 @@ export class Ch03TuCompoundScene extends Phaser.Scene {
 		for (const actor of this.npcActors) actor.destroy();
 		this.npcActors = [];
 		this.playerVisual?.destroy();
-		if ((window as any).ch03TuCompoundGame === this) delete (window as any).ch03TuCompoundGame;
+		if (import.meta.env.DEV && (window as any).ch03TuCompoundGame === this) delete (window as any).ch03TuCompoundGame;
 	}
 }

@@ -87,7 +87,7 @@ export class Ch04FinalChoiceScene extends Phaser.Scene {
 		this.state.playerLocked = true;
 		this.state.mode = this.completed ? "end" : "narrative";
 		this.mode = this.completed ? "transition" : "narrative";
-		(window as any).ch04FinalChoiceGame = this;
+		if (import.meta.env.DEV) (window as any).ch04FinalChoiceGame = this;
 
 		if (this.completed) {
 			fadeToBlack();
@@ -187,7 +187,7 @@ export class Ch04FinalChoiceScene extends Phaser.Scene {
 		this.bgm?.stop();
 		this.bgm?.destroy();
 		this.bgm = undefined;
-		if ((window as any).ch04FinalChoiceGame === this)
+		if (import.meta.env.DEV && (window as any).ch04FinalChoiceGame === this)
 			delete (window as any).ch04FinalChoiceGame;
 	}
 }

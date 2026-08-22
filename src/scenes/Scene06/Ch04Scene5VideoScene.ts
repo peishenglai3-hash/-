@@ -69,7 +69,7 @@ export class Ch04Scene5VideoScene extends Phaser.Scene {
 		// 正常流程完整播放；E/Space 仍作为试玩和自动化测试的跳过入口。
 		onAction(this, "INTERACT", () => this.handleAdvance());
 		onAction(this, "ADVANCE", () => this.handleAdvance());
-		(window as any).ch04Scene5VideoGame = this;
+		if (import.meta.env.DEV) (window as any).ch04Scene5VideoGame = this;
 	}
 
 	fitVideo(video: Phaser.GameObjects.Video) {
@@ -107,7 +107,7 @@ export class Ch04Scene5VideoScene extends Phaser.Scene {
 		this.videoOverlay?.stop();
 		this.videoOverlay?.destroy();
 		this.videoOverlay = undefined;
-		if ((window as any).ch04Scene5VideoGame === this)
+		if (import.meta.env.DEV && (window as any).ch04Scene5VideoGame === this)
 			delete (window as any).ch04Scene5VideoGame;
 	}
 }

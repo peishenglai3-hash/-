@@ -83,9 +83,9 @@ for (let i = 0; i < 8; i += 1) {
 }
 await waitFor(() => window.prologueState.flags.has("CH04_FINAL_CHOICE_COMPLETE"), 8000);
 await waitFor(() => !!window.ch04AnswerWrittenGame, 8000);
-for (let i = 0; i < 20; i += 1) {
+for (let i = 0; i < 40 && !(await page.evaluate(() => window.prologueState.flags.has("CH04_SCENE5_COMPLETE"))); i += 1) {
 	await page.keyboard.press("Space");
-	await page.waitForTimeout(40);
+	await page.waitForTimeout(80);
 }
 await waitFor(() => window.prologueState.flags.has("CH04_SCENE5_COMPLETE"), 8000);
 await waitFor(() => !!window.ch04Scene5VideoGame, 8000);

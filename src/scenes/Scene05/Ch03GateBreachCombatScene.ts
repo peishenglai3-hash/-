@@ -248,7 +248,7 @@ export class Ch03GateBreachCombatScene extends Phaser.Scene {
 		onAction(this, "SWAP_WEAPON", () => this.swapWeapon());
 		this.input.on("pointerdown", this.handlePointerDown, this);
 		this.input.mouse?.disableContextMenu();
-		(window as any).ch03GateBreachCombatGame = this;
+		if (import.meta.env.DEV) (window as any).ch03GateBreachCombatGame = this;
 
 		this.state.flags.add(CH03_COMBAT_FLAGS.started);
 		this.state.mode = "combat_intro";
@@ -1027,6 +1027,6 @@ export class Ch03GateBreachCombatScene extends Phaser.Scene {
 		this.combatEmbers?.destroy();
 		this.combatEmbers = undefined;
 		hideCombatHud();
-		if ((window as any).ch03GateBreachCombatGame === this) delete (window as any).ch03GateBreachCombatGame;
+		if (import.meta.env.DEV && (window as any).ch03GateBreachCombatGame === this) delete (window as any).ch03GateBreachCombatGame;
 	}
 }

@@ -76,7 +76,7 @@ export class Ch04AnswerWrittenScene extends Phaser.Scene {
 		this.completed = this.state.flags.has(COMPLETE_FLAG);
 		this.state.mode = this.completed ? "transition" : "narrative";
 		this.state.playerLocked = true;
-		(window as any).ch04AnswerWrittenGame = this;
+		if (import.meta.env.DEV) (window as any).ch04AnswerWrittenGame = this;
 
 		if (this.completed) {
 			fadeToBlack();
@@ -129,7 +129,7 @@ export class Ch04AnswerWrittenScene extends Phaser.Scene {
 		this.bgm?.stop();
 		this.bgm?.destroy();
 		this.bgm = undefined;
-		if ((window as any).ch04AnswerWrittenGame === this)
+		if (import.meta.env.DEV && (window as any).ch04AnswerWrittenGame === this)
 			delete (window as any).ch04AnswerWrittenGame;
 	}
 }

@@ -65,7 +65,7 @@ export class Ch02TransitionScene extends Phaser.Scene {
 			};
 		});
 
-		(window as any).ch02TransitionGame = this;
+		if (import.meta.env.DEV) (window as any).ch02TransitionGame = this;
 	}
 
 	fitVideo(video: Phaser.GameObjects.Video) {

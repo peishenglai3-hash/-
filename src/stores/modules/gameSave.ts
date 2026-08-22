@@ -32,6 +32,10 @@ export const SAVE_VERSION = 2;
 export const FIXED_TAGS = ["PROLOGUE_COMPLETED", "TIME_TRAVEL_CHECKPOINT"];
 export const MANUAL_SLOTS = MANUAL_SAVE_SLOTS;
 export type ReplayChapter = 1 | 2 | 3 | 4;
+const MAX_PERSISTED_SCORE = 1000;
+const MAX_PERSISTED_TAGS = 200;
+const MAX_PERSISTED_TEXT = 160;
+const PROP_STATE_KEYS = ["notebook", "phone", "recorder", "mooncake"] as const;
 
 // sceneId → Phaser scene key
 export const SCENE_KEY: Record<SceneId, string> = {
@@ -151,6 +155,22 @@ export const DEFAULT_SETTINGS: GameSettings = {
 	textSpeed: 1,
 };
 
+function normalizeSettings(value: unknown): GameSettings {
+	const record = value && typeof value === "object" ? value as Record<string, unknown> : {};
+	const clampVolume = (candidate: unknown, fallback: number): number => {
+		const numeric = typeof candidate === "number" ? candidate : Number(candidate);
+		return Number.isFinite(numeric) ? Math.min(1, Math.max(0, numeric)) : fallback;
+	};
+	const textSpeed = typeof record.textSpeed === "number" && [0.75, 1, 1.5].includes(record.textSpeed)
+		? record.textSpeed
+		: DEFAULT_SETTINGS.textSpeed;
+	return {
+		bgmVolume: clampVolume(record.bgmVolume, DEFAULT_SETTINGS.bgmVolume),
+		sfxVolume: clampVolume(record.sfxVolume, DEFAULT_SETTINGS.sfxVolume),
+		textSpeed,
+	};
+}
+
 // 简易校验和（djb2 变体），防存档损坏静默读入
 function checksum(payload: Omit<RunSave, "checksum">): string {
 	const json = JSON.stringify(payload);
@@ -189,19 +209,21 @@ function buildSave(
 }
 
 function isNonNegativeInteger(value: unknown): value is number {
-	return typeof value === "number" && Number.isInteger(value) && value >= 0;
+	return typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= MAX_PERSISTED_SCORE;
 }
 
 function isValidProfile(value: unknown): boolean {
 	if (!value || typeof value !== "object") return false;
 	const record = value as Record<string, unknown>;
-	return PROFILE_AXES.every((axis) => isNonNegativeInteger(record[axis]));
+	return Object.keys(record).every((axis) => PROFILE_AXES.includes(axis as (typeof PROFILE_AXES)[number])) &&
+		PROFILE_AXES.every((axis) => isNonNegativeInteger(record[axis]));
 }
 
 function isValidRisk(value: unknown): boolean {
 	if (!value || typeof value !== "object") return false;
 	const record = value as Record<string, unknown>;
-	return RISK_DIMENSIONS.every((dimension) => isNonNegativeInteger(record[dimension]));
+	return Object.keys(record).every((dimension) => RISK_DIMENSIONS.includes(dimension as (typeof RISK_DIMENSIONS)[number])) &&
+		RISK_DIMENSIONS.every((dimension) => isNonNegativeInteger(record[dimension]));
 }
 
 function isValidSceneId(value: unknown): value is SceneId {
@@ -209,25 +231,37 @@ function isValidSceneId(value: unknown): value is SceneId {
 }
 
 function isValidTags(value: unknown): value is string[] {
-	return Array.isArray(value) && value.every((tag) => typeof tag === "string");
+	return Array.isArray(value) && value.length <= MAX_PERSISTED_TAGS && value.every(
+		(tag) => typeof tag === "string" && tag.length <= MAX_PERSISTED_TEXT && /^[A-Z0-9_:-]+$/.test(tag),
+	);
 }
 
 function isValidChoice(value: unknown): boolean {
 	if (value === null) return true;
 	if (!value || typeof value !== "object") return false;
 	const choice = value as Record<string, unknown>;
-	return ["id", "flag", "echo_summary"].every((key) => typeof choice[key] === "string");
+	return ["id", "flag", "echo_summary"].every(
+		(key) => typeof choice[key] === "string" && (choice[key] as string).length <= MAX_PERSISTED_TEXT,
+	);
+}
+
+function isValidPropStates(value: unknown): value is Record<string, string> {
+	if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+	const record = value as Record<string, unknown>;
+	return Object.keys(record).every((key) => PROP_STATE_KEYS.includes(key as (typeof PROP_STATE_KEYS)[number])) &&
+		Object.values(record).every((state) => typeof state === "string" && state.length <= MAX_PERSISTED_TEXT && /^[A-Za-z0-9_:-]+$/.test(state));
 }
 
 function isValidSaveShape(candidate: Record<string, unknown>): boolean {
 	if (!isValidSceneId(candidate.sceneId)) return false;
 	if (!["auto", "fixed", "manual"].includes(String(candidate.kind))) return false;
-	if (typeof candidate.sceneLabel !== "string" || typeof candidate.checkpoint !== "string") return false;
-	if (candidate.label !== undefined && typeof candidate.label !== "string") return false;
+	if (typeof candidate.sceneLabel !== "string" || candidate.sceneLabel.length > MAX_PERSISTED_TEXT) return false;
+	if (typeof candidate.checkpoint !== "string" || candidate.checkpoint.length > MAX_PERSISTED_TEXT) return false;
+	if (candidate.label !== undefined && (typeof candidate.label !== "string" || candidate.label.length > MAX_PERSISTED_TEXT)) return false;
 	if (typeof candidate.timestamp !== "number" || !Number.isFinite(candidate.timestamp) || candidate.timestamp <= 0) return false;
 	if (!isValidTags(candidate.tags) || !isValidTags(candidate.fixed)) return false;
 	if (!isValidChoice(candidate.choice) || !isValidProfile(candidate.profile) || !isValidRisk(candidate.risk)) return false;
-	if (!candidate.propStates || typeof candidate.propStates !== "object" || Array.isArray(candidate.propStates)) return false;
+	if (!isValidPropStates(candidate.propStates)) return false;
 	const slot = candidate.slot;
 	if (candidate.kind === "manual") return MANUAL_SLOTS.includes(slot as ManualSaveSlot);
 	return slot === null || slot === undefined;
@@ -263,10 +297,7 @@ function verify(raw: unknown): RunSave | null {
 export const useGameSaveStore = defineStore("gameSave", () => {
 	// ===== 设置（音量/文字速度）——持久化 + 订阅生效 =====
 
-	const settings = ref<GameSettings>({
-		...DEFAULT_SETTINGS,
-		...(getRedcodeSettings() ?? {}),
-	});
+	const settings = ref<GameSettings>(normalizeSettings(getRedcodeSettings()));
 	const settingsListeners: Array<(s: GameSettings) => void> = [];
 	let lastSceneId: SceneId = "PROLOGUE_SC01";
 
@@ -275,7 +306,7 @@ export const useGameSaveStore = defineStore("gameSave", () => {
 	}
 
 	function updateSettings(patch: Partial<GameSettings>): void {
-		settings.value = { ...settings.value, ...patch };
+		settings.value = normalizeSettings({ ...settings.value, ...patch });
 		setRedcodeSettings(settings.value);
 		for (const listener of settingsListeners) listener(getSettings());
 	}
@@ -365,9 +396,11 @@ export const useGameSaveStore = defineStore("gameSave", () => {
 		return verify(getRedcodeReplayEntry(chapter));
 	}
 
-	function prepareChapterReplay(chapter: ReplayChapter): void {
-		const source = loadChapterEntry(chapter) ?? loadAuto() ?? MANUAL_SLOTS.map((slot) => loadManual(slot)).find(Boolean) ?? loadFixed();
-		if (source) applyToState(source);
+	function prepareChapterReplay(chapter: ReplayChapter): boolean {
+		// 章节重玩只能从该章专用入口快照开始，禁止回退到其他章节的自动/手动存档。
+		const source = loadChapterEntry(chapter);
+		if (!source) return false;
+		applyToState(source);
 		const { state, resetTransientState } = useGameStateStore();
 		const prefixesToClear = chapter === 1
 			? ["CH01", "CH02", "CH03", "CH04"]
@@ -398,6 +431,7 @@ export const useGameSaveStore = defineStore("gameSave", () => {
 			mooncake: "default",
 		};
 		resetTransientState();
+		return true;
 	}
 
 	// 将存档还原到运行时 state（旗标/画像/选择/风险/道具状态），瞬态字段复位
