@@ -310,6 +310,6 @@ export function buildChapter3ActionFeedback(
 export function buildChapter3ActionFailureTask(failure: RiskFailure) {
 	return {
 		title: "行动前撤换",
-		detail: `交互二使${failure === "coordination" ? "协同" : failure === "execution" ? "执行" : "身份"}风险达到失败阈值。你不会进入行动核心，系统将返回“陈继南家中醒来”节点。`,
+		detail: "当前安排已经收紧。你不会进入行动核心，接下来会返回“陈继南家中醒来”节点。",
 	};
 }

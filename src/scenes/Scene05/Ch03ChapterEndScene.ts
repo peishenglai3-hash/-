@@ -77,7 +77,7 @@ export class Ch03ChapterEndScene extends Phaser.Scene {
 		// 正常流程以视频结束为准；E/Space 保留为试玩和自动化测试的跳过入口。
 		onAction(this, "INTERACT", () => this.handleAdvance());
 		onAction(this, "ADVANCE", () => this.handleAdvance());
-		(window as any).ch03ChapterEndGame = this;
+		if (import.meta.env.DEV) (window as any).ch03ChapterEndGame = this;
 	}
 
 	fitVideo(video: Phaser.GameObjects.Video) {
@@ -120,9 +120,9 @@ export class Ch03ChapterEndScene extends Phaser.Scene {
 		};
 		showEndPanel(save, {
 			title: "第三章·行动结束：三路结果汇合｜完成",
-			hint: saved ? "第三章故事到此结束" : "本地存档暂不可用；本次结果保留在当前页面，请勿立即关闭。",
-			buttonLabel: "返回标题",
-			next: "title",
+			hint: saved ? "下一段故事：1927年9月11日，戴家场王爷庙戏台" : "本地存档暂不可用；本次结果保留在当前页面，请勿立即关闭。",
+			buttonLabel: "进入第四章",
+			next: "chapter4",
 		});
 	}
 
@@ -130,7 +130,7 @@ export class Ch03ChapterEndScene extends Phaser.Scene {
 		this.videoOverlay?.stop();
 		this.videoOverlay?.destroy();
 		this.videoOverlay = undefined;
-		if ((window as any).ch03ChapterEndGame === this)
+		if (import.meta.env.DEV && (window as any).ch03ChapterEndGame === this)
 			delete (window as any).ch03ChapterEndGame;
 	}
 }

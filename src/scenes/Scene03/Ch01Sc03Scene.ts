@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { createKeyMap, isActionDown, onAction } from "@/common/actions";
 import { useGameStateStore } from "@/stores/modules/gameState";
+import { addManagedBgm } from "@/common/audioBus";
 import {
 	showTask,
 	hideTask,
@@ -151,9 +152,9 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 			if (this.state.inNarrative) advanceNarrative();
 		});
 		onAction(this, "PAUSE", () => togglePause());
-		(window as any).ch01Sc03Game = this;
+		if (import.meta.env.DEV) (window as any).ch01Sc03Game = this;
 
-		this.bgm = this.sound.add("ch01_sc03_bgm", { loop: true, volume: 0.35 });
+	this.bgm = addManagedBgm(this, "ch01_sc03_bgm", 0.35);
 		this.bgm.play();
 
 		// 开场：任务卡 → 自由探索（走近联络人按 E 触发剧情）
@@ -256,6 +257,7 @@ export class Ch01Sc03Scene extends Phaser.Scene {
 	}
 
 	setupZoneEditor() {
+		if (!import.meta.env.DEV) return;
 		const file = "public/data/ch01_sc03_yard_manifest.json";
 		const documents = { [file]: this.manifest as any };
 		this.zoneEditor = new CollisionEditor(this, {

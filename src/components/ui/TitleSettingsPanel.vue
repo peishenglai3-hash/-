@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive } from "vue";
+import { onMounted, onUnmounted, reactive } from "vue";
 import { useHudStore } from "@/stores/modules/hud";
 import { useGameSaveStore } from "@/stores";
 
@@ -26,11 +26,24 @@ function onSpeed(value: number) {
 function close() {
 	hud.title.settingsOpen = false;
 }
+
+function onKeyDown(event: KeyboardEvent) {
+	if (event.key === "Escape" && hud.title.settingsOpen) close();
+}
+
+onMounted(() => window.addEventListener("keydown", onKeyDown));
+onUnmounted(() => window.removeEventListener("keydown", onKeyDown));
 </script>
 
 <template>
-	<div v-if="hud.title.settingsOpen" class="title-settings-panel">
-		<h2>设 置</h2>
+	<div
+		v-if="hud.title.settingsOpen"
+		class="title-settings-panel"
+		role="dialog"
+		aria-modal="true"
+		aria-labelledby="settings-panel-title"
+	>
+		<h2 id="settings-panel-title">设 置</h2>
 
 		<label class="row">
 			<span>音乐音量</span>
@@ -65,6 +78,7 @@ function close() {
 		<div class="row">
 			<span>文字速度</span>
 			<button
+				type="button"
 				v-for="opt in [
 					{ v: 0.75, label: '慢' },
 					{ v: 1, label: '标准' },
@@ -79,7 +93,7 @@ function close() {
 			</button>
 		</div>
 
-		<button class="back" @click="close">返 回</button>
+		<button class="back" type="button" @click="close">返 回</button>
 	</div>
 </template>
 

@@ -14,7 +14,7 @@ const hud = useHudStore();
 	background: #000;
 	opacity: 0;
 	pointer-events: none;
-	transition: opacity 2.5s ease;
+	transition: opacity 1s ease;
 	z-index: 15;
 }
 

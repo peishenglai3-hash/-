@@ -18,6 +18,7 @@ import {
 	togglePause,
 } from "@/common/ui";
 import { useGameStateStore } from "@/stores/modules/gameState";
+import { useGameSaveStore } from "@/stores/modules/gameSave";
 import { applyFormalChoice } from "@/common/actionProfileSystem";
 import {
 	CH02_FLASHBACK_CHOICES,
@@ -88,7 +89,7 @@ export class Ch02FlashbackScene extends Phaser.Scene {
 		onAction(this, "INTERACT", () => this.handleAdvance());
 		onAction(this, "ADVANCE", () => this.handleAdvance());
 		onAction(this, "PAUSE", () => togglePause());
-		(window as any).ch02FlashbackGame = this;
+		if (import.meta.env.DEV) (window as any).ch02FlashbackGame = this;
 	}
 
 	fitVideo(video: Phaser.GameObjects.Video) {
@@ -162,6 +163,7 @@ export class Ch02FlashbackScene extends Phaser.Scene {
 			echoSummary: choice.label,
 			failureCheck: false,
 		});
+		useGameSaveStore().autosave("CH02_FLASHBACK");
 		hideChoices();
 		this.phase = "choice-thoughts";
 		this.state.mode = "narrative";

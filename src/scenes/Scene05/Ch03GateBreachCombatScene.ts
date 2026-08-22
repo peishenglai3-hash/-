@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { createKeyMap, isActionDown, onAction } from "@/common/actions";
 import { actorDepth } from "@/common/displayDepth";
 import { useGameSaveStore } from "@/stores/modules/gameSave";
+import { addManagedBgm } from "@/common/audioBus";
 import { useGameStateStore } from "@/stores/modules/gameState";
 import {
 	clearFade,
@@ -20,6 +21,7 @@ import {
 	showPrompt,
 	showTask,
 	taskNeedsConfirmation,
+	togglePause,
 	updateCombatHud,
 } from "@/common/ui";
 import {
@@ -239,13 +241,14 @@ export class Ch03GateBreachCombatScene extends Phaser.Scene {
 
 		this.keyMap = createKeyMap(this);
 		onAction(this, "INTERACT", () => this.handleConfirm());
+		onAction(this, "PAUSE", () => togglePause());
 		onAction(this, "ADVANCE", () => {
 			if (this.state.inNarrative) advanceNarrative();
 		});
 		onAction(this, "SWAP_WEAPON", () => this.swapWeapon());
 		this.input.on("pointerdown", this.handlePointerDown, this);
 		this.input.mouse?.disableContextMenu();
-		(window as any).ch03GateBreachCombatGame = this;
+		if (import.meta.env.DEV) (window as any).ch03GateBreachCombatGame = this;
 
 		this.state.flags.add(CH03_COMBAT_FLAGS.started);
 		this.state.mode = "combat_intro";
@@ -923,7 +926,7 @@ export class Ch03GateBreachCombatScene extends Phaser.Scene {
 	}
 
 	playBgm() {
-		this.chapter3Bgm = this.sound.add("ch03_bgm_gate_breach", { loop: true, volume: 0.58 });
+		this.chapter3Bgm = addManagedBgm(this, "ch03_bgm_gate_breach", 0.58);
 		this.chapter3Bgm.play();
 	}
 
@@ -1024,6 +1027,6 @@ export class Ch03GateBreachCombatScene extends Phaser.Scene {
 		this.combatEmbers?.destroy();
 		this.combatEmbers = undefined;
 		hideCombatHud();
-		if ((window as any).ch03GateBreachCombatGame === this) delete (window as any).ch03GateBreachCombatGame;
+		if (import.meta.env.DEV && (window as any).ch03GateBreachCombatGame === this) delete (window as any).ch03GateBreachCombatGame;
 	}
 }

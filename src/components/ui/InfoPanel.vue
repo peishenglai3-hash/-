@@ -23,8 +23,13 @@ onUnmounted(() => window.removeEventListener("keydown", onKeyDown, true));
 
 <template>
 	<div v-if="hud.infoPanel" class="info-screen">
-		<section class="info-card" role="dialog" aria-label="剧情已知信息">
-			<div class="info-title">【{{ hud.infoPanel.title }}】</div>
+		<section
+			class="info-card"
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="info-panel-title"
+		>
+			<div id="info-panel-title" class="info-title">【{{ hud.infoPanel.title }}】</div>
 			<ul>
 				<li v-for="item in hud.infoPanel.items" :key="item">{{ item }}</li>
 			</ul>

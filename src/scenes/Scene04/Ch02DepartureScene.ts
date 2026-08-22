@@ -72,7 +72,7 @@ export class Ch02DepartureScene extends Phaser.Scene {
 			onAction(this, "ADVANCE", () => this.handleAdvance());
 		});
 		onAction(this, "PAUSE", () => togglePause());
-		(window as any).ch02DepartureGame = this;
+		if (import.meta.env.DEV) (window as any).ch02DepartureGame = this;
 	}
 
 	fitVideo(video: Phaser.GameObjects.Video) {

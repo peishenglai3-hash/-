@@ -1,44 +1,63 @@
-"""Extract the Chapter 3 Dong Yunting runtime assets from the supplied board.
+"""Build the Chapter 3 Dong Yunting runtime assets from the supplied character art.
 
-The delivered board uses a green background and keeps the historical character
-name at the source boundary.  The game-facing asset key is intentionally named
-``ch03-dong-yunting`` so player-facing dialogue remains aligned with the
-current Chapter 3 script.
+The current delivery is a three-view front/side/back pixel character set.  The
+runtime only needs a front-facing body and a dialogue portrait, so this script
+removes the checkerboard matte, keeps the proportions intact, and fits the
+results into the existing runtime contracts (85x125 and 295x300).
+
+The source filename may still contain the old provenance name.  It is not a
+player-facing identity; the runtime key remains ``ch03-dong-yunting``.
 """
 
 from __future__ import annotations
 
+from collections import deque
 from pathlib import Path
 
 from PIL import Image
 
 
 PROJECT = Path(__file__).resolve().parents[1]
-SOURCE = Path(r"D:\美术资产\第3章 美术资产\Chapter3_character\董锦堂、年长队员、受伤队员素材.png")
+SOURCE = Path(r"C:\Users\35636\Downloads\export (2)\彭国材_二次元像素_三视图_正面.png")
+LEGACY_SOURCE = Path(r"D:\美术资产\第3章 美术资产\Chapter3_character\董锦堂、年长队员、受伤队员素材.png")
 OUT = PROJECT / "public" / "assets" / "characters" / "ch03-dong-yunting"
 
-# Top band: the first character block is the Dong Yunting reference.  Keep a
-# front idle pose for the arena and the large neutral portrait for dialogue.
-CROPS = {
-    "idle.png": (470, 145, 555, 315),
-    "avatar.png": (175, 20, 470, 320),
-}
+# The supplied front-view sheet is 672x992. The same framing is retained in
+# the source so the body crop can be regenerated without introducing a
+# stretch. The existing dialogue avatar is intentionally not regenerated:
+# that portrait has already been approved for the dialogue box.
+OUTPUT_SIZES = {"idle.png": (85, 125)}
 
 
-def keyed(image: Image.Image) -> Image.Image:
+def is_checkerboard(pixel: tuple[int, int, int, int]) -> bool:
+    r, g, b, _ = pixel
+    return max(r, g, b) - min(r, g, b) <= 8 and min(r, g, b) >= 220
+
+
+def remove_external_checkerboard(image: Image.Image) -> Image.Image:
+    """Make only the outside checkerboard transparent, preserving light clothes."""
+
     rgba = image.convert("RGBA")
     pixels = rgba.load()
-    for y in range(rgba.height):
-        for x in range(rgba.width):
-            r, g, b, _ = pixels[x, y]
-            green_strength = g - max(r, b)
-            if g >= 90 and green_strength >= 45:
-                alpha = 0
-            elif g >= 80 and green_strength >= 12:
-                alpha = max(0, min(255, int((45 - green_strength) * 255 / 33)))
-            else:
-                alpha = 255
-            pixels[x, y] = (r, g, b, alpha)
+    visited: set[tuple[int, int]] = set()
+    queue: deque[tuple[int, int]] = deque()
+
+    for x in range(rgba.width):
+        queue.extend(((x, 0), (x, rgba.height - 1)))
+    for y in range(1, rgba.height - 1):
+        queue.extend(((0, y), (rgba.width - 1, y)))
+
+    while queue:
+        x, y = queue.popleft()
+        if (x, y) in visited or not (0 <= x < rgba.width and 0 <= y < rgba.height):
+            continue
+        visited.add((x, y))
+        if not is_checkerboard(pixels[x, y]):
+            continue
+        r, g, b, _ = pixels[x, y]
+        pixels[x, y] = (r, g, b, 0)
+        queue.extend(((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)))
+
     return rgba
 
 
@@ -54,13 +73,28 @@ def trim(image: Image.Image, padding: int = 5) -> Image.Image:
     return image.crop((left, top, right, bottom))
 
 
+def fit_on_canvas(image: Image.Image, size: tuple[int, int], *, bottom: bool) -> Image.Image:
+    canvas = Image.new("RGBA", size, (0, 0, 0, 0))
+    scale = min(size[0] / image.width, size[1] / image.height)
+    resized = image.resize(
+        (max(1, round(image.width * scale)), max(1, round(image.height * scale))),
+        Image.Resampling.NEAREST,
+    )
+    x = (size[0] - resized.width) // 2
+    y = size[1] - resized.height if bottom else (size[1] - resized.height) // 2
+    canvas.alpha_composite(resized, (x, y))
+    return canvas
+
+
 def main() -> None:
-    if not SOURCE.exists():
-        raise SystemExit(f"missing source board: {SOURCE}")
-    source = Image.open(SOURCE)
+    source_path = SOURCE if SOURCE.exists() else LEGACY_SOURCE
+    if not source_path.exists():
+        raise SystemExit(f"missing source art: {SOURCE} (fallback: {LEGACY_SOURCE})")
+    source = remove_external_checkerboard(Image.open(source_path))
+    body = trim(source, padding=4)
     OUT.mkdir(parents=True, exist_ok=True)
-    for name, box in CROPS.items():
-        output = trim(keyed(source.crop(box)))
+    outputs = {"idle.png": fit_on_canvas(body, OUTPUT_SIZES["idle.png"], bottom=True)}
+    for name, output in outputs.items():
         output.save(OUT / name, "PNG", optimize=True)
         print(f"{OUT / name}: {output.width}x{output.height}")
 

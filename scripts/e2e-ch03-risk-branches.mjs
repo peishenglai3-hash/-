@@ -53,52 +53,58 @@ try {
 		const page = await context.newPage();
 		const errors = [];
 		page.on("pageerror", (error) => errors.push(error.message));
-		await page.goto(`${base}/?chapter=3`, { waitUntil: "networkidle" });
-		await waitFor(
-			page,
-			() => !!window.prologueState && !!window.ch03OpeningGame,
-		);
-		await waitFor(page, () => {
-			const video = window.ch03OpeningGame?.videoOverlay?.video;
-			return !!video?.videoWidth && video.readyState >= 2;
-		});
-		await page.evaluate(
-			(risk) => Object.assign(window.prologueState.risk, risk),
-			testCase.risk,
-		);
-		await page.waitForTimeout(250);
-		await page.keyboard.press("E");
-		await waitFor(
-			page,
-			() =>
-				!!window.ch03TuCompoundGame &&
-				window.prologueState.flags.has("CH03_RISK_PRECHECK_STARTED"),
-		);
-		await advanceUntil(
-			page,
-			() => !!document.querySelector(".info-screen"),
-		);
-		await page.locator(".info-card button").click();
-		await advanceUntil(page, () =>
-			window.prologueState.flags.has("CH03_RISK_PRECHECK_COMPLETE"),
-		);
-		const state = await page.evaluate(() => ({
-			permission: window.prologueState.chapter3TaskPermission,
-			risk: window.prologueState.risk,
-			flags: [...window.prologueState.flags].filter((flag) =>
-				flag.startsWith("CH03_TASK_"),
-			),
-		}));
-		if (state.permission !== testCase.expected)
-			throw new Error(`${testCase.name}: ${JSON.stringify(state)}`);
-		if (errors.length)
-			throw new Error(`${testCase.name}: ${errors.join("\\n")}`);
-		results.push({
-			name: testCase.name,
-			permission: state.permission,
-			flags: state.flags,
-		});
-		await context.close();
+		try {
+			// A video request can remain active for the whole opening scene. DOM
+			// readiness plus the explicit video-ready wait is the reliable gate;
+			// networkidle would make this five-case branch audit wait unnecessarily.
+			await page.goto(`${base}/?chapter=3`, { waitUntil: "domcontentloaded" });
+			await waitFor(
+				page,
+				() => !!window.prologueState && !!window.ch03OpeningGame,
+			);
+			await waitFor(page, () => {
+				const video = window.ch03OpeningGame?.videoOverlay?.video;
+				return !!video?.videoWidth && video.readyState >= 2;
+			});
+			await page.evaluate(
+				(risk) => Object.assign(window.prologueState.risk, risk),
+				testCase.risk,
+			);
+			await page.waitForTimeout(250);
+			await page.keyboard.press("E");
+			await waitFor(
+				page,
+				() =>
+					!!window.ch03TuCompoundGame &&
+					window.prologueState.flags.has("CH03_RISK_PRECHECK_STARTED"),
+			);
+			await advanceUntil(
+				page,
+				() => !!document.querySelector(".info-screen"),
+			);
+			await page.locator(".info-card button").click();
+			await advanceUntil(page, () =>
+				window.prologueState.flags.has("CH03_RISK_PRECHECK_COMPLETE"),
+			);
+			const state = await page.evaluate(() => ({
+				permission: window.prologueState.chapter3TaskPermission,
+				risk: window.prologueState.risk,
+				flags: [...window.prologueState.flags].filter((flag) =>
+					flag.startsWith("CH03_TASK_"),
+				),
+			}));
+			if (state.permission !== testCase.expected)
+				throw new Error(`${testCase.name}: ${JSON.stringify(state)}`);
+			if (errors.length)
+				throw new Error(`${testCase.name}: ${errors.join("\\n")}`);
+			results.push({
+				name: testCase.name,
+				permission: state.permission,
+				flags: state.flags,
+			});
+		} finally {
+			await context.close();
+		}
 	}
 	console.log(
 		JSON.stringify(

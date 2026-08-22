@@ -163,13 +163,28 @@ try {
 }
 assert(chapterOneFailureRejected, "chapter 1/2 cannot enable failure checks");
 
+let chapterFourFailureRejected = false;
+try {
+	applyFormalChoice({ profile: createProfile(), risk: createRisk(), flags: new Set() }, {
+		choiceId: "BAD_CH04_FAILURE_CHECK",
+		chapter: 4,
+		isFormalChoice: true,
+		portraitChange: { D: 1 },
+		riskChange: {},
+		failureCheck: true,
+	});
+} catch {
+	chapterFourFailureRejected = true;
+}
+assert(chapterFourFailureRejected, "chapter 4 cannot enable failure checks");
+
 // 阈值和优先级：协同 > 执行 > 身份。
 assert(classifyRisk({ identity: 3, execution: 4, coordination: 6 }).identity === "LOW", "identity low threshold");
 assert(classifyRisk({ identity: 4, execution: 5, coordination: 7 }).execution === "HIGH", "execution high threshold");
 assert(classifyRisk({ identity: 6, execution: 7, coordination: 10 }).coordination === "FAILURE", "coordination failure threshold");
 assert(getRiskFailure({ identity: 6, execution: 7, coordination: 10 }) === "coordination", "risk failure priority");
 
-// 第三章前置检查先只读风险派生权限；完成重新安排后，执行/协同高风险各有一次前置 -1。
+// 第三章前置检查只读风险派生权限；重新安排不得修改永久风险。
 const beforeRisk = { identity: 4, execution: 5, coordination: 7 };
 const access = getChapter3Access(beforeRisk);
 assert(access.failure === null && access.canContinue, "high risk remains playable before failure threshold");
@@ -186,11 +201,19 @@ assert(getChapter3TaskAssignment({ identity: 6, execution: 0, coordination: 0 })
 assert(CH03_TASK_PERMISSION_TAGS.REAR_SUPPORT === "REAR_SUPPORT", "rear support keeps canonical tag");
 assert(CH03_TASK_PERMISSION_TAGS.REAR_COORDINATION === "REAR_COORDINATION", "rear coordination keeps canonical tag");
 assert(CH03_TASK_PERMISSION_TAGS.ESCORTED_SUPPORT === "ESCORTED_SUPPORT", "escorted support keeps canonical tag");
-assert(same(chapter3PrecheckRiskAdjustment(getChapter3TaskAssignment({ identity: 0, execution: 5, coordination: 7 })), {
-	execution: -1,
-	coordination: -1,
-}), "high execution and coordination receive one precheck correction");
+assert(same(chapter3PrecheckRiskAdjustment(getChapter3TaskAssignment({ identity: 0, execution: 5, coordination: 7 })), {}), "precheck never mutates permanent risk");
 assert(same(chapter3PrecheckRiskAdjustment(getChapter3TaskAssignment({ identity: 4, execution: 0, coordination: 0 })), {}), "identity precheck does not mutate risk");
+
+const clearingFailureDefinition = buildChapter3ClearingFormalChoice("CH03_CLEARING_D");
+const clearingRuntime = {
+	profile: createProfile(),
+	risk: { identity: 0, execution: 6, coordination: 8 },
+	flags: new Set(),
+};
+const clearingResult = applyFormalChoice(clearingRuntime, clearingFailureDefinition);
+assert(clearingResult.failure === "coordination", "clearing D checks the coordination failure threshold");
+assert(clearingRuntime.risk.execution === 7 && clearingRuntime.risk.coordination === 10, "clearing D keeps independent risk deltas");
+assert(CH03_CLEARING_FLAGS.replacement === "CH03_CLEARING_REPLACEMENT", "clearing failure has a recoverable replacement flag");
 
 // 第三章交互一：四张分支图都对应正式选项；C 只在前方辅助权限下可用。
 const observationForwardChoices = buildChapter3ObservationChoices("FORWARD_SUPPORT");

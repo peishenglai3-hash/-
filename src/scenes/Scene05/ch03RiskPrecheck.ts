@@ -121,15 +121,16 @@ export function taskPermissionFlags(permission: Chapter3TaskPermission): string[
 	return [taskPermissionFlag(permission), taskPermissionCanonicalTag(permission)];
 }
 
-/** 高风险重新安排产生一次性的执行/协同风险前置修正。 */
+/**
+ * 兼容旧调用方的占位接口。
+ *
+ * 按最新系统守则，前置检查只能读取风险并派生权限，不得修改永久风险。
+ * 正式选择的风险变化仍由 applyFormalChoice 统一结算。
+ */
 export function chapter3PrecheckRiskAdjustment(
-	assignment: Chapter3TaskAssignment,
+	_assignment: Chapter3TaskAssignment,
 ): RiskDelta {
-	if (!assignment.access.canContinue) return {};
-	const delta: RiskDelta = {};
-	if (assignment.access.levels.execution === "HIGH") delta.execution = -1;
-	if (assignment.access.levels.coordination === "HIGH") delta.coordination = -1;
-	return delta;
+	return {};
 }
 
 export function taskPermissionFromFlags(

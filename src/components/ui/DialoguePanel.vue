@@ -3,6 +3,7 @@ import { useHudStore } from "@/stores/modules/hud";
 const hud = useHudStore();
 
 const assetBase = import.meta.env.BASE_URL || "/";
+const smoothAvatarIds = new Set(["ch02-chen", "ch01-fisherman"]);
 </script>
 
 <template>
@@ -10,6 +11,9 @@ const assetBase = import.meta.env.BASE_URL || "/";
 		v-if="hud.dialogue.visible"
 		class="dialogue-panel"
 		:class="hud.dialogue.style"
+		role="dialog"
+		aria-live="polite"
+		aria-label="剧情对话"
 	>
 		<div class="dialogue-left">
 			<div
@@ -20,7 +24,7 @@ const assetBase = import.meta.env.BASE_URL || "/";
 					v-if="hud.dialogue.avatarSrc"
 					:src="`${assetBase}assets/characters/${hud.dialogue.avatarSrc}/avatar.png`"
 					:alt="hud.dialogue.speaker"
-					:class="{ 'dialogue-avatar-pixel': hud.dialogue.avatarSrc !== 'ch02-chen' }"
+					:class="{ 'dialogue-avatar-pixel': !smoothAvatarIds.has(hud.dialogue.avatarSrc) }"
 				/>
 			</div>
 		</div>
@@ -38,7 +42,13 @@ const assetBase = import.meta.env.BASE_URL || "/";
 	left: 50%;
 	bottom: 20px;
 	transform: translateX(-50%);
-	width: 400px;
+	/*
+	 * The dialogue frame keeps its source aspect ratio. Reducing the width
+	 * from 680px to 480px therefore reduces both dimensions proportionally,
+	 * bringing the occupied screen area down to roughly half while keeping
+	 * the text and portrait layout readable.
+	 */
+	width: min(480px, calc(100% - 32px));
 	aspect-ratio: 2629 / 1398;
 	pointer-events: auto;
 	background: url("/assets/ui/keyed/dialogue.png") center / 100% 100%
@@ -103,7 +113,7 @@ const assetBase = import.meta.env.BASE_URL || "/";
 	height: 10%;
 	width: 27%;
 	text-align: center;
-	font-size: 15px;
+	font-size: clamp(15px, 1.25vw, 20px);
 	font-weight: 700;
 	letter-spacing: 0.28em;
 }
@@ -160,12 +170,12 @@ const assetBase = import.meta.env.BASE_URL || "/";
 
 @media (max-width: 850px) {
 	.dialogue-panel {
-		width: min(82%, 480px);
+		width: min(92%, 480px);
 		bottom: 8px;
 	}
 
 	.dialogue-text {
-		font-size: clamp(12px, 1.8vw, 15px);
+		font-size: clamp(12px, 2.4vw, 17px);
 	}
 	.dialogue-speaker {
 		font-size: 11px;
