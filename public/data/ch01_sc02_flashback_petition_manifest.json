@@ -1683,6 +1683,7 @@
     },
     "NPC_FISHERMAN": {
       "display_height": 320,
+      "position": [1252, 468],
       "offset": [0, 0]
     }
   },

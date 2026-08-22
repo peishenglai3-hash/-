@@ -687,6 +687,38 @@ export class CollisionEditor {
     if (target) target[1].player_motion = getDevPlayerMotionJson();
   }
 
+  syncActorVisualDocuments() {
+    const actors = this.config.getActorVisuals?.() ?? [];
+    if (!actors.length) return;
+    for (const document of Object.values(this.config.documents)) {
+      if (!document?.actor_visuals || typeof document.actor_visuals !== 'object') continue;
+      for (const actor of actors) {
+        if (!actor?.id) continue;
+        const current = document.actor_visuals[actor.id];
+        const profile = current && typeof current === 'object' ? current : {};
+        const height = Number(actor.displayHeight);
+        // 位置以当前贴图实际坐标为准重新计算，避免只改尺寸或拖动后
+        // profile.offset 尚未刷新时，把旧位置写回 JSON。
+        const position = actor.position;
+        const anchor = actor.anchor;
+        const offset = position && anchor
+          && Number.isFinite(position.x) && Number.isFinite(position.y)
+          && Number.isFinite(anchor.x) && Number.isFinite(anchor.y)
+          ? [position.x - anchor.x, position.y - anchor.y]
+          : actor.offset;
+        if (Number.isFinite(height) && height > 0) profile.display_height = height;
+        if (position && Number.isFinite(position.x) && Number.isFinite(position.y)) {
+          profile.position = [position.x, position.y];
+        }
+        if (Array.isArray(offset) && offset.length === 2
+          && offset.every(Number.isFinite)) {
+          profile.offset = [...offset];
+        }
+        document.actor_visuals[actor.id] = profile;
+      }
+    }
+  }
+
   rename() {
     if (!this.selected) return;
     const nextId = this.idInput.value.trim();
@@ -828,6 +860,8 @@ export class CollisionEditor {
 
   changed(message = '有未保存修改') {
     this.dirty = true;
+    // 位置和尺寸都要先同步回 JSON 文档，再让场景刷新序列化副本。
+    if (this.kind === 'visual') this.syncActorVisualDocuments();
     this.config.onChange(this.kind);
     this.refreshInputs();
     this.render();
@@ -984,6 +1018,7 @@ export class CollisionEditor {
 
   async save() {
     this.syncPlayerMotionDocument();
+    this.syncActorVisualDocuments();
     const documents = this.config.documents;
     try {
       for (const [file, data] of Object.entries(documents)) {

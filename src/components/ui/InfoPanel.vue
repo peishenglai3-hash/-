@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { onMounted, onUnmounted } from "vue";
 import { useHudStore } from "@/stores/modules/hud";
 
 const hud = useHudStore();
@@ -6,6 +7,18 @@ const hud = useHudStore();
 function onContinue() {
 	hud.closeInfoPanel();
 }
+
+function onKeyDown(event: KeyboardEvent) {
+	if (!hud.infoPanel) return;
+	if (event.code === "Space" || event.code === "Enter") {
+		event.preventDefault();
+		event.stopImmediatePropagation();
+		onContinue();
+	}
+}
+
+onMounted(() => window.addEventListener("keydown", onKeyDown, true));
+onUnmounted(() => window.removeEventListener("keydown", onKeyDown, true));
 </script>
 
 <template>
