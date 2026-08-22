@@ -1,0 +1,222 @@
+{
+  "map_id": "MAP_CH3_TU_COMPOUND",
+  "state_id": "STATE_GATE_CLOSED",
+  "canvas": {
+    "width": 1664,
+    "height": 936
+  },
+  "tile_size": 48,
+  "coordinate_origin": "top_left",
+  "objects": [
+    {
+      "id": "COL_HALL_FOOTPRINT",
+      "type": "collision",
+      "rect": [
+        235,
+        70,
+        640,
+        390
+      ]
+    },
+    {
+      "id": "COL_OIL_PRESS_FOOTPRINT",
+      "type": "collision",
+      "rect": [
+        1030,
+        50,
+        510,
+        555
+      ]
+    },
+    {
+      "id": "COL_FRONT_WALL_LEFT",
+      "type": "collision",
+      "rect": [
+        205,
+        650,
+        430,
+        190
+      ]
+    },
+    {
+      "id": "COL_FRONT_WALL_RIGHT",
+      "type": "collision",
+      "rect": [
+        1040,
+        650,
+        545,
+        190
+      ]
+    },
+    {
+      "id": "COL_TREE_SHADOW",
+      "type": "collision",
+      "rect": [
+        0,
+        400,
+        360,
+        536
+      ]
+    },
+    {
+      "id": "COL_BANQUET_TABLE",
+      "type": "collision",
+      "rect": [
+        345,
+        225,
+        455,
+        190
+      ]
+    },
+    {
+      "id": "TRG_HIDING_ZONE",
+      "type": "interaction",
+      "rect": [
+        200,
+        610,
+        360,
+        250
+      ],
+      "action": "observe_waiting_position"
+    },
+    {
+      "id": "TRG_SPILLED_LEFTOVERS",
+      "type": "interaction",
+      "rect": [
+        235,
+        790,
+        235,
+        125
+      ],
+      "action": "inspect_leftovers"
+    },
+    {
+      "id": "TRG_BANQUET_REMAINS",
+      "type": "interaction",
+      "rect": [
+        315,
+        180,
+        520,
+        290
+      ],
+      "action": "inspect_banquet"
+    },
+    {
+      "id": "TRG_OIL_PRESS",
+      "type": "interaction",
+      "rect": [
+        1005,
+        55,
+        565,
+        560
+      ],
+      "action": "inspect_oil_press"
+    },
+    {
+      "id": "TRG_GATE",
+      "type": "interaction",
+      "rect": [
+        620,
+        630,
+        440,
+        245
+      ],
+      "action": "inspect_gate"
+    },
+    {
+      "id": "TRG_BACK_ROUTE",
+      "type": "interaction",
+      "rect": [
+        820,
+        0,
+        225,
+        275
+      ],
+      "action": "observe_back_route"
+    },
+    {
+      "id": "CAM_OUTSIDE",
+      "type": "camera",
+      "rect": [
+        0,
+        565,
+        1664,
+        371
+      ]
+    },
+    {
+      "id": "CAM_COURTYARD",
+      "type": "camera",
+      "rect": [
+        180,
+        120,
+        1400,
+        720
+      ]
+    },
+    {
+      "id": "CAM_OIL_PRESS",
+      "type": "camera",
+      "rect": [
+        930,
+        0,
+        734,
+        675
+      ]
+    },
+    {
+      "id": "SPAWN_PLAYER_HIDING",
+      "type": "spawn",
+      "rect": [
+        430,
+        760,
+        48,
+        48
+      ],
+      "facing": "up"
+    },
+    {
+      "id": "SPAWN_FRONT_GROUP_A",
+      "type": "spawn",
+      "rect": [
+        600,
+        825,
+        48,
+        48
+      ],
+      "runtime_group": "front_gate"
+    },
+    {
+      "id": "SPAWN_FRONT_GROUP_B",
+      "type": "spawn",
+      "rect": [
+        1015,
+        825,
+        48,
+        48
+      ],
+      "runtime_group": "front_gate"
+    },
+    {
+      "id": "EXIT_BACK_ROUTE",
+      "type": "exit",
+      "rect": [
+        835,
+        0,
+        190,
+        72
+      ],
+      "destination": "rear_or_street_direction"
+    },
+    {
+      "id": "COL_GATE_CLOSED",
+      "type": "collision",
+      "rect": [
+        635,
+        665,
+        410,
+        190
+      ]
+    }
+  ]
+}

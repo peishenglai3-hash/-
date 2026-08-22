@@ -14,6 +14,8 @@ function onChoose(id: string) {
 			v-for="choice in hud.choicePanel.items"
 			:key="choice.id"
 			class="choice"
+			:class="{ 'choice--disabled': choice.disabled }"
+			:disabled="choice.disabled"
 			@click="onChoose(choice.id)"
 		>
 			<b>[{{ choice.id.slice(-1) }}]</b>
@@ -64,6 +66,16 @@ function onChoose(id: string) {
 .choice:hover {
 	background: #58452b;
 	border-color: #d3ad64;
+}
+
+.choice:disabled {
+	opacity: 0.48;
+	cursor: not-allowed;
+}
+
+.choice:disabled:hover {
+	background: #31261b;
+	border-color: #7f6848;
 }
 
 .choice b {

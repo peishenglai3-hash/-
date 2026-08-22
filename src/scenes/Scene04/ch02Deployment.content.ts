@@ -42,7 +42,7 @@ export const CH02_DEPLOYMENT_NARRATIVE: NarrativeEntry[] = [
 		entry_id: "CH02_DEPLOYMENT_TARGET",
 		kind: "dialogue",
 		speaker_name: "戴安南",
-		text: "今夜先打余老三。",
+		text: "今夜先打杜老三。",
 		style: "dialogue",
 		cps: 14,
 	},
@@ -57,7 +57,7 @@ export const CH02_DEPLOYMENT_NARRATIVE: NarrativeEntry[] = [
 	{
 		entry_id: "CH02_DEPLOYMENT_MESSAGE_SPREAD",
 		kind: "narration",
-		text: "不久，正厅静默，传话的人疾步走出，低低的声音蔓延到院内，又迅速安静下来。\n煤油灯下的细节并没有传到每个人耳中。有人只听清了目标，有人只知道自己要跟随哪一组，还有人仍在等待本组负责人通知。但所有人都已知晓，今夜他们有个共同的敌人，他的名字是余老三。",
+		text: "不久，正厅静默，传话的人疾步走出，低低的声音蔓延到院内，又迅速安静下来。\n煤油灯下的细节并没有传到每个人耳中。有人只听清了目标，有人只知道自己要跟随哪一组，还有人仍在等待本组负责人通知。但所有人都已知晓，今夜他们有个共同的敌人，他的名字是杜老三。",
 		style: "narration",
 		cps: 11,
 	},
@@ -65,5 +65,5 @@ export const CH02_DEPLOYMENT_NARRATIVE: NarrativeEntry[] = [
 
 export const CH02_DEPLOYMENT_TASK = {
 	title: "正厅内的部署",
-	detail: "你站在正厅门口，只听见传到门边的部分安排。今夜，他们有一个共同的敌人：余老三。按 E 进入闪回二：抓壮丁。",
+	detail: "你站在正厅门口，只听见传到门边的部分安排。今夜，他们有一个共同的敌人：杜老三。按 E 进入闪回二：抓壮丁。",
 };

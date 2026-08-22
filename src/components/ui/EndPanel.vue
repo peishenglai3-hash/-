@@ -10,6 +10,10 @@ const onClose = () => {
 		director.startChapter2Opening();
 		return;
 	}
+	if (hud.endPanel?.next === "chapter3") {
+		director.startChapter3Opening();
+		return;
+	}
 	if (hud.endPanel?.next === "title") {
 		director.goToTitle();
 		return;

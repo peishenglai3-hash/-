@@ -24,7 +24,7 @@ const VIDEO_KEY = "ch02_departure";
  * 第二章末段“出发前／分批出发”。
  *
  * 视频负责承载祠堂内最后交代、分批离开和声音转入黑幕的专门处理；
- * 视频结束后按照剧本显示“余家大院外围”的字幕与旁白，再交给章末结算。
+ * 视频结束后按照剧本显示“杜家大院外围”的字幕与旁白，再交给章末结算。
  */
 export class Ch02DepartureScene extends Phaser.Scene {
 	videoOverlay?: Phaser.GameObjects.Video;

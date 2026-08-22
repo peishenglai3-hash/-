@@ -5,6 +5,8 @@ export const ACTIONS: Record<string, string[]> = {
 	MOVE_RIGHT: ["D", "RIGHT"],
 	INTERACT: ["E"],
 	ADVANCE: ["SPACE"],
+	FIRE: ["SPACE"],
+	SWAP_WEAPON: ["Q"],
 	PAUSE: ["ESC"],
 };
 
