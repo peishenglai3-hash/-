@@ -1,7 +1,7 @@
 import { chromium } from 'playwright';
 import { mkdirSync } from 'fs';
 
-const out = 'C:\\Users\\35636\\AppData\\Local\\Temp\\honghu_e2e\\';
+const out = '.tmp_e2e/ch01-sc01/';
 mkdirSync(out, { recursive: true });
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const PORT = process.env.E2E_PORT || '5175';
@@ -14,7 +14,7 @@ page.on('requestfailed', (r) => console.log('[requestfailed]', r.url(), r.failur
 
 await page.goto('http://127.0.0.1:' + PORT + '/');
 // 标题门禁（2026-08-12 起）：先点「创建」热区进入新游戏流程
-await page.waitForFunction(() => window.titleScene, null, { timeout: 15000 });
+await page.waitForFunction(() => window.gameDirector && window.prologueState, null, { timeout: 15000 });
 await page.mouse.click(301, 641);
 await page.waitForSelector('.intro-panel button');
 await sleep(800);

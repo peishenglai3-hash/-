@@ -9,134 +9,102 @@
   "objects": [
     {
       "id": "COL_OUTER_LEFT",
-      "type": "collision",
       "rect": [
-        120,
+        52,
         0,
         190,
         936
-      ]
+      ],
+      "rotation": 0,
+      "type": "collision"
     },
     {
       "id": "COL_OUTER_RIGHT",
-      "type": "collision",
       "rect": [
-        1360,
+        1506.5,
         0,
-        185,
+        157.5,
         936
-      ]
+      ],
+      "rotation": 0,
+      "type": "collision"
     },
     {
       "id": "COL_OUTER_BOTTOM",
-      "type": "collision",
       "rect": [
         120,
-        790,
+        839,
         1425,
-        146
-      ]
+        97
+      ],
+      "rotation": 0,
+      "type": "collision"
     },
     {
       "id": "COL_HALL_BACK",
-      "type": "collision",
       "rect": [
         315,
         0,
         1030,
-        130
-      ]
+        203.625
+      ],
+      "rotation": 0,
+      "type": "collision"
     },
     {
-      "id": "COL_TABLE",
-      "type": "collision",
+      "id": "collision_msvgpvp7",
       "rect": [
-        745,
-        175,
-        215,
-        245
-      ]
+        1279.25,
+        87.25,
+        225.5,
+        269.5
+      ],
+      "rotation": 0,
+      "type": "collision"
     },
     {
-      "id": "COL_CHAIRS_LEFT",
-      "type": "collision",
+      "id": "collision_msvgqa0e",
       "rect": [
-        650,
-        175,
-        92,
-        250
-      ]
+        154.25,
+        52.25,
+        225.5,
+        269.5
+      ],
+      "rotation": 0,
+      "type": "collision"
     },
     {
-      "id": "COL_CHAIRS_RIGHT",
-      "type": "collision",
+      "id": "collision_msvh3xh6",
       "rect": [
-        965,
-        175,
-        92,
-        250
-      ]
+        1163.9375,
+        156.75,
+        82.375,
+        197.25
+      ],
+      "rotation": -20,
+      "type": "collision"
     },
     {
-      "id": "COL_TREE",
-      "type": "collision",
+      "id": "collision_msy6yskm",
       "rect": [
-        300,
-        430,
-        185,
-        260
-      ]
-    },
-    {
-      "id": "COL_SUPPLY",
-      "type": "collision",
-      "rect": [
-        1250,
-        365,
-        270,
-        220
-      ]
-    },
-    {
-      "id": "TRG_ENTRY",
-      "type": "interaction",
-      "rect": [
-        760,
-        790,
-        150,
-        146
-      ]
+        242,
+        137,
+        1303,
+        298
+      ],
+      "rotation": 0,
+      "type": "collision"
     },
     {
       "id": "TRG_HALL_OBSERVE",
-      "type": "interaction",
+      "rect": [
+        460,
+        167.5,
+        819.25,
+        349
+      ],
       "prompt": "正厅门口",
-      "rect": [
-        675,
-        420,
-        330,
-        96
-      ]
-    },
-    {
-      "id": "TRG_DEPLOYMENT_TABLE",
-      "type": "interaction",
-      "rect": [
-        720,
-        145,
-        280,
-        300
-      ]
-    },
-    {
-      "id": "TRG_SUPPLY_ZONE",
-      "type": "interaction",
-      "rect": [
-        1215,
-        340,
-        330,
-        270
-      ]
+      "type": "interaction"
     },
     {
       "id": "SPAWN_PLAYER",
@@ -160,13 +128,596 @@
     },
     {
       "id": "EXIT_GATE",
-      "type": "exit",
       "rect": [
         765,
         850,
         145,
         86
+      ],
+      "type": "exit"
+    },
+    {
+      "id": "foreground_msy6w81v",
+      "shape": "polygon",
+      "points": [
+        [
+          241,
+          740
+        ],
+        [
+          239,
+          838
+        ],
+        [
+          749,
+          840
+        ],
+        [
+          750,
+          717
+        ],
+        [
+          720,
+          712
+        ],
+        [
+          717,
+          740
+        ],
+        [
+          242,
+          741
+        ]
+      ],
+      "sort_y": 840,
+      "units": "tiles",
+      "layer": "foreground",
+      "enabled": true,
+      "depth": 1600,
+      "type": "foreground"
+    },
+    {
+      "id": "foreground_msy6wzpj",
+      "shape": "polygon",
+      "points": [
+        [
+          911,
+          710
+        ],
+        [
+          911,
+          845
+        ],
+        [
+          1513,
+          852
+        ],
+        [
+          1513,
+          742
+        ],
+        [
+          941,
+          738
+        ],
+        [
+          941,
+          712
+        ],
+        [
+          912,
+          710
+        ]
+      ],
+      "sort_y": 852,
+      "units": "tiles",
+      "layer": "foreground",
+      "enabled": true,
+      "depth": 1600,
+      "type": "foreground"
+    },
+    {
+      "id": "foreground_msy6xg6h",
+      "shape": "polygon",
+      "points": [
+        [
+          750,
+          737
+        ],
+        [
+          749,
+          886
+        ],
+        [
+          831,
+          889
+        ],
+        [
+          830,
+          756
+        ],
+        [
+          915,
+          759
+        ],
+        [
+          918,
+          734
+        ],
+        [
+          749,
+          737
+        ]
+      ],
+      "sort_y": 889,
+      "units": "tiles",
+      "layer": "foreground",
+      "enabled": true,
+      "depth": 1600,
+      "type": "foreground"
+    },
+    {
+      "id": "foreground_msy6xogj",
+      "shape": "polygon",
+      "points": [
+        [
+          909,
+          762
+        ],
+        [
+          863,
+          784
+        ],
+        [
+          862,
+          933
+        ],
+        [
+          913,
+          902
+        ],
+        [
+          910,
+          763
+        ]
+      ],
+      "sort_y": 933,
+      "units": "tiles",
+      "layer": "foreground",
+      "enabled": true,
+      "depth": 1600,
+      "type": "foreground"
+    },
+    {
+      "id": "foreground_msyfl31g",
+      "shape": "polygon",
+      "points": [
+        [
+          265,
+          431
+        ],
+        [
+          258,
+          451
+        ],
+        [
+          252,
+          490
+        ],
+        [
+          254,
+          526
+        ],
+        [
+          282,
+          547
+        ],
+        [
+          302,
+          536
+        ],
+        [
+          332,
+          547
+        ],
+        [
+          299,
+          554
+        ],
+        [
+          283,
+          584
+        ],
+        [
+          304,
+          622
+        ],
+        [
+          338,
+          608
+        ],
+        [
+          354,
+          575
+        ],
+        [
+          379,
+          608
+        ],
+        [
+          376,
+          648
+        ],
+        [
+          358,
+          689
+        ],
+        [
+          383,
+          703
+        ],
+        [
+          408,
+          686
+        ],
+        [
+          428,
+          701
+        ],
+        [
+          431,
+          689
+        ],
+        [
+          452,
+          702
+        ],
+        [
+          482,
+          693
+        ],
+        [
+          436,
+          632
+        ],
+        [
+          432,
+          584
+        ],
+        [
+          473,
+          553
+        ],
+        [
+          489,
+          545
+        ],
+        [
+          509,
+          576
+        ],
+        [
+          520,
+          568
+        ],
+        [
+          538,
+          584
+        ],
+        [
+          554,
+          579
+        ],
+        [
+          570,
+          579
+        ],
+        [
+          572,
+          562
+        ],
+        [
+          563,
+          526
+        ],
+        [
+          574,
+          545
+        ],
+        [
+          593,
+          551
+        ],
+        [
+          605,
+          535
+        ],
+        [
+          595,
+          523
+        ],
+        [
+          579,
+          514
+        ],
+        [
+          583,
+          504
+        ],
+        [
+          603,
+          504
+        ],
+        [
+          608,
+          485
+        ],
+        [
+          600,
+          469
+        ],
+        [
+          586,
+          465
+        ],
+        [
+          566,
+          469
+        ],
+        [
+          519,
+          489
+        ],
+        [
+          549,
+          459
+        ],
+        [
+          584,
+          450
+        ],
+        [
+          596,
+          437
+        ],
+        [
+          608,
+          406
+        ],
+        [
+          597,
+          400
+        ],
+        [
+          575,
+          408
+        ],
+        [
+          568,
+          393
+        ],
+        [
+          581,
+          391
+        ],
+        [
+          571,
+          375
+        ],
+        [
+          567,
+          355
+        ],
+        [
+          549,
+          351
+        ],
+        [
+          527,
+          361
+        ],
+        [
+          539,
+          337
+        ],
+        [
+          537,
+          321
+        ],
+        [
+          519,
+          319
+        ],
+        [
+          504,
+          330
+        ],
+        [
+          485,
+          331
+        ],
+        [
+          503,
+          306
+        ],
+        [
+          452,
+          284
+        ],
+        [
+          420,
+          295
+        ],
+        [
+          401,
+          308
+        ],
+        [
+          352,
+          335
+        ],
+        [
+          327,
+          358
+        ],
+        [
+          304,
+          370
+        ],
+        [
+          286,
+          386
+        ],
+        [
+          304,
+          422
+        ],
+        [
+          266,
+          432
+        ]
+      ],
+      "sort_y": 703,
+      "units": "tiles",
+      "layer": "foreground",
+      "enabled": true,
+      "depth": 1600,
+      "type": "foreground"
+    }
+  ],
+  "actor_colliders": {
+    "PLAYER": {
+      "offset": [
+        -28,
+        -36
+      ],
+      "size": [
+        56,
+        36
       ]
     }
-  ]
+  },
+  "actor_visuals": {
+    "PLAYER": {
+      "display_height": 280,
+      "offset": [
+        0,
+        0
+      ]
+    },
+    "GROUP_LEADER": {
+      "display_height": 280,
+      "offset": [
+        0,
+        0
+      ],
+      "enabled": false
+    },
+    "YOUNG_MEMBER": {
+      "display_height": 280,
+      "offset": [
+        0,
+        0
+      ]
+    },
+    "DAI_ANNAN": {
+      "display_height": 280,
+      "offset": [
+        0,
+        0
+      ]
+    },
+    "ARRIVAL_GUARD_0": {
+      "display_height": 208,
+      "offset": [
+        0,
+        0
+      ],
+      "enabled": false
+    },
+    "ARRIVAL_GUARD_1": {
+      "display_height": 208,
+      "offset": [
+        0,
+        0
+      ],
+      "enabled": false
+    },
+    "ARRIVAL_CROWD_0": {
+      "display_height": 280,
+      "offset": [
+        0,
+        0
+      ],
+      "enabled": false
+    },
+    "ARRIVAL_CROWD_1": {
+      "display_height": 280,
+      "offset": [
+        0,
+        0
+      ],
+      "enabled": false
+    },
+    "ARRIVAL_CROWD_2": {
+      "display_height": 280,
+      "offset": [
+        0,
+        0
+      ],
+      "enabled": false
+    },
+    "ARRIVAL_CROWD_3": {
+      "display_height": 280,
+      "offset": [
+        0,
+        0
+      ],
+      "enabled": false
+    },
+    "ARRIVAL_CROWD_4": {
+      "display_height": 280,
+      "offset": [
+        -82.85954785031163,
+        21.482286486095063
+      ],
+      "enabled": false
+    },
+    "ARRIVAL_CROWD_5": {
+      "display_height": 280,
+      "offset": [
+        0,
+        0
+      ],
+      "enabled": false
+    },
+    "ARRIVAL_CROWD_6": {
+      "display_height": 280,
+      "offset": [
+        0,
+        0
+      ],
+      "enabled": false
+    },
+    "ARRIVAL_CROWD_7": {
+      "display_height": 280,
+      "offset": [
+        0,
+        0
+      ],
+      "enabled": false
+    },
+    "ARRIVAL_CROWD_8": {
+      "display_height": 280,
+      "offset": [
+        0,
+        0
+      ],
+      "enabled": false
+    }
+  },
+  "player_motion": {
+    "movement_multiplier": 1.2,
+    "animation_multiplier": 1.5
+  }
 }

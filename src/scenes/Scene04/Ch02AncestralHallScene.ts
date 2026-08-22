@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { createKeyMap, isActionDown, onAction } from "@/common/actions";
-import { actorDepth, WORLD_INDICATOR_DEPTH } from "@/common/displayDepth";
+import { actorDepth, foregroundDepth, WORLD_INDICATOR_DEPTH } from "@/common/displayDepth";
 import { useGameStateStore } from "@/stores/modules/gameState";
 // @ts-ignore Shared JS helpers are intentionally untyped in the current project.
 import { actorColliderBottomAt, actorColliderRectAt, ensureActorColliderConfig, createActorColliderEntry, ensureActorVisualConfig, createActorVisualEntry } from "../../actor-collider.js";
@@ -8,6 +8,8 @@ import { actorColliderBottomAt, actorColliderRectAt, ensureActorColliderConfig, 
 import { aabbOverlapsRotatedRect } from "../../collision-geometry.js";
 // @ts-ignore Shared developer editor is JavaScript and used by existing scenes.
 import { CollisionEditor } from "../../zone-editor.js";
+// @ts-ignore Shared foreground occlusion renderer is JavaScript and used by existing scenes.
+import { ForegroundOcclusionRenderer, foregroundBottomPx } from "../../foreground-occlusion.js";
 import {
 	chenAnimKey,
 	chenDisplayWidth,
@@ -35,6 +37,7 @@ import {
 	togglePause,
 	getPlayerAnimationMultiplier,
 	getPlayerMovementMultiplier,
+	applyDevPlayerMotionFromJson,
 	showChoices,
 	showInfoPanel,
 } from "@/common/ui";
@@ -79,6 +82,43 @@ const WORLD_W = 1664;
 const WORLD_H = 936;
 const PLAYER_DISPLAY_HEIGHT = 280;
 const NPC_DISPLAY_HEIGHT = 280;
+
+function pointInPolygon(point: [number, number], polygon: Array<[number, number]>) {
+	let inside = false;
+	for (let index = 0, previous = polygon.length - 1; index < polygon.length; previous = index++) {
+		const [x, y] = polygon[index];
+		const [previousX, previousY] = polygon[previous];
+		const intersects = ((y > point[1]) !== (previousY > point[1]))
+			&& point[0] < (previousX - x) * (point[1] - y) / ((previousY - y) || Number.EPSILON) + x;
+		if (intersects) inside = !inside;
+	}
+	return inside;
+}
+
+function orientation(a: [number, number], b: [number, number], c: [number, number]) {
+	return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+}
+
+function segmentsIntersect(a: [number, number], b: [number, number], c: [number, number], d: [number, number]) {
+	const abC = orientation(a, b, c);
+	const abD = orientation(a, b, d);
+	const cdA = orientation(c, d, a);
+	const cdB = orientation(c, d, b);
+	return (abC === 0 || abD === 0 || Math.sign(abC) !== Math.sign(abD))
+		&& (cdA === 0 || cdB === 0 || Math.sign(cdA) !== Math.sign(cdB));
+}
+
+function polygonsOverlap(first: Array<[number, number]> | null, second: Array<[number, number]> | null) {
+	if (!first?.length || !second?.length) return false;
+	if (pointInPolygon(first[0], second) || pointInPolygon(second[0], first)) return true;
+	for (let firstIndex = 0; firstIndex < first.length; firstIndex += 1) {
+		const firstNext = first[(firstIndex + 1) % first.length];
+		for (let secondIndex = 0; secondIndex < second.length; secondIndex += 1) {
+			if (segmentsIntersect(first[firstIndex], firstNext, second[secondIndex], second[(secondIndex + 1) % second.length])) return true;
+		}
+	}
+	return false;
+}
 const CAMERA_ZOOM = 1280 / WORLD_W;
 
 type Rect = [number, number, number, number];
@@ -96,9 +136,11 @@ interface RuntimeMapManifest {
 	foreground_occlusion: { reserved: boolean; objects: unknown[] };
 	actor_colliders?: Record<string, unknown>;
 	actor_visuals?: Record<string, unknown>;
+	player_motion?: { movement_multiplier?: number; animation_multiplier?: number };
 }
 
 type DeploymentNpcId = "GROUP_LEADER" | "YOUNG_MEMBER" | "DAI_ANNAN";
+type NamedNpcId = DeploymentNpcId;
 type DeploymentNpcPhase = "waiting" | "briefing" | "settled";
 type DisciplinePhase = "waiting-table" | "find-leader" | "choice" | "complete";
 type MaterialsPhase = "waiting-npc" | "briefing" | "choice" | "complete";
@@ -148,10 +190,11 @@ function normalizeObjectDocument(document: LayeredMapObjectDocument): RuntimeMap
 		camera_bounds: camera?.rect as Rect | undefined,
 		foreground_occlusion: {
 			reserved: true,
-			objects: [],
+			objects: ofType("foreground"),
 		},
 		actor_colliders: document.actor_colliders as Record<string, unknown> | undefined,
 		actor_visuals: document.actor_visuals as Record<string, unknown> | undefined,
+		player_motion: (document as any).player_motion,
 	};
 }
 
@@ -168,6 +211,10 @@ function serializeRuntimeManifest(manifest: RuntimeMapManifest): LayeredMapObjec
 			? [{ id: "CAM_MAIN", type: "camera", rect: manifest.camera_bounds }]
 			: []),
 		...manifest.exits.map((item) => ({ ...item, type: "exit" })),
+		...manifest.foreground_occlusion.objects.map((item) => ({
+			...(item as Record<string, unknown>),
+			type: "foreground",
+		}) as LayeredMapObject),
 	];
 	return {
 		map_id: manifest.map_id,
@@ -177,6 +224,7 @@ function serializeRuntimeManifest(manifest: RuntimeMapManifest): LayeredMapObjec
 		objects,
 		...(manifest.actor_colliders ? { actor_colliders: manifest.actor_colliders } : {}),
 		...(manifest.actor_visuals ? { actor_visuals: manifest.actor_visuals } : {}),
+		...(manifest.player_motion ? { player_motion: manifest.player_motion } : {}),
 	};
 }
 
@@ -188,10 +236,12 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 	mapManifest!: ReturnType<typeof mountLayeredMap>["manifest"];
 	mapDocument!: RuntimeMapManifest;
 	mapDocumentFile = "";
+	foregroundOcclusion?: any;
 	playerColliderProfile: any;
 	actorColliderEntries: any[] = [];
 	actorVisualProfiles: Record<string, any> = {};
 	actorVisualEntries: any[] = [];
+	namedNpcBasePositions: Record<string, { x: number; y: number }> = {};
 	player!: Phaser.Physics.Arcade.Sprite;
 	playerVisual!: Phaser.GameObjects.Sprite;
 	playerDirection: ChenWalkDirection = "down";
@@ -203,11 +253,13 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 	deploymentNpcPhase: DeploymentNpcPhase = "waiting";
 	deploymentComplete = false;
 	disciplineCrowd: Phaser.GameObjects.Image[] = [];
+	freeNpcAnchors: Record<string, { x: number; y: number }> = {};
 	disciplinePhase: DisciplinePhase = "waiting-table";
 	materialsActors: Partial<Record<DeploymentNpcId, Phaser.GameObjects.Image>> = {};
 	materialsCrowd: Phaser.GameObjects.Image[] = [];
 	materialsPhase: MaterialsPhase = "waiting-npc";
 	interactionMarkers: Partial<Record<DeploymentNpcId, Phaser.GameObjects.Container>> = {};
+	nextNpcAlphaUpdate = 0;
 	chapter2Bgm?: Phaser.Sound.BaseSound;
 
 	get state() {
@@ -242,6 +294,9 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 		this.materialsCrowd = [];
 		this.materialsPhase = "waiting-npc";
 		this.interactionMarkers = {};
+		this.nextNpcAlphaUpdate = 0;
+		this.namedNpcBasePositions = {};
+		this.freeNpcAnchors = {};
 	}
 
 	preload() {
@@ -268,6 +323,18 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 		this.mapManifest = mounted.manifest;
 		this.mapDocumentFile = `public/data/${this.definition.objectPath.replace(/^data\//, "")}`;
 		this.mapDocument = normalizeObjectDocument(mounted.objectDocument);
+		applyDevPlayerMotionFromJson((this.mapDocument as any).player_motion);
+		// 前景遮罩以 L06 高层遮挡层为源图：套索区域内的内容按 sort_y 判定盖到角色上方，
+		// 其余分层全部固定在角色 y 排序带之下。
+		const occlusionSource = mounted.layers.L06_OCCLUSION_HIGH;
+		if (occlusionSource) {
+			this.foregroundOcclusion = new ForegroundOcclusionRenderer(this, {
+				background: occlusionSource,
+				getObjects: () => this.mapDocument.foreground_occlusion.objects,
+				resolveDepth: (object: any) => foregroundDepth(foregroundBottomPx(object, 1) ?? 0),
+				tileSize: 1,
+			});
+		}
 		this.setupActorCollider();
 		this.physics.world.setBounds(0, 0, WORLD_W, WORLD_H);
 		this.buildCollision();
@@ -347,6 +414,7 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 		this.state.playerLocked = true;
 		hidePrompt();
 		hideTask();
+		this.setInteractionMarkerVisible("DAI_ANNAN", false);
 		playNarrative(CH02_DISCIPLINE_NARRATIVE, () => {
 			this.state.flags.add(CH02_DISCIPLINE_FLAGS.disciplineComplete);
 			this.reformDisciplineCrowd();
@@ -539,6 +607,7 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 				.setFlipX(flip)
 				.setDepth(actorDepth(726));
 			this.arrivalActors.push(actor);
+			this.registerFreeNpcVisual(`ARRIVAL_GUARD_${this.arrivalActors.length - 1}`, actor, x, 726);
 		}
 
 		// 不逐人绘制三百余名角色，而以院内、院门外和墙根的人影传达规模。
@@ -560,6 +629,7 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 				this.add.rectangle(0, -25, 34, 64, 0x0b1116, alpha),
 			]);
 			this.arrivalCrowd.push(person);
+			this.registerFreeNpcVisual(`ARRIVAL_CROWD_${this.arrivalCrowd.length - 1}`, person as unknown as Phaser.GameObjects.Image, x, y);
 		}
 	}
 
@@ -571,7 +641,7 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 				texture: "ch02_npc_group_leader",
 				x: 832,
 				y: 760,
-				alpha: 0.82,
+				alpha: 1,
 				// 站在低桌前沿，保持在所有静态地图分层之上。
 				depth: 1650,
 			},
@@ -580,7 +650,7 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 				texture: "ch02_npc_young_member",
 				x: 642,
 				y: 842,
-				alpha: 0.96,
+				alpha: 1,
 				depth: actorDepth(842),
 			},
 			{
@@ -588,7 +658,7 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 				texture: "ch02_npc_dai_annan",
 				x: 1028,
 				y: 842,
-				alpha: 0.96,
+				alpha: 1,
 				depth: actorDepth(842),
 			},
 		];
@@ -599,9 +669,9 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 				.image(definition.x, definition.y, definition.texture)
 				.setOrigin(0.5, 1)
 				.setDisplaySize(width, NPC_DISPLAY_HEIGHT)
-				.setAlpha(definition.alpha)
+				.setAlpha(1)
 				.setDepth(definition.depth);
-			this.deploymentActors[definition.id] = actor;
+			this.registerNamedNpc(definition.id, actor, definition.x, definition.y);
 		}
 	}
 
@@ -613,7 +683,7 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 				texture: "ch02_npc_group_leader",
 				x: 690,
 				y: 760,
-				alpha: 0.94,
+				alpha: 1,
 				depth: 1650,
 			},
 			{
@@ -621,15 +691,15 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 				texture: "ch02_npc_young_member",
 				x: 1090,
 				y: 820,
-				alpha: 0.9,
+				alpha: 1,
 				depth: 1650,
 			},
 			{
 				id: "DAI_ANNAN",
 				texture: "ch02_npc_dai_annan",
-				x: 920,
+				x: 832,
 				y: 760,
-				alpha: 0.98,
+				alpha: 1,
 				depth: 1660,
 			},
 		];
@@ -640,40 +710,52 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 				.image(definition.x, definition.y, definition.texture)
 				.setOrigin(0.5, 1)
 				.setDisplaySize(width, NPC_DISPLAY_HEIGHT)
-				.setAlpha(definition.alpha)
+				.setAlpha(1)
 				.setDepth(definition.depth);
-			this.deploymentActors[definition.id] = actor;
+			this.registerNamedNpc(definition.id, actor, definition.x, definition.y);
 			if (definition.id === "GROUP_LEADER")
 				this.createInteractionMarker("GROUP_LEADER", actor);
+			if (definition.id === "DAI_ANNAN")
+				this.createInteractionMarker("DAI_ANNAN", actor).setVisible(true);
 		}
 
-		// 现场人数用四种已抠图的普通队员循环实例化；散点是初始等候，目标点是纪律传达后的分组站位。
-		const crowd: Array<[string, number, number, number, number, number]> = [
-			["ch02_npc_worker_white_headcloth", 470, 720, 535, 760, 0.62],
-			["ch02_npc_worker_straw_hat", 555, 820, 600, 820, 0.58],
-			["ch02_npc_worker_conical_hat", 650, 700, 675, 760, 0.64],
-			["ch02_npc_worker_blue_headcloth", 760, 835, 745, 835, 0.56],
-			["ch02_npc_worker_white_headcloth", 850, 840, 845, 820, 0.5],
-			["ch02_npc_worker_straw_hat", 1015, 710, 1015, 770, 0.58],
-			["ch02_npc_worker_conical_hat", 1135, 720, 1145, 780, 0.62],
-			["ch02_npc_worker_blue_headcloth", 1220, 840, 1210, 820, 0.54],
-			["ch02_npc_worker_white_headcloth", 1310, 710, 1290, 760, 0.5],
-			["ch02_npc_worker_straw_hat", 1400, 820, 1365, 815, 0.52],
-			["ch02_npc_worker_conical_hat", 1480, 730, 1435, 765, 0.48],
-			["ch02_npc_worker_blue_headcloth", 1530, 840, 1490, 820, 0.46],
+		// 装饰人物默认完全不透明；玩家位于其身后时降低到 50%。
+		const crowd: Array<[string, number, number, number, number]> = [
+			["ch02_npc_worker_white_headcloth", 470, 720, 535, 760], ["ch02_npc_worker_straw_hat", 555, 820, 600, 820],
+			["ch02_npc_worker_conical_hat", 650, 700, 675, 760], ["ch02_npc_worker_blue_headcloth", 760, 835, 745, 835],
+			["ch02_npc_worker_white_headcloth", 850, 840, 845, 820], ["ch02_npc_worker_straw_hat", 1015, 710, 1015, 770],
+			["ch02_npc_worker_conical_hat", 1135, 720, 1145, 780], ["ch02_npc_worker_blue_headcloth", 1220, 840, 1210, 820],
+			["ch02_npc_worker_white_headcloth", 1310, 710, 1290, 760], ["ch02_npc_worker_straw_hat", 1400, 820, 1365, 815],
+			["ch02_npc_worker_conical_hat", 1480, 730, 1435, 765], ["ch02_npc_worker_blue_headcloth", 1530, 840, 1490, 820],
 		];
-		for (const [texture, x, y, targetX, targetY, alpha] of crowd) {
+		for (const [texture, x, y, targetX, targetY] of crowd) {
 			const source = this.textures.get(texture).getSourceImage() as HTMLImageElement;
 			const height = 210;
 			const width = Math.round((source.width / source.height) * height);
-			const actor = this.add
-				.image(x, y, texture)
-				.setOrigin(0.5, 1)
-				.setDisplaySize(width, height)
-				.setAlpha(alpha)
-				.setDepth(1540);
+			const actor = this.add.image(x, y, texture).setOrigin(0.5, 1).setDisplaySize(width, height).setAlpha(1).setDepth(actorDepth(y));
 			(actor as Phaser.GameObjects.Image & { disciplineTarget?: [number, number] }).disciplineTarget = [targetX, targetY];
 			this.disciplineCrowd.push(actor);
+			this.registerFreeNpcVisual(`DISCIPLINE_CROWD_${this.disciplineCrowd.length - 1}`, actor, x, y);
+		}
+	}
+
+	updateNpcOcclusion() {
+		if (!this.player || !this.playerVisual) return;
+		const updateAlpha = this.time.now >= this.nextNpcAlphaUpdate;
+		if (updateAlpha) this.nextNpcAlphaUpdate = this.time.now + 50;
+		const playerBounds = this.playerVisual.getBounds();
+		const playerEntry = this.actorVisualEntries.find((entry) => entry.id === "PLAYER");
+		const playerContour = updateAlpha ? playerEntry?.getContour?.() as Array<[number, number]> | null : null;
+		for (const entry of this.actorVisualEntries) {
+			if (entry.id === "PLAYER") continue;
+			const actor = entry.getActor?.() as Phaser.GameObjects.GameObject & { y: number; setDepth: (value: number) => unknown; setAlpha: (value: number) => unknown; getBounds?: () => Phaser.Geom.Rectangle } | undefined;
+			if (!actor?.getBounds) continue;
+			const layer = this.mapDocument.foreground_occlusion.objects.find((item: any) => item.actor_id === entry.id && item.enabled !== false) as any;
+			actor.setDepth(layer ? foregroundDepth(Number(layer.sort_y) || actor.y) : actorDepth(actor.y));
+			if (!updateAlpha) continue;
+			const boundsOverlap = Phaser.Geom.Intersects.RectangleToRectangle(playerBounds, actor.getBounds());
+			const npcContour = boundsOverlap ? entry.getContour?.() as Array<[number, number]> | null : null;
+			actor.setAlpha(boundsOverlap && polygonsOverlap(playerContour, npcContour) ? 0.8 : 1);
 		}
 	}
 
@@ -685,7 +767,7 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 				texture: "ch02_npc_group_leader",
 				x: 640,
 				y: 575,
-				alpha: 0.97,
+				alpha: 1,
 				depth: 1650,
 			},
 			{
@@ -693,7 +775,7 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 				texture: "ch02_npc_young_member",
 				x: 1085,
 				y: 620,
-				alpha: 0.88,
+				alpha: 1,
 				depth: 1651,
 			},
 		];
@@ -704,9 +786,10 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 				.image(definition.x, definition.y, definition.texture)
 				.setOrigin(0.5, 1)
 				.setDisplaySize(width, NPC_DISPLAY_HEIGHT)
-				.setAlpha(definition.alpha)
+				.setAlpha(1)
 				.setDepth(definition.depth);
 			this.materialsActors[definition.id] = actor;
+			this.registerNamedNpc(definition.id, actor, definition.x, definition.y);
 			if (definition.id === "GROUP_LEADER") {
 				const marker = this.createInteractionMarker("GROUP_LEADER", actor);
 				marker.setVisible(true);
@@ -733,6 +816,7 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 					.setAlpha(alpha)
 					.setDepth(1620),
 			);
+			this.registerFreeNpcVisual(`MATERIALS_CROWD_${this.materialsCrowd.length - 1}`, this.materialsCrowd[this.materialsCrowd.length - 1], x, y);
 		}
 	}
 
@@ -800,15 +884,15 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 		const youngMember = this.deploymentActors.YOUNG_MEMBER;
 		const daiAnnan = this.deploymentActors.DAI_ANNAN;
 		if (phase === "briefing") {
-			leader?.setAlpha(0.78);
-			youngMember?.setAlpha(0.9);
-			daiAnnan?.setAlpha(0.96);
+			leader?.setAlpha(1);
+			youngMember?.setAlpha(1);
+			daiAnnan?.setAlpha(1);
 			return;
 		}
 		if (phase === "settled") {
-			leader?.setAlpha(0.62);
-			youngMember?.setAlpha(0.72);
-			daiAnnan?.setAlpha(0.78);
+			leader?.setAlpha(1);
+			youngMember?.setAlpha(1);
+			daiAnnan?.setAlpha(1);
 		}
 	}
 
@@ -839,6 +923,9 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 		];
 		this.actorVisualProfiles = {
 			PLAYER: ensureActorVisualConfig(this.mapDocument as any, "PLAYER", PLAYER_DISPLAY_HEIGHT),
+			GROUP_LEADER: ensureActorVisualConfig(this.mapDocument as any, "GROUP_LEADER", NPC_DISPLAY_HEIGHT),
+			YOUNG_MEMBER: ensureActorVisualConfig(this.mapDocument as any, "YOUNG_MEMBER", NPC_DISPLAY_HEIGHT),
+			DAI_ANNAN: ensureActorVisualConfig(this.mapDocument as any, "DAI_ANNAN", NPC_DISPLAY_HEIGHT),
 		};
 		this.actorVisualEntries = [
 			createActorVisualEntry({
@@ -850,7 +937,18 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 				onPositionChange: () => this.applyActorVisualPosition("PLAYER"),
 				tileSize: 1,
 			}),
+			...(["GROUP_LEADER", "YOUNG_MEMBER", "DAI_ANNAN"] as NamedNpcId[]).map((id) => createActorVisualEntry({
+				id,
+				label: id === "GROUP_LEADER" ? "小组负责人" : id === "YOUNG_MEMBER" ? "年轻队员" : "戴安南",
+				getActor: () => this.getNamedNpcActor(id),
+				getProfile: () => this.actorVisualProfiles[id],
+				getAnchor: () => this.namedNpcBasePositions[id] ?? null,
+				onPositionChange: (changedId: string) => this.applyActorVisualPosition(changedId),
+				tileSize: 1,
+			})),
 		];
+		for (const id of ["GROUP_LEADER", "YOUNG_MEMBER", "DAI_ANNAN"] as NamedNpcId[])
+			this.applyActorVisualHeight(id, this.actorVisualProfiles[id].display_height);
 	}
 
 	setupZoneEditor() {
@@ -875,6 +973,7 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 				this.setupActorCollider();
 				this.buildCollision();
 				this.applyPlayerColliderBody();
+				this.foregroundOcclusion?.rebuild();
 			},
 			onChange: (kind: string) => {
 				documents[this.mapDocumentFile] = serializeRuntimeManifest(this.mapDocument);
@@ -882,6 +981,7 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 					this.buildCollision();
 					this.applyPlayerColliderBody();
 				}
+				if (!kind || kind === "foreground") this.foregroundOcclusion?.rebuild();
 			},
 		});
 	}
@@ -895,17 +995,73 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 			.setDepth(this.depthForPlayer());
 	}
 
+	getNamedNpcActor(id: NamedNpcId): Phaser.GameObjects.Image | undefined {
+		return this.deploymentActors[id] ?? this.materialsActors[id];
+	}
+
+	registerNamedNpc(id: NamedNpcId, actor: Phaser.GameObjects.Image, x: number, y: number) {
+		this.namedNpcBasePositions[id] = { x, y };
+		if (this.variant === "sidewall") this.materialsActors[id] = actor;
+		else this.deploymentActors[id] = actor;
+		this.applyActorVisualHeight(id, this.actorVisualProfiles[id]?.display_height ?? NPC_DISPLAY_HEIGHT);
+		this.applyActorVisualPosition(id);
+	}
+
+	registerFreeNpcVisual(id: string, actor: Phaser.GameObjects.Image, x: number, y: number) {
+		this.freeNpcAnchors[id] = { x, y };
+		this.actorVisualProfiles[id] = ensureActorVisualConfig(this.mapDocument as any, id, actor.displayHeight || NPC_DISPLAY_HEIGHT);
+		actor.setVisible(this.actorVisualProfiles[id].enabled !== false);
+		this.actorVisualEntries.push(createActorVisualEntry({
+			id,
+			label: `NPC · ${id}`,
+			getActor: () => actor,
+			getProfile: () => this.actorVisualProfiles[id],
+			getAnchor: () => this.freeNpcAnchors[id],
+			onPositionChange: () => this.applyFreeNpcVisualPosition(id),
+			tileSize: 1,
+		}));
+	}
+
+	applyFreeNpcVisualPosition(id: string) {
+		const actor = this.actorVisualEntries.find((entry) => entry.id === id)?.getActor?.();
+		const base = this.freeNpcAnchors[id];
+		const offset = this.actorVisualProfiles[id]?.offset ?? [0, 0];
+		if (actor && base) actor.setPosition(base.x + offset[0], base.y + offset[1]);
+	}
+
 	applyActorVisualHeight(id: string, height: number) {
-		if (id !== "PLAYER" || !this.playerVisual || !Number.isFinite(height) || height <= 0) return;
-		const source = chenFrameSize(this, this.playerDirection);
-		this.playerVisual.setDisplaySize(Math.round((source.width / source.height) * height), height);
+		if (!Number.isFinite(height) || height <= 0) return;
+		if (id === "PLAYER") {
+			if (!this.playerVisual) return;
+			const source = chenFrameSize(this, this.playerDirection);
+			this.playerVisual.setDisplaySize(Math.round((source.width / source.height) * height), height);
+			this.playerVisual.setVisible(this.actorVisualProfiles.PLAYER?.enabled !== false);
+		} else {
+			const actor = this.getNamedNpcActor(id as NamedNpcId) ?? this.actorVisualEntries.find((entry) => entry.id === id)?.getActor?.();
+			const source = actor?.texture?.getSourceImage?.() as HTMLImageElement | undefined;
+			if (!actor || !source?.height) return;
+			actor.setDisplaySize(Math.round((source.width / source.height) * height), height).setAlpha(1).setVisible(this.actorVisualProfiles[id]?.enabled !== false);
+		}
 		this.applyActorVisualPosition(id);
 	}
 
 	applyActorVisualPosition(id: string) {
-		if (id !== "PLAYER" || !this.playerVisual || !this.player) return;
-		const offset = this.actorVisualProfiles.PLAYER?.offset ?? [0, 0];
-		this.playerVisual.setPosition(this.player.x + offset[0], this.player.y + offset[1]);
+		if (id === "PLAYER") {
+			if (!this.playerVisual || !this.player) return;
+			const offset = this.actorVisualProfiles.PLAYER?.offset ?? [0, 0];
+			this.playerVisual.setPosition(this.player.x + offset[0], this.player.y + offset[1]);
+			return;
+		}
+		const actor = this.getNamedNpcActor(id as NamedNpcId) ?? this.actorVisualEntries.find((entry) => entry.id === id)?.getActor?.();
+		const base = this.namedNpcBasePositions[id];
+		if (!base && this.freeNpcAnchors[id]) {
+			this.applyFreeNpcVisualPosition(id);
+			return;
+		}
+		if (!actor || !base) return;
+		const offset = this.actorVisualProfiles[id]?.offset ?? [0, 0];
+		actor.setPosition(base.x + offset[0], base.y + offset[1]);
+		this.interactionMarkers[id as DeploymentNpcId]?.setPosition(actor.x, actor.y - NPC_DISPLAY_HEIGHT - 20);
 	}
 
 	applyPlayerColliderBody() {
@@ -931,6 +1087,7 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 	update() {
 		// 场景切换时 Arcade body 可能先于 Scene.update 的最后一帧被销毁。
 		if (!this.player || !this.player.body) return;
+		this.updateNpcOcclusion();
 		const depth = this.depthForPlayer();
 		this.player.setDepth(depth);
 		this.playerVisual?.setDepth(depth);
@@ -995,7 +1152,7 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 		];
 		return candidates.find((target) => {
 			const [x, y, width, height] = target.rect;
-			return this.player.x >= x - 32 && this.player.x <= x + width + 32 && this.player.y >= y - 32 && this.player.y <= y + height + 32;
+			return this.player.x >= x && this.player.x <= x + width && this.player.y >= y && this.player.y <= y + height;
 		});
 	}
 
@@ -1006,7 +1163,7 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 		}
 		const nearbyTarget = this.nearby();
 		const target = this.entry === "discipline"
-			? this.disciplinePhase === "waiting-table" && nearbyTarget?.id === "TRG_DEPLOYMENT_MAP"
+			? this.disciplinePhase === "waiting-table" && nearbyTarget?.id === "TRG_DAI_ANNAN"
 				? nearbyTarget
 				: this.disciplinePhase === "find-leader" && nearbyTarget?.id === "TRG_GROUP_LEADER"
 					? nearbyTarget
@@ -1040,7 +1197,7 @@ export class Ch02AncestralHallScene extends Phaser.Scene {
 				this.beginMaterialsTransition();
 				return;
 			}
-			if (this.disciplinePhase === "waiting-table" && target?.id === "TRG_DEPLOYMENT_MAP") {
+			if (this.disciplinePhase === "waiting-table" && target?.id === "TRG_DAI_ANNAN") {
 				this.beginDisciplineNarrative();
 				return;
 			}

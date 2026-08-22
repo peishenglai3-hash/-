@@ -3,7 +3,7 @@ import { mkdirSync } from "node:fs";
 
 const port = process.env.E2E_PORT || "5176";
 const base = `http://127.0.0.1:${port}`;
-const output = "C:\\Users\\35636\\AppData\\Local\\Temp\\honghu_e2e_ch02\\";
+const output = ".tmp_e2e/ch02/";
 mkdirSync(output, { recursive: true });
 
 const browser = await chromium.launch();

@@ -108,6 +108,17 @@
       ]
     },
     {
+      "id": "TRG_DAI_ANNAN",
+      "type": "interaction",
+      "prompt": "听取戴安南传达纪律",
+      "rect": [
+        742,
+        610,
+        180,
+        180
+      ]
+    },
+    {
       "id": "TRG_ANCESTRAL_TABLET",
       "type": "interaction",
       "rect": [
@@ -115,16 +126,6 @@
         105,
         260,
         245
-      ]
-    },
-    {
-      "id": "TRG_HALL_THRESHOLD",
-      "type": "interaction",
-      "rect": [
-        500,
-        735,
-        670,
-        145
       ]
     },
     {
@@ -148,8 +149,8 @@
       ]
     },
     {
-      "id": "EXIT_TO_COURTYARD",
-      "type": "exit",
+      "id": "TRG_HALL_THRESHOLD",
+      "type": "interaction",
       "rect": [
         500,
         840,
